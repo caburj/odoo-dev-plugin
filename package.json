@@ -14,8 +14,8 @@
   "contributes": {
     "commands": [
       {
-        "command": "odoo-dev-plugin.helloWorld",
-        "title": "Hello World"
+        "command": "odoo-dev-plugin.addBaseBranch",
+        "title": "Add Base Branch"
       }
     ],
     "viewsContainers": {
