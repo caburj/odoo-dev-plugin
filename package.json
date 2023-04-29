@@ -16,6 +16,18 @@
       {
         "command": "odoo-dev-plugin.addBaseBranch",
         "title": "Add Base Branch"
+      },
+      {
+        "command": "odoo-dev-plugin.addDevBranch",
+        "title": "Add Dev Branch"
+      },
+      {
+        "command": "odoo-dev-plugin.removeBaseBranch",
+        "title": "Remove Base Branch"
+      },
+      {
+        "command": "odoo-dev-plugin.removeDevBranch",
+        "title": "Remove Dev Branch"
       }
     ],
     "viewsContainers": {

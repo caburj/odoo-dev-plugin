@@ -1,6 +1,5 @@
 import * as vscode from 'vscode';
-import * as fs from 'fs';
-import * as path from 'path';
+import { OdooPluginDB } from './odoo_plugin_db';
 
 export class OdooDevBranches implements vscode.TreeDataProvider<OdooDevBranch> {
   private _onDidChangeTreeData: vscode.EventEmitter<
@@ -9,9 +8,10 @@ export class OdooDevBranches implements vscode.TreeDataProvider<OdooDevBranch> {
   readonly onDidChangeTreeData: vscode.Event<OdooDevBranch | undefined | void> =
     this._onDidChangeTreeData.event;
 
-  constructor(private workspaceRoot: string | undefined) {
-    console.log(this.workspaceRoot);
-  }
+  constructor(
+    private workspaceRoot: string | undefined,
+    private db: OdooPluginDB
+  ) {}
 
   refresh(): void {
     this._onDidChangeTreeData.fire();
@@ -21,15 +21,27 @@ export class OdooDevBranches implements vscode.TreeDataProvider<OdooDevBranch> {
     return element;
   }
 
-  getChildren(element?: OdooDevBranch): Thenable<OdooDevBranch[]> {
-    const root = ['master', '16.0'];
-    if (element?.label && root.includes(element.label)) {
-      return Promise.resolve([
-        new OdooDevBranch(`${element.label}-1`, 0),
-        new OdooDevBranch(`${element.label}-2`, 0),
-      ]);
+  async getChildren(element?: OdooDevBranch): Promise<OdooDevBranch[]> {
+    if (!element) {
+      const baseBranches = this.db.getBaseBranches();
+      return baseBranches.map(({ name }) => {
+        const devBranches = this.db.getDevBranches(name);
+        return new OdooDevBranch(
+          name,
+          devBranches.length > 0
+            ? vscode.TreeItemCollapsibleState.Collapsed
+            : vscode.TreeItemCollapsibleState.None
+        );
+      });
+    } else {
+      const branchName = element.label;
+      return this.db
+        .getDevBranches(branchName)
+        .map(
+          ({ name }) =>
+            new OdooDevBranch(name, vscode.TreeItemCollapsibleState.None)
+        );
     }
-    return Promise.resolve(root.map(v => new OdooDevBranch(v, 1)));
   }
 }
 
