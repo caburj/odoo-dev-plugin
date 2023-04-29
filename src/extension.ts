@@ -19,7 +19,18 @@ export function activate(context: vscode.ExtensionContext) {
       ? vscode.workspace.workspaceFolders[0].uri.fsPath
       : undefined;
 
-  vscode.window.registerTreeDataProvider("odoo-dev-branches", new OdooDevBranches(rootPath, db));
+  const treeDataProvider = new OdooDevBranches(rootPath, db);
+
+  const refreshTreeOnSuccessOrShowError = async (cb: () => void | Promise<void>) => {
+    try {
+      await cb();
+      treeDataProvider.refresh();
+    } catch (error) {
+      vscode.window.showErrorMessage((error as Error).message);
+    }
+  };
+
+  vscode.window.registerTreeDataProvider("odoo-dev-branches", treeDataProvider);
 
   const disposables = [
     vscode.commands.registerCommand("odoo-dev-plugin.addBaseBranch", async () => {
@@ -34,17 +45,16 @@ export function activate(context: vscode.ExtensionContext) {
 
       // IMPROVEMENT: Validate if the input is proper branch from the odoo repo.
       if (input === "") {
-        vscode.window.showErrorMessage("Please provide an input.");
-      } else {
-        try {
-          const [name, seqStr] = input.split(",");
-          const parsedSeq = parseInt(seqStr);
-          const sequence = isNaN(parsedSeq) ? undefined : parsedSeq;
-          db.addBaseBranch({ name, sequence });
-        } catch (error) {
-          vscode.window.showErrorMessage((error as Error).message);
-        }
+        vscode.window.showErrorMessage("Empty input is invalid.");
+        return;
       }
+
+      return refreshTreeOnSuccessOrShowError(() => {
+        const [name, seqStr] = input.split(",");
+        const parsedSeq = parseInt(seqStr);
+        const sequence = isNaN(parsedSeq) ? undefined : parsedSeq;
+        db.addBaseBranch({ name, sequence });
+      });
     }),
     vscode.commands.registerCommand("odoo-dev-plugin.addDevBranch", async () => {
       const input = await vscode.window.showInputBox({
@@ -57,29 +67,31 @@ export function activate(context: vscode.ExtensionContext) {
       }
 
       if (input === "") {
-        vscode.window.showErrorMessage("Please provide an input.");
-      } else {
-        const base = inferBaseBranch(input);
-        try {
-          if (!db.baseBranchExists(base)) {
-            const response = await vscode.window.showQuickPick(["Yes", "No"], {
-              title: `'${base}' base doesn't exist, do you want to create the base branch to proceed in creation of the dev branch '${input}'?`,
-            });
-            if (response && response === "Yes") {
-              db.addBaseBranch({ name: base });
-              db.addDevBranch({ base, name: input });
-            }
-          } else {
-            if (!db.devBranchExists({ base, name: input })) {
-              db.addDevBranch({ base, name: input });
-            } else {
-              vscode.window.showErrorMessage(`'${input}' already exists!`);
-            }
-          }
-        } catch (error) {
-          vscode.window.showErrorMessage((error as Error).message);
-        }
+        vscode.window.showErrorMessage("Empty input is invalid.");
+        return;
       }
+
+      const base = inferBaseBranch(input);
+
+      return refreshTreeOnSuccessOrShowError(async () => {
+        let newBase = false;
+        if (!db.baseBranchExists(base)) {
+          const response = await vscode.window.showQuickPick(["Yes", "No"], {
+            title: `'${base}' base doesn't exist, do you want to create the base branch to proceed in creation of the dev branch '${input}'?`,
+          });
+          if (response && response === "Yes") {
+            db.addBaseBranch({ name: base });
+            newBase = true;
+          } else {
+            return;
+          }
+        }
+        if (!newBase && db.devBranchExists({ base, name: input })) {
+          vscode.window.showErrorMessage(`'${input}' already exists!`);
+          return;
+        }
+        db.addDevBranch({ base, name: input });
+      });
     }),
     vscode.commands.registerCommand("odoo-dev-plugin.removeBaseBranch", async () => {
       const baseBranches = db.getBaseBranches();
@@ -92,11 +104,9 @@ export function activate(context: vscode.ExtensionContext) {
         return;
       }
 
-      try {
+      return refreshTreeOnSuccessOrShowError(() => {
         db.removeBaseBranch(selected);
-      } catch (error) {
-        vscode.window.showErrorMessage((error as Error).message);
-      }
+      });
     }),
     vscode.commands.registerCommand("odoo-dev-plugin.removeDevBranch", async () => {
       const devBranches = db
@@ -113,11 +123,9 @@ export function activate(context: vscode.ExtensionContext) {
         return;
       }
 
-      try {
+      return refreshTreeOnSuccessOrShowError(() => {
         db.removeDevBranch(selected);
-      } catch (error) {
-        vscode.window.showErrorMessage((error as Error).message);
-      }
+      });
     }),
   ];
 
