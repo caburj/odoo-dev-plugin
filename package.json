@@ -17,7 +17,24 @@
         "command": "odoo-dev-plugin.helloWorld",
         "title": "Hello World"
       }
-    ]
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "odoo-dev-container",
+          "title": "Odoo Dev",
+          "icon": "resources/not-really-odoo-icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "odoo-dev-container": [
+        {
+          "id": "odoo-dev-branches",
+          "name": "Branches"
+        }
+      ]
+    }
   },
   "scripts": {
     "vscode:prepublish": "pnpm run compile",
