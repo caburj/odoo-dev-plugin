@@ -1,4 +1,4 @@
-import * as vscode from 'vscode';
+import * as vscode from "vscode";
 
 type BaseBranch = { name: string; sequence: number };
 type DevBranch = { name: string };
@@ -17,8 +17,8 @@ function exists<T>(items: T[], pred: (x: T) => boolean): boolean {
 }
 
 export class OdooPluginDB {
-  private static baseBranchesKey = 'base-branches';
-  constructor(private globalState: vscode.ExtensionContext['globalState']) {
+  private static baseBranchesKey = "base-branches";
+  constructor(private globalState: vscode.ExtensionContext["globalState"]) {
     const baseBranches = this.globalState.get(OdooPluginDB.baseBranchesKey);
     if (!baseBranches) {
       this.globalState.update(OdooPluginDB.baseBranchesKey, []);
@@ -37,11 +37,9 @@ export class OdooPluginDB {
         throw new Error(`'${name}' already exists.`);
       }
       const seq =
-        sequence === undefined
-          ? baseBranches[baseBranches.length - 1]['sequence'] + 10
-          : sequence;
+        sequence === undefined ? baseBranches[baseBranches.length - 1]["sequence"] + 10 : sequence;
       baseBranches.push({ name, sequence: seq });
-      baseBranches.sort((a, b) => a['sequence'] - b['sequence']);
+      baseBranches.sort((a, b) => a["sequence"] - b["sequence"]);
     }
     this.globalState.update(OdooPluginDB.baseBranchesKey, [...baseBranches]);
   }
@@ -57,10 +55,7 @@ export class OdooPluginDB {
     this.globalState.update(name, undefined);
   }
   getBaseBranches(): BaseBranch[] {
-    const baseBranches = this.globalState.get(
-      OdooPluginDB.baseBranchesKey,
-      []
-    ) as BaseBranch[];
+    const baseBranches = this.globalState.get(OdooPluginDB.baseBranchesKey, []) as BaseBranch[];
     return baseBranches;
   }
   devBranchExists({ base, name }: DevBranchInput): boolean {

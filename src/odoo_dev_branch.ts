@@ -1,17 +1,13 @@
-import * as vscode from 'vscode';
-import { OdooPluginDB } from './odoo_plugin_db';
+import * as vscode from "vscode";
+import { OdooPluginDB } from "./odoo_plugin_db";
 
 export class OdooDevBranches implements vscode.TreeDataProvider<OdooDevBranch> {
-  private _onDidChangeTreeData: vscode.EventEmitter<
-    OdooDevBranch | undefined | void
-  > = new vscode.EventEmitter<OdooDevBranch | undefined | void>();
+  private _onDidChangeTreeData: vscode.EventEmitter<OdooDevBranch | undefined | void> =
+    new vscode.EventEmitter<OdooDevBranch | undefined | void>();
   readonly onDidChangeTreeData: vscode.Event<OdooDevBranch | undefined | void> =
     this._onDidChangeTreeData.event;
 
-  constructor(
-    private workspaceRoot: string | undefined,
-    private db: OdooPluginDB
-  ) {}
+  constructor(private workspaceRoot: string | undefined, private db: OdooPluginDB) {}
 
   refresh(): void {
     this._onDidChangeTreeData.fire();
@@ -37,10 +33,7 @@ export class OdooDevBranches implements vscode.TreeDataProvider<OdooDevBranch> {
       const branchName = element.label;
       return this.db
         .getDevBranches(branchName)
-        .map(
-          ({ name }) =>
-            new OdooDevBranch(name, vscode.TreeItemCollapsibleState.None)
-        );
+        .map(({ name }) => new OdooDevBranch(name, vscode.TreeItemCollapsibleState.None));
     }
   }
 }
@@ -55,5 +48,5 @@ export class OdooDevBranch extends vscode.TreeItem {
     this.tooltip = this.label;
   }
 
-  contextValue = 'odoo-dev-branch';
+  contextValue = "odoo-dev-branch";
 }
