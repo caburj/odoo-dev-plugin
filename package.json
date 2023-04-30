@@ -11,6 +11,9 @@
   ],
   "activationEvents": [],
   "main": "./out/extension.js",
+  "extensionDependencies": [
+    "vscode.git"
+  ],
   "contributes": {
     "commands": [
       {
@@ -20,6 +23,10 @@
       {
         "command": "odoo-dev-plugin.removeDevBranch",
         "title": "Remove Dev Branch"
+      },
+      {
+        "command": "odoo-dev-plugin.selectDevBranch",
+        "title": "Select Dev Branch"
       }
     ],
     "configuration": {
@@ -34,6 +41,10 @@
             "master": 0
           },
           "description": "List of base branches. Value serves as the sequence number for ordering the items in the Tree View."
+        },
+        "odooDev.sourceFolder": {
+          "type": "string",
+          "description": "Folder where odoo/odoo repository is clone. This folder is also expected to have odoo/enterprise, odoo/upgrade and your custom addons folder."
         }
       }
     },

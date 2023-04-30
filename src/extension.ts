@@ -1,6 +1,10 @@
 import * as vscode from "vscode";
 import { OdooDevBranches } from "./odoo_dev_branch";
 import { OdooPluginDB } from "./odoo_plugin_db";
+import { GitExtension } from "./git";
+
+const gitExtension = vscode.extensions.getExtension<GitExtension>("vscode.git")!.exports;
+const git = gitExtension.getAPI(1);
 
 function splitWithDashFrom(str: string, start: number) {
   return [str.substring(0, str.indexOf("-", start)), str.substring(str.indexOf("-", start) + 1)];
@@ -18,6 +22,36 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0
       ? vscode.workspace.workspaceFolders[0].uri.fsPath
       : undefined;
+
+  const getOdooRepo = () => {
+    const sourceFolder = vscode.workspace.getConfiguration("odooDev").sourceFolder as string;
+    const odooUri = vscode.Uri.joinPath(vscode.Uri.file(sourceFolder), "odoo");
+    const odooRepo = git.getRepository(odooUri);
+    if (odooRepo === null) {
+      throw new Error(`Unable to checkout. 'odoo' repo is not found in '${sourceFolder}'.`);
+    }
+    return odooRepo;
+  };
+
+  const createDevBranch = async (base: string, branch: string) => {
+    const odooRepo = getOdooRepo();
+    await odooRepo.checkout(base);
+    await odooRepo.createBranch(branch, true);
+    vscode.window.showInformationMessage(`Successful checkout of '${branch}'`);
+  };
+
+  const checkoutDevBranch = async (branch: string) => {
+    const odooRepo = getOdooRepo();
+    if (odooRepo.state.HEAD?.name === branch) {
+      throw new Error(`The current branch is already '${branch}`);
+    }
+    try {
+      await odooRepo.checkout(branch);
+    } catch (error) {
+      throw new Error((error as Error & { stderr: string }).stderr);
+    }
+    vscode.window.showInformationMessage(`Successful checkout of '${branch}'`);
+  };
 
   const getBaseBranches = () => {
     const odooConfig = vscode.workspace.getConfiguration("odooDev");
@@ -71,6 +105,7 @@ export function activate(context: vscode.ExtensionContext) {
           return;
         }
         db.addDevBranch({ base, name: input });
+        await createDevBranch(base, input);
       });
     }),
     vscode.commands.registerCommand("odoo-dev-plugin.removeDevBranch", async () => {
@@ -90,6 +125,22 @@ export function activate(context: vscode.ExtensionContext) {
       return refreshTreeOnSuccessOrShowError(() => {
         db.removeDevBranch(selected);
       });
+    }),
+    vscode.commands.registerCommand("odoo-dev-plugin.selectDevBranch", async () => {
+      const devBranches = getBaseBranches()
+        .map((base) => db.getDevBranches(base).map((db) => ({ ...db, base })))
+        .flat();
+
+      const selected = await vscode.window.showQuickPick(
+        devBranches.map((b) => ({ ...b, label: b.name })),
+        { title: "Choose from the list" }
+      );
+
+      if (selected === undefined) {
+        return;
+      }
+
+      return refreshTreeOnSuccessOrShowError(() => checkoutDevBranch(selected.name));
     }),
   ];
 
