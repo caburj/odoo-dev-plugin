@@ -7,7 +7,11 @@ export class OdooDevBranches implements vscode.TreeDataProvider<OdooDevBranch> {
   readonly onDidChangeTreeData: vscode.Event<OdooDevBranch | undefined | void> =
     this._onDidChangeTreeData.event;
 
-  constructor(private workspaceRoot: string | undefined, private db: OdooPluginDB) {}
+  constructor(
+    private workspaceRoot: string | undefined,
+    private db: OdooPluginDB,
+    private getBaseBranches: () => string[]
+  ) {}
 
   refresh(): void {
     this._onDidChangeTreeData.fire();
@@ -19,8 +23,8 @@ export class OdooDevBranches implements vscode.TreeDataProvider<OdooDevBranch> {
 
   async getChildren(element?: OdooDevBranch): Promise<OdooDevBranch[]> {
     if (!element) {
-      const baseBranches = this.db.getBaseBranches();
-      return baseBranches.map(({ name }) => {
+      const baseBranches = this.getBaseBranches();
+      return baseBranches.map((name) => {
         const devBranches = this.db.getDevBranches(name);
         return new OdooDevBranch(
           name,
