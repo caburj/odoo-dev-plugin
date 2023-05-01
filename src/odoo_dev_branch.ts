@@ -29,7 +29,7 @@ export class OdooDevBranches implements vscode.TreeDataProvider<OdooDevBranch> {
         return new OdooDevBranch(
           name,
           devBranches.length > 0
-            ? vscode.TreeItemCollapsibleState.Collapsed
+            ? vscode.TreeItemCollapsibleState.Expanded
             : vscode.TreeItemCollapsibleState.None
         );
       });

@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import { OdooDevBranches } from "./odoo_dev_branch";
 import { OdooPluginDB } from "./odoo_plugin_db";
-import { GitExtension } from "./git";
+import { GitExtension, Repository } from "./git";
 
 const gitExtension = vscode.extensions.getExtension<GitExtension>("vscode.git")!.exports;
 const git = gitExtension.getAPI(1);
@@ -15,7 +15,51 @@ function inferBaseBranch(devBranchName: string) {
   return splitWithDashFrom(devBranchName, start)[0];
 }
 
-export function activate(context: vscode.ExtensionContext) {
+function getRemoteConfigStatus(
+  repo: Repository,
+  remoteName: string,
+  remoteUrl: string
+): "not-added" | "wrong" | "okay" {
+  for (const remote of repo.state.remotes) {
+    if (remote.name === remoteName) {
+      if (remote.fetchUrl === remoteUrl) {
+        return "okay";
+      } else {
+        return "wrong";
+      }
+    }
+  }
+  return "not-added";
+}
+
+async function ensureRemoteOdooDevConfig(repo: Repository) {
+  const remoteUrl = vscode.workspace.getConfiguration("odooDev").remoteOdooDevUrl as string;
+  const remoteOdooDevConfigStatus = getRemoteConfigStatus(repo, "odoo-dev", remoteUrl);
+  switch (remoteOdooDevConfigStatus) {
+    case "wrong":
+      await repo.removeRemote("odoo-dev");
+      await repo.addRemote("odoo-dev", remoteUrl);
+      break;
+    case "not-added":
+      await repo.addRemote("odoo-dev", remoteUrl);
+      break;
+  }
+}
+
+function callWithSpinner(options: { message: string; cb: () => Thenable<void> }) {
+  return vscode.window.withProgress(
+    {
+      location: vscode.ProgressLocation.Window,
+      cancellable: false,
+    },
+    async (progress) => {
+      progress.report({ message: options.message });
+      await options.cb();
+    }
+  );
+}
+
+export async function activate(context: vscode.ExtensionContext) {
   const db = new OdooPluginDB(context.globalState);
 
   const rootPath =
@@ -35,8 +79,22 @@ export function activate(context: vscode.ExtensionContext) {
 
   const createDevBranch = async (base: string, branch: string) => {
     const odooRepo = getOdooRepo();
-    await odooRepo.checkout(base);
-    await odooRepo.createBranch(branch, true);
+    try {
+      await callWithSpinner({
+        message: "Fetching branch from odoo-dev...",
+        cb: () => odooRepo.fetch("odoo-dev", branch),
+      });
+      await odooRepo.checkout(branch);
+    } catch (error) {
+      await callWithSpinner({
+        message: "Remote branch not found, creating new branch locally...",
+        cb: async () => {
+          // Checkout base first as basis for creating the new branch.
+          await odooRepo.checkout(base);
+          await odooRepo.createBranch(branch, true);
+        },
+      });
+    }
     vscode.window.showInformationMessage(`Successful checkout of '${branch}'`);
   };
 
@@ -46,7 +104,10 @@ export function activate(context: vscode.ExtensionContext) {
       throw new Error(`The current branch is already '${branch}`);
     }
     try {
-      await odooRepo.checkout(branch);
+      await callWithSpinner({
+        message: `Checking out '${branch}' in odoo...`,
+        cb: () => odooRepo.checkout(branch),
+      });
     } catch (error) {
       throw new Error((error as Error & { stderr: string }).stderr);
     }
@@ -75,6 +136,8 @@ export function activate(context: vscode.ExtensionContext) {
 
   const disposables = [
     vscode.commands.registerCommand("odoo-dev-plugin.addDevBranch", async () => {
+      await ensureRemoteOdooDevConfig(getOdooRepo());
+
       const input = await vscode.window.showInputBox({
         placeHolder: "e.g. master-ref-barcode-parser-jcb",
         prompt: "Add new dev branch",
@@ -104,8 +167,8 @@ export function activate(context: vscode.ExtensionContext) {
           vscode.window.showErrorMessage(`'${input}' already exists!`);
           return;
         }
-        db.addDevBranch({ base, name: input });
         await createDevBranch(base, input);
+        db.addDevBranch({ base, name: input });
       });
     }),
     vscode.commands.registerCommand("odoo-dev-plugin.removeDevBranch", async () => {

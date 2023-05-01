@@ -32,6 +32,10 @@
     "configuration": {
       "title": "Odoo Dev",
       "properties": {
+        "odooDev.sourceFolder": {
+          "type": "string",
+          "description": "Folder where odoo/odoo repository is clone. This folder is also expected to have odoo/enterprise, odoo/upgrade and your custom addons folder."
+        },
         "odooDev.baseBranches": {
           "type": "object",
           "additionalProperties": {
@@ -42,9 +46,10 @@
           },
           "description": "List of base branches. Value serves as the sequence number for ordering the items in the Tree View."
         },
-        "odooDev.sourceFolder": {
+        "odooDev.remoteOdooDevUrl": {
           "type": "string",
-          "description": "Folder where odoo/odoo repository is clone. This folder is also expected to have odoo/enterprise, odoo/upgrade and your custom addons folder."
+          "default": "git@github.com:odoo-dev/odoo.git",
+          "description": "This is where dev branches will be fetched."
         }
       }
     },
