@@ -21,6 +21,15 @@ export class OdooDevBranches implements vscode.TreeDataProvider<OdooDevBranch> {
     return element;
   }
 
+  private computeLabel(name: string): string {
+    const activeBranch = this.db.getActiveBranch();
+    if (activeBranch === name) {
+      return `[${name}]`;
+    } else {
+      return name;
+    }
+  }
+
   async getChildren(element?: OdooDevBranch): Promise<OdooDevBranch[]> {
     if (!element) {
       const baseBranches = this.getBaseBranches();
@@ -28,28 +37,34 @@ export class OdooDevBranches implements vscode.TreeDataProvider<OdooDevBranch> {
         const devBranches = this.db.getDevBranches(name);
         return new OdooDevBranch(
           name,
+          this.computeLabel(name),
           devBranches.length > 0
             ? vscode.TreeItemCollapsibleState.Expanded
             : vscode.TreeItemCollapsibleState.None
         );
       });
     } else {
-      const branchName = element.label;
+      const branchName = element.name;
       return this.db
         .getDevBranches(branchName)
-        .map(({ name }) => new OdooDevBranch(name, vscode.TreeItemCollapsibleState.None));
+        .map(
+          ({ name }) =>
+            new OdooDevBranch(name, this.computeLabel(name), vscode.TreeItemCollapsibleState.None)
+        );
     }
   }
 }
 
 export class OdooDevBranch extends vscode.TreeItem {
   constructor(
+    public readonly name: string,
     public readonly label: string,
     public readonly collapsibleState: vscode.TreeItemCollapsibleState,
     public readonly command?: vscode.Command
   ) {
     super(label, collapsibleState);
-    this.tooltip = this.label;
+    this.id = name;
+    this.name = name;
   }
 
   contextValue = "odoo-dev-branch";

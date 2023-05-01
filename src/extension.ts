@@ -95,7 +95,7 @@ export async function activate(context: vscode.ExtensionContext) {
         },
       });
     }
-    vscode.window.showInformationMessage(`Successful checkout of '${branch}'`);
+    vscode.window.showInformationMessage(`Successful checkout: ${branch}`);
   };
 
   const checkoutDevBranch = async (branch: string) => {
@@ -111,7 +111,7 @@ export async function activate(context: vscode.ExtensionContext) {
     } catch (error) {
       throw new Error((error as Error & { stderr: string }).stderr);
     }
-    vscode.window.showInformationMessage(`Successful checkout of '${branch}'`);
+    vscode.window.showInformationMessage(`Successful checkout: ${branch}`);
   };
 
   const getBaseBranches = () => {
@@ -189,9 +189,12 @@ export async function activate(context: vscode.ExtensionContext) {
         db.removeDevBranch(selected);
       });
     }),
-    vscode.commands.registerCommand("odoo-dev-plugin.selectDevBranch", async () => {
+    vscode.commands.registerCommand("odoo-dev-plugin.selectBranch", async () => {
       const devBranches = getBaseBranches()
-        .map((base) => db.getDevBranches(base).map((db) => ({ ...db, base })))
+        .map((base) => [
+          { base, name: base },
+          ...db.getDevBranches(base).map((db) => ({ ...db, base })),
+        ])
         .flat();
 
       const selected = await vscode.window.showQuickPick(
@@ -203,7 +206,11 @@ export async function activate(context: vscode.ExtensionContext) {
         return;
       }
 
-      return refreshTreeOnSuccessOrShowError(() => checkoutDevBranch(selected.name));
+      return refreshTreeOnSuccessOrShowError(async () => {
+        const branch = selected.name;
+        await checkoutDevBranch(branch);
+        db.setActiveBranch(branch);
+      });
     }),
   ];
 

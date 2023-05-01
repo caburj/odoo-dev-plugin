@@ -25,8 +25,8 @@
         "title": "Remove Dev Branch"
       },
       {
-        "command": "odoo-dev-plugin.selectDevBranch",
-        "title": "Select Dev Branch"
+        "command": "odoo-dev-plugin.selectBranch",
+        "title": "Select Branch"
       }
     ],
     "configuration": {

@@ -23,6 +23,12 @@ export class OdooPluginDB {
       this.globalState.update(OdooPluginDB.baseBranchesKey, []);
     }
   }
+  setActiveBranch(branch?: string) {
+    this.globalState.update("active-branch", branch);
+  }
+  getActiveBranch(): string | undefined {
+    return this.globalState.get("active-branch");
+  }
   devBranchExists({ base, name }: DevBranchInput): boolean {
     const devBranches = this.getDevBranches(base);
     return exists(devBranches, (dv) => dv.name === name);
