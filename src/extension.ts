@@ -85,6 +85,7 @@ export async function activate(context: vscode.ExtensionContext) {
         cb: () => odooRepo.fetch("odoo-dev", branch),
       });
       await odooRepo.checkout(branch);
+      db.setActiveBranch(branch);
     } catch (error) {
       await callWithSpinner({
         message: "Remote branch not found, creating new branch locally...",
@@ -92,6 +93,7 @@ export async function activate(context: vscode.ExtensionContext) {
           // Checkout base first as basis for creating the new branch.
           await odooRepo.checkout(base);
           await odooRepo.createBranch(branch, true);
+          db.setActiveBranch(branch);
         },
       });
     }
@@ -112,6 +114,26 @@ export async function activate(context: vscode.ExtensionContext) {
       throw new Error((error as Error & { stderr: string }).stderr);
     }
     vscode.window.showInformationMessage(`Successful checkout: ${branch}`);
+  };
+
+  const selectBranch = async (name: string) => {
+    await checkoutDevBranch(name);
+    db.setActiveBranch(name);
+  };
+
+  const deleteDevBranch = async (name: string) => {
+    const odooRepo = getOdooRepo();
+    try {
+      await callWithSpinner({
+        message: `Deleting '${name}' branch in odoo...`,
+        cb: async () => {
+          await odooRepo.deleteBranch(name, true);
+        },
+      });
+      vscode.window.showInformationMessage(`'${name}' branch deleted.`);
+    } catch (error) {
+      throw new Error((error as { stderr: string }).stderr);
+    }
   };
 
   const getBaseBranches = () => {
@@ -185,7 +207,15 @@ export async function activate(context: vscode.ExtensionContext) {
         return;
       }
 
-      return refreshTreeOnSuccessOrShowError(() => {
+      return refreshTreeOnSuccessOrShowError(async () => {
+        if (selected.base === selected.name) {
+          // Not really possible at the moment. But better be sure.
+          throw new Error(`Deleting base branch '${selected.base}' is not allowed.`);
+        }
+        if (db.getActiveBranch() === selected.name) {
+          await selectBranch(selected.base);
+        }
+        await deleteDevBranch(selected.name);
         db.removeDevBranch(selected);
       });
     }),
@@ -206,11 +236,7 @@ export async function activate(context: vscode.ExtensionContext) {
         return;
       }
 
-      return refreshTreeOnSuccessOrShowError(async () => {
-        const branch = selected.name;
-        await checkoutDevBranch(branch);
-        db.setActiveBranch(branch);
-      });
+      return refreshTreeOnSuccessOrShowError(() => selectBranch(selected.name));
     }),
   ];
 
