@@ -2,6 +2,8 @@ import * as vscode from "vscode";
 import { OdooDevBranches } from "./odoo_dev_branch";
 import { OdooPluginDB } from "./odoo_plugin_db";
 import { GitExtension, Repository } from "./git";
+import { SymbolKind } from "vscode";
+import { DocumentSymbol } from "vscode";
 
 const gitExtension = vscode.extensions.getExtension<GitExtension>("vscode.git")!.exports;
 const git = gitExtension.getAPI(1);
@@ -143,6 +145,16 @@ export async function activate(context: vscode.ExtensionContext) {
     return baseBranches.map((b) => b[0]);
   };
 
+  const getFullTestTag = (
+    addon: string,
+    classSymbol?: DocumentSymbol,
+    methodSymbol?: DocumentSymbol
+  ) => {
+    return `${addon}${classSymbol ? `:${classSymbol.name}` : ""}${
+      methodSymbol ? `.${methodSymbol.name}` : ""
+    }`;
+  };
+
   const treeDataProvider = new OdooDevBranches(rootPath, db, getBaseBranches);
 
   const refreshTreeOnSuccessOrShowError = async (cb: () => void | Promise<void>) => {
@@ -237,6 +249,35 @@ export async function activate(context: vscode.ExtensionContext) {
       }
 
       return refreshTreeOnSuccessOrShowError(() => selectBranch(selected.name));
+    }),
+    vscode.commands.registerCommand("odoo-dev-plugin.getTestTag", async () => {
+      const editor = vscode.window.activeTextEditor;
+      if (editor) {
+        const match = editor.document.uri.path.match(/.*\/addons\/(.*)\/tests\/test_.*\.py/);
+        const [, addon] = match || [undefined, undefined];
+        if (!addon) {
+          vscode.window.showErrorMessage("Invalid file");
+          return;
+        }
+        const position = editor.selection.active;
+        const symbols = await vscode.commands.executeCommand<vscode.DocumentSymbol[]>(
+          "vscode.executeDocumentSymbolProvider",
+          editor.document.uri
+        );
+        // Find the class it belongs, followed by the method.
+        const classSymbol = symbols.find(
+          (s) => s.kind === SymbolKind.Class && s.range.contains(position)
+        );
+        const methodSymbol = classSymbol
+          ? classSymbol.children.find(
+              (s) =>
+                /^test.*/.test(s.name) && s.kind === SymbolKind.Method && s.range.contains(position)
+            )
+          : undefined;
+        const testTag = getFullTestTag(addon, classSymbol, methodSymbol);
+        await vscode.env.clipboard.writeText(testTag);
+        vscode.window.showInformationMessage(`'${testTag}' is added to clipboard.`);
+      }
     }),
   ];
 

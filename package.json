@@ -27,6 +27,10 @@
       {
         "command": "odoo-dev-plugin.selectBranch",
         "title": "Select Branch"
+      },
+      {
+        "command": "odoo-dev-plugin.getTestTag",
+        "title": "Get Test Tag"
       }
     ],
     "configuration": {
