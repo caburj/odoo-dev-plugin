@@ -158,14 +158,38 @@ export async function activate(context: vscode.ExtensionContext) {
     return baseBranches.map((b) => b[0]);
   };
 
-  const getFullTestTag = (
-    addon: string,
-    classSymbol?: DocumentSymbol,
-    methodSymbol?: DocumentSymbol
-  ) => {
+  const getTestTag = async (editor: vscode.TextEditor) => {
+    const match = editor.document.uri.path.match(/.*\/addons\/(.*)\/tests\/test_.*\.py/);
+    const [, addon] = match || [undefined, undefined];
+    if (!addon) {
+      throw new Error("Current file is not a test file.");
+    }
+    const position = editor.selection.active;
+    const symbols = await vscode.commands.executeCommand<vscode.DocumentSymbol[]>(
+      "vscode.executeDocumentSymbolProvider",
+      editor.document.uri
+    );
+    // Find the class it belongs, followed by the method.
+    const classSymbol = symbols.find(
+      (s) => s.kind === SymbolKind.Class && s.range.contains(position)
+    );
+    const methodSymbol = classSymbol
+      ? classSymbol.children.find(
+          (s) =>
+            /^test.*/.test(s.name) && s.kind === SymbolKind.Method && s.range.contains(position)
+        )
+      : undefined;
     return `${addon}${classSymbol ? `:${classSymbol.name}` : ""}${
       methodSymbol ? `.${methodSymbol.name}` : ""
     }`;
+  };
+
+  const getTestFilePath = (editor: vscode.TextEditor) => {
+    const isTestFile = /.*\/addons\/(.*)\/tests\/test_.*\.py/.test(editor.document.uri.path);
+    if (!isTestFile) {
+      throw new Error("Current file is not a test file.");
+    }
+    return editor.document.uri.path;
   };
 
   const treeDataProvider = new OdooDevBranches(rootPath, db, getBaseBranches);
@@ -182,7 +206,7 @@ export async function activate(context: vscode.ExtensionContext) {
   vscode.window.registerTreeDataProvider("odoo-dev-branches", treeDataProvider);
 
   const disposables = [
-    vscode.commands.registerCommand("odoo-dev-plugin.addDevBranch", async () => {
+    vscode.commands.registerCommand("odoo-dev-plugin.addBranch", async () => {
       await ensureRemoteOdooDevConfig(getOdooRepo());
 
       const input = await vscode.window.showInputBox({
@@ -218,7 +242,7 @@ export async function activate(context: vscode.ExtensionContext) {
         db.addDevBranch({ base, name: input });
       });
     }),
-    vscode.commands.registerCommand("odoo-dev-plugin.removeDevBranch", async () => {
+    vscode.commands.registerCommand("odoo-dev-plugin.removeBranch", async () => {
       const devBranches = getBaseBranches()
         .map((base) => db.getDevBranches(base).map((db) => ({ ...db, base })))
         .flat();
@@ -292,33 +316,136 @@ export async function activate(context: vscode.ExtensionContext) {
       };
       await vscode.debug.startDebugging(undefined, debugOdooPythonLaunchConfig);
     }),
+    vscode.commands.registerCommand("odoo-dev-plugin.startSelectedTest", async () => {
+      try {
+        let terminal = vscode.window.activeTerminal;
+        if (!terminal) {
+          terminal = vscode.window.createTerminal({
+            name: "Odoo Terminal",
+            cwd: `${vscode.workspace.getConfiguration("odooDev").sourceFolder}/odoo`,
+          });
+          terminal.show();
+        }
+
+        const editor = vscode.window.activeTextEditor;
+        if (!editor) {
+          throw new Error(
+            "Open the test file and put the cursor in the test method you want to start."
+          );
+        }
+        const testTag = await getTestTag(editor);
+        const python = vscode.workspace.getConfiguration("python").defaultInterpreterPath;
+        const odooBin = `${
+          vscode.workspace.getConfiguration("odooDev").sourceFolder
+        }/odoo/odoo-bin`;
+        const configFile = `${
+          vscode.workspace.getConfiguration("odooDev").sourceFolder
+        }/.odoo-dev-plugin/odoo.conf`;
+
+        terminal.sendText(
+          `${python} ${odooBin} -c ${configFile} --stop-after-init --test-enable --test-tags ${testTag}`
+        );
+      } catch (error) {
+        vscode.window.showErrorMessage((error as Error).message);
+      }
+    }),
+    vscode.commands.registerCommand("odoo-dev-plugin.debugSelectedTest", async () => {
+      const editor = vscode.window.activeTextEditor;
+      if (!editor) {
+        vscode.window.showErrorMessage("There is no selected test.");
+        return;
+      }
+
+      try {
+        const testTag = await getTestTag(editor);
+        const debugOdooPythonLaunchConfig: vscode.DebugConfiguration = {
+          name: "Debug Odoo Python",
+          type: "python",
+          request: "launch",
+          stopOnEntry: false,
+          python: "${command:python.interpreterPath}",
+          console: "integratedTerminal",
+          program: "${workspaceFolder:odoo}/odoo-bin",
+          args: [
+            "-c",
+            "${workspaceFolder:.odoo-dev-plugin}/odoo.conf",
+            "--stop-after-init",
+            "--test-enable",
+            "--test-tags",
+            testTag,
+          ],
+        };
+        await vscode.debug.startDebugging(undefined, debugOdooPythonLaunchConfig);
+      } catch (error) {
+        vscode.window.showErrorMessage((error as Error).message);
+      }
+    }),
+    vscode.commands.registerCommand("odoo-dev-plugin.startCurrentTestFile", async () => {
+      try {
+        let terminal = vscode.window.activeTerminal;
+        if (!terminal) {
+          terminal = vscode.window.createTerminal({
+            name: "Odoo Terminal",
+            cwd: `${vscode.workspace.getConfiguration("odooDev").sourceFolder}/odoo`,
+          });
+          terminal.show();
+        }
+
+        const editor = vscode.window.activeTextEditor;
+        if (!editor) {
+          throw new Error("Please open a file.");
+        }
+        const testFilePath = getTestFilePath(editor);
+        const python = vscode.workspace.getConfiguration("python").defaultInterpreterPath;
+        const odooBin = `${
+          vscode.workspace.getConfiguration("odooDev").sourceFolder
+        }/odoo/odoo-bin`;
+        const configFile = `${
+          vscode.workspace.getConfiguration("odooDev").sourceFolder
+        }/.odoo-dev-plugin/odoo.conf`;
+
+        terminal.sendText(
+          `${python} ${odooBin} -c ${configFile} --stop-after-init --test-file ${testFilePath}`
+        );
+      } catch (error) {
+        vscode.window.showErrorMessage((error as Error).message);
+      }
+    }),
+    vscode.commands.registerCommand("odoo-dev-plugin.debugCurrentTestFile", async () => {
+      const editor = vscode.window.activeTextEditor;
+      if (!editor) {
+        vscode.window.showErrorMessage("There is no selected test.");
+        return;
+      }
+
+      try {
+        const testFilePath = getTestFilePath(editor);
+        const debugOdooPythonLaunchConfig: vscode.DebugConfiguration = {
+          name: "Debug Odoo Python",
+          type: "python",
+          request: "launch",
+          stopOnEntry: false,
+          python: "${command:python.interpreterPath}",
+          console: "integratedTerminal",
+          program: "${workspaceFolder:odoo}/odoo-bin",
+          args: [
+            "-c",
+            "${workspaceFolder:.odoo-dev-plugin}/odoo.conf",
+            "--stop-after-init",
+            "--test-file",
+            testFilePath,
+          ],
+        };
+        await vscode.debug.startDebugging(undefined, debugOdooPythonLaunchConfig);
+      } catch (error) {
+        vscode.window.showErrorMessage((error as Error).message);
+      }
+    }),
     vscode.commands.registerCommand("odoo-dev-plugin.getTestTag", async () => {
       const editor = vscode.window.activeTextEditor;
       if (editor) {
-        const match = editor.document.uri.path.match(/.*\/addons\/(.*)\/tests\/test_.*\.py/);
-        const [, addon] = match || [undefined, undefined];
-        if (!addon) {
-          vscode.window.showErrorMessage("Invalid file");
-          return;
-        }
-        const position = editor.selection.active;
-        const symbols = await vscode.commands.executeCommand<vscode.DocumentSymbol[]>(
-          "vscode.executeDocumentSymbolProvider",
-          editor.document.uri
-        );
-        // Find the class it belongs, followed by the method.
-        const classSymbol = symbols.find(
-          (s) => s.kind === SymbolKind.Class && s.range.contains(position)
-        );
-        const methodSymbol = classSymbol
-          ? classSymbol.children.find(
-              (s) =>
-                /^test.*/.test(s.name) && s.kind === SymbolKind.Method && s.range.contains(position)
-            )
-          : undefined;
-        const testTag = getFullTestTag(addon, classSymbol, methodSymbol);
+        const testTag = await getTestTag(editor);
         await vscode.env.clipboard.writeText(testTag);
-        vscode.window.showInformationMessage(`'${testTag}' is added to clipboard.`);
       }
     }),
     vscode.commands.registerCommand("odoo-dev-plugin.getLocalServerUrl", async () => {
@@ -332,7 +459,7 @@ export async function activate(context: vscode.ExtensionContext) {
         vscode.window.showErrorMessage((error as Error).message);
       }
     }),
-    vscode.commands.registerCommand("odoo-dev-plugin.openDefaultConf", () => {
+    vscode.commands.registerCommand("odoo-dev-plugin.openOdooConf", () => {
       const odooDevPluginFolder = vscode.workspace.workspaceFolders?.find(
         (f) => f.name === ".odoo-dev-plugin"
       );

@@ -17,36 +17,52 @@
   "contributes": {
     "commands": [
       {
-        "command": "odoo-dev-plugin.addDevBranch",
-        "title": "Add Dev Branch"
+        "command": "odoo-dev-plugin.addBranch",
+        "title": "Odoo Dev: Add Branch"
       },
       {
-        "command": "odoo-dev-plugin.removeDevBranch",
-        "title": "Remove Dev Branch"
+        "command": "odoo-dev-plugin.removeBranch",
+        "title": "Odoo Dev: Remove Branch"
       },
       {
         "command": "odoo-dev-plugin.selectBranch",
-        "title": "Select Branch"
+        "title": "Odoo Dev: Select Branch"
       },
       {
         "command": "odoo-dev-plugin.startServer",
-        "title": "Start Odoo Server"
+        "title": "Odoo Dev: Start Server"
       },
       {
         "command": "odoo-dev-plugin.debugServer",
-        "title": "Debug Odoo Server"
+        "title": "Odoo Dev: Debug Server"
+      },
+      {
+        "command": "odoo-dev-plugin.startSelectedTest",
+        "title": "Odoo Dev: Start Selected Test"
+      },
+      {
+        "command": "odoo-dev-plugin.debugSelectedTest",
+        "title": "Odoo Dev: Debug Selected Test"
+      },
+      {
+        "command": "odoo-dev-plugin.startCurrentTestFile",
+        "title": "Odoo Dev: Start Current Test File"
+      },
+      {
+        "command": "odoo-dev-plugin.debugCurrentTestFile",
+        "title": "Odoo Dev: Debug Current Test File"
       },
       {
         "command": "odoo-dev-plugin.getTestTag",
-        "title": "Get Test Tag"
+        "title": "Odoo Dev: Get Test Tag"
       },
       {
         "command": "odoo-dev-plugin.getLocalServerUrl",
-        "title": "Get Odoo Server Url"
+        "title": "Odoo Dev: Get Server Url"
       },
       {
-        "command": "odoo-dev-plugin.openDefaultConf",
-        "title": "Open Odoo Conf"
+        "command": "odoo-dev-plugin.openOdooConf",
+        "title": "Odoo Dev: Open Config File"
       }
     ],
     "configuration": {
