@@ -1,4 +1,5 @@
 import * as vscode from "vscode";
+import * as child_process from "child_process";
 import { OdooDevBranches } from "./odoo_dev_branch";
 import { OdooPluginDB } from "./odoo_plugin_db";
 import { GitExtension, Repository } from "./git";
@@ -32,6 +33,18 @@ function getRemoteConfigStatus(
     }
   }
   return "not-added";
+}
+
+function runShellCommand(command: string): Promise<string> {
+  return new Promise<string>((resolve, reject) => {
+    child_process.exec(command, (error, stdout, stderr) => {
+      if (error) {
+        reject(error);
+      } else {
+        resolve(stdout.toString());
+      }
+    });
+  });
 }
 
 async function ensureRemoteOdooDevConfig(repo: Repository) {
@@ -250,6 +263,35 @@ export async function activate(context: vscode.ExtensionContext) {
 
       return refreshTreeOnSuccessOrShowError(() => selectBranch(selected.name));
     }),
+    vscode.commands.registerCommand("odoo-dev-plugin.startServer", async () => {
+      let terminal = vscode.window.activeTerminal;
+      if (!terminal) {
+        terminal = vscode.window.createTerminal({
+          name: "Odoo Terminal",
+          cwd: `${vscode.workspace.getConfiguration("odooDev").sourceFolder}/odoo`,
+        });
+        terminal.show();
+      }
+      const python = vscode.workspace.getConfiguration("python").defaultInterpreterPath;
+      const odooBin = `${vscode.workspace.getConfiguration("odooDev").sourceFolder}/odoo/odoo-bin`;
+      const configFile = `${
+        vscode.workspace.getConfiguration("odooDev").sourceFolder
+      }/.odoo-dev-plugin/odoo.conf`;
+      terminal.sendText(`${python} ${odooBin} -c ${configFile}`);
+    }),
+    vscode.commands.registerCommand("odoo-dev-plugin.debugServer", async () => {
+      const debugOdooPythonLaunchConfig: vscode.DebugConfiguration = {
+        name: "Debug Odoo Python",
+        type: "python",
+        request: "launch",
+        stopOnEntry: false,
+        python: "${command:python.interpreterPath}",
+        console: "integratedTerminal",
+        program: "${workspaceFolder:odoo}/odoo-bin",
+        args: ["-c", "${workspaceFolder:.odoo-dev-plugin}/odoo.conf"],
+      };
+      await vscode.debug.startDebugging(undefined, debugOdooPythonLaunchConfig);
+    }),
     vscode.commands.registerCommand("odoo-dev-plugin.getTestTag", async () => {
       const editor = vscode.window.activeTextEditor;
       if (editor) {
@@ -277,6 +319,36 @@ export async function activate(context: vscode.ExtensionContext) {
         const testTag = getFullTestTag(addon, classSymbol, methodSymbol);
         await vscode.env.clipboard.writeText(testTag);
         vscode.window.showInformationMessage(`'${testTag}' is added to clipboard.`);
+      }
+    }),
+    vscode.commands.registerCommand("odoo-dev-plugin.getLocalServerUrl", async () => {
+      try {
+        const ip = await runShellCommand(
+          `ifconfig en0 | grep "inet " | grep -v 127.0.0.1 | awk '{print $2}'`
+        );
+        const url = `http://${ip.trim()}:8070`;
+        await vscode.env.clipboard.writeText(url);
+      } catch (error) {
+        vscode.window.showErrorMessage((error as Error).message);
+      }
+    }),
+    vscode.commands.registerCommand("odoo-dev-plugin.openDefaultConf", () => {
+      const odooDevPluginFolder = vscode.workspace.workspaceFolders?.find(
+        (f) => f.name === ".odoo-dev-plugin"
+      );
+      if (!odooDevPluginFolder) {
+        vscode.window.showErrorMessage(
+          `'.odoo-dev-plugin' folder is missing from the source folder.`
+        );
+        return;
+      }
+      const confUri = vscode.Uri.joinPath(odooDevPluginFolder.uri, "odoo.conf");
+      if (confUri) {
+        vscode.window.showTextDocument(confUri);
+      } else {
+        vscode.window.showErrorMessage(
+          `'odoo.conf' file is missing in the '.odoo-dev-plugin' folder.`
+        );
       }
     }),
   ];

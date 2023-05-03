@@ -29,8 +29,24 @@
         "title": "Select Branch"
       },
       {
+        "command": "odoo-dev-plugin.startServer",
+        "title": "Start Odoo Server"
+      },
+      {
+        "command": "odoo-dev-plugin.debugServer",
+        "title": "Debug Odoo Server"
+      },
+      {
         "command": "odoo-dev-plugin.getTestTag",
         "title": "Get Test Tag"
+      },
+      {
+        "command": "odoo-dev-plugin.getLocalServerUrl",
+        "title": "Get Odoo Server Url"
+      },
+      {
+        "command": "odoo-dev-plugin.openDefaultConf",
+        "title": "Open Odoo Conf"
       }
     ],
     "configuration": {
