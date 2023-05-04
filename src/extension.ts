@@ -3,7 +3,7 @@ import * as child_process from "child_process";
 import { OdooDevBranches } from "./odoo_dev_branch";
 import { OdooPluginDB } from "./odoo_plugin_db";
 import { GitExtension, Repository } from "./git";
-import { screamOnError } from "./utils";
+import { getFoldersInDirectory, screamOnError } from "./utils";
 
 const gitExtension = vscode.extensions.getExtension<GitExtension>("vscode.git")!.exports;
 const git = gitExtension.getAPI(1);
@@ -71,6 +71,13 @@ function callWithSpinner(options: { message: string; cb: () => Thenable<void> })
       await options.cb();
     }
   );
+}
+
+async function multiSelectAddons() {
+  const addons = getFoldersInDirectory(
+    `${vscode.workspace.getConfiguration("odooDev").sourceFolder}/odoo/addons`
+  );
+  return vscode.window.showQuickPick(addons, { canPickMany: true });
 }
 
 export async function activate(context: vscode.ExtensionContext) {
@@ -190,7 +197,9 @@ export async function activate(context: vscode.ExtensionContext) {
     const methodSymbol = classSymbol
       ? classSymbol.children.find(
           (s) =>
-            /^test.*/.test(s.name) && s.kind === vscode.SymbolKind.Method && s.range.contains(position)
+            /^test.*/.test(s.name) &&
+            s.kind === vscode.SymbolKind.Method &&
+            s.range.contains(position)
         )
       : undefined;
     return `${addon}${classSymbol ? `:${classSymbol.name}` : ""}${
@@ -328,6 +337,100 @@ export async function activate(context: vscode.ExtensionContext) {
           console: "integratedTerminal",
           program: "${workspaceFolder:odoo}/odoo-bin",
           args: ["-c", "${workspaceFolder:.odoo-dev-plugin}/odoo.conf"],
+        };
+        await vscode.debug.startDebugging(undefined, debugOdooPythonLaunchConfig);
+      })
+    ),
+    vscode.commands.registerCommand(
+      "odoo-dev-plugin.startServerWithInstall",
+      screamOnError(async () => {
+        const selectedAddons = await multiSelectAddons();
+        if (!selectedAddons) {
+          return;
+        }
+
+        const python = vscode.workspace.getConfiguration("python").defaultInterpreterPath;
+        const odooBin = `${
+          vscode.workspace.getConfiguration("odooDev").sourceFolder
+        }/odoo/odoo-bin`;
+        const configFile = `${
+          vscode.workspace.getConfiguration("odooDev").sourceFolder
+        }/.odoo-dev-plugin/odoo.conf`;
+        const command = `${python} ${odooBin} -c ${configFile}${
+          selectedAddons.length > 1 ? ` -i ${selectedAddons.join(",")}` : ""
+        }`;
+        getOdooDevTerminal().sendText(command);
+      })
+    ),
+    vscode.commands.registerCommand(
+      "odoo-dev-plugin.debugServerWithInstall",
+      screamOnError(async () => {
+        const selectedAddons = await multiSelectAddons();
+        if (!selectedAddons) {
+          return;
+        }
+
+        const debugOdooPythonLaunchConfig: vscode.DebugConfiguration = {
+          name: "Debug Odoo Python",
+          type: "python",
+          request: "launch",
+          stopOnEntry: false,
+          python: "${command:python.interpreterPath}",
+          console: "integratedTerminal",
+          program: "${workspaceFolder:odoo}/odoo-bin",
+          args: [
+            "-c",
+            "${workspaceFolder:.odoo-dev-plugin}/odoo.conf",
+            "-i",
+            selectedAddons.join(","),
+          ],
+        };
+        await vscode.debug.startDebugging(undefined, debugOdooPythonLaunchConfig);
+      })
+    ),
+    vscode.commands.registerCommand(
+      "odoo-dev-plugin.startServerWithUpdate",
+      screamOnError(async () => {
+        const selectedAddons = await multiSelectAddons();
+        if (!selectedAddons) {
+          return;
+        }
+
+        const python = vscode.workspace.getConfiguration("python").defaultInterpreterPath;
+        const odooBin = `${
+          vscode.workspace.getConfiguration("odooDev").sourceFolder
+        }/odoo/odoo-bin`;
+        const configFile = `${
+          vscode.workspace.getConfiguration("odooDev").sourceFolder
+        }/.odoo-dev-plugin/odoo.conf`;
+        const command = `${python} ${odooBin} -c ${configFile}${
+          selectedAddons.length > 0 ? ` -u ${selectedAddons.join(",")}` : ""
+        }`;
+        getOdooDevTerminal().sendText(command);
+      })
+    ),
+    vscode.commands.registerCommand(
+      "odoo-dev-plugin.debugServerWithUpdate",
+      screamOnError(async () => {
+        const selectedAddons = await multiSelectAddons();
+        if (!selectedAddons) {
+          return;
+        }
+
+        const debugOdooPythonLaunchConfig: vscode.DebugConfiguration = {
+          name: "Debug Odoo Python",
+          type: "python",
+          request: "launch",
+          stopOnEntry: false,
+          python: "${command:python.interpreterPath}",
+          console: "integratedTerminal",
+          program: "${workspaceFolder:odoo}/odoo-bin",
+          args: [
+            "-c",
+            "${workspaceFolder:.odoo-dev-plugin}/odoo.conf",
+            "-u",
+            selectedAddons.join(","),
+          ],
         };
         await vscode.debug.startDebugging(undefined, debugOdooPythonLaunchConfig);
       })

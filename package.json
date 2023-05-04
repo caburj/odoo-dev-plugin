@@ -37,6 +37,22 @@
         "title": "Odoo Dev: Debug Server"
       },
       {
+        "command": "odoo-dev-plugin.startServerWithInstall",
+        "title": "Odoo Dev: Start Server With Install..."
+      },
+      {
+        "command": "odoo-dev-plugin.debugServerWithInstall",
+        "title": "Odoo Dev: Debug Server With Install..."
+      },
+      {
+        "command": "odoo-dev-plugin.startServerWithUpdate",
+        "title": "Odoo Dev: Start Server With Update..."
+      },
+      {
+        "command": "odoo-dev-plugin.debugServerWithUpdate",
+        "title": "Odoo Dev: Debug Server With Update..."
+      },
+      {
         "command": "odoo-dev-plugin.startSelectedTest",
         "title": "Odoo Dev: Start Selected Test"
       },
