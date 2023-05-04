@@ -76,6 +76,24 @@ function callWithSpinner(options: { message: string; cb: () => Thenable<void> })
 export async function activate(context: vscode.ExtensionContext) {
   const db = new OdooPluginDB(context.globalState);
 
+  let odooDevTerminal: vscode.Terminal | undefined;
+
+  const getOdooDevTerminal = () => {
+    if (!odooDevTerminal) {
+      odooDevTerminal = vscode.window.createTerminal({
+        name: "Odoo Dev Terminal",
+        cwd: `${vscode.workspace.getConfiguration("odooDev").sourceFolder}/odoo`,
+      });
+      vscode.window.onDidCloseTerminal((t) => {
+        if (t === odooDevTerminal) {
+          odooDevTerminal = undefined;
+        }
+      });
+      odooDevTerminal.show();
+    }
+    return odooDevTerminal;
+  };
+
   const rootPath =
     vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0
       ? vscode.workspace.workspaceFolders[0].uri.fsPath
@@ -280,14 +298,7 @@ export async function activate(context: vscode.ExtensionContext) {
       return refreshTreeOnSuccessOrShowError(() => selectBranch(selected.name));
     }),
     vscode.commands.registerCommand("odoo-dev-plugin.startServer", async () => {
-      let terminal = vscode.window.activeTerminal;
-      if (!terminal) {
-        terminal = vscode.window.createTerminal({
-          name: "Odoo Terminal",
-          cwd: `${vscode.workspace.getConfiguration("odooDev").sourceFolder}/odoo`,
-        });
-        terminal.show();
-      }
+      const terminal = getOdooDevTerminal();
       const python = vscode.workspace.getConfiguration("python").defaultInterpreterPath;
       const odooBin = `${vscode.workspace.getConfiguration("odooDev").sourceFolder}/odoo/odoo-bin`;
       const configFile = `${
@@ -310,15 +321,7 @@ export async function activate(context: vscode.ExtensionContext) {
     }),
     vscode.commands.registerCommand("odoo-dev-plugin.startSelectedTest", async () => {
       try {
-        let terminal = vscode.window.activeTerminal;
-        if (!terminal) {
-          terminal = vscode.window.createTerminal({
-            name: "Odoo Terminal",
-            cwd: `${vscode.workspace.getConfiguration("odooDev").sourceFolder}/odoo`,
-          });
-          terminal.show();
-        }
-
+        const terminal = getOdooDevTerminal();
         const editor = vscode.window.activeTextEditor;
         if (!editor) {
           throw new Error(
@@ -374,18 +377,10 @@ export async function activate(context: vscode.ExtensionContext) {
     }),
     vscode.commands.registerCommand("odoo-dev-plugin.startCurrentTestFile", async () => {
       try {
-        let terminal = vscode.window.activeTerminal;
-        if (!terminal) {
-          terminal = vscode.window.createTerminal({
-            name: "Odoo Terminal",
-            cwd: `${vscode.workspace.getConfiguration("odooDev").sourceFolder}/odoo`,
-          });
-          terminal.show();
-        }
-
+        const terminal = getOdooDevTerminal();
         const editor = vscode.window.activeTextEditor;
         if (!editor) {
-          throw new Error("Please open a file.");
+          throw new Error("Open a test file.");
         }
         const testFilePath = getTestFilePath(editor);
         const python = vscode.workspace.getConfiguration("python").defaultInterpreterPath;
@@ -409,7 +404,6 @@ export async function activate(context: vscode.ExtensionContext) {
         vscode.window.showErrorMessage("There is no selected test.");
         return;
       }
-
       try {
         const testFilePath = getTestFilePath(editor);
         const debugOdooPythonLaunchConfig: vscode.DebugConfiguration = {
