@@ -3,7 +3,7 @@ import * as child_process from "child_process";
 import { OdooDevBranches } from "./odoo_dev_branch";
 import { OdooPluginDB } from "./odoo_plugin_db";
 import { GitExtension, Repository } from "./git";
-import { SymbolKind } from "vscode";
+import { screamOnError } from "./utils";
 
 const gitExtension = vscode.extensions.getExtension<GitExtension>("vscode.git")!.exports;
 const git = gitExtension.getAPI(1);
@@ -185,12 +185,12 @@ export async function activate(context: vscode.ExtensionContext) {
     );
     // Find the class it belongs, followed by the method.
     const classSymbol = symbols.find(
-      (s) => s.kind === SymbolKind.Class && s.range.contains(position)
+      (s) => s.kind === vscode.SymbolKind.Class && s.range.contains(position)
     );
     const methodSymbol = classSymbol
       ? classSymbol.children.find(
           (s) =>
-            /^test.*/.test(s.name) && s.kind === SymbolKind.Method && s.range.contains(position)
+            /^test.*/.test(s.name) && s.kind === vscode.SymbolKind.Method && s.range.contains(position)
         )
       : undefined;
     return `${addon}${classSymbol ? `:${classSymbol.name}` : ""}${
@@ -208,119 +208,133 @@ export async function activate(context: vscode.ExtensionContext) {
 
   const treeDataProvider = new OdooDevBranches(rootPath, db, getBaseBranches);
 
-  const refreshTreeOnSuccessOrShowError = async (cb: () => void | Promise<void>) => {
-    try {
-      await cb();
-      treeDataProvider.refresh();
-    } catch (error) {
-      vscode.window.showErrorMessage((error as Error).message);
-    }
+  const refreshTreeOnSuccess = async (cb: () => void | Promise<void>) => {
+    await cb();
+    treeDataProvider.refresh();
   };
 
   vscode.window.registerTreeDataProvider("odoo-dev-branches", treeDataProvider);
 
   const disposables = [
-    vscode.commands.registerCommand("odoo-dev-plugin.addBranch", async () => {
-      await ensureRemoteOdooDevConfig(getOdooRepo());
+    vscode.commands.registerCommand(
+      "odoo-dev-plugin.addBranch",
+      screamOnError(async () => {
+        await ensureRemoteOdooDevConfig(getOdooRepo());
 
-      const input = await vscode.window.showInputBox({
-        placeHolder: "e.g. master-ref-barcode-parser-jcb",
-        prompt: "Add new dev branch",
-      });
+        const input = await vscode.window.showInputBox({
+          placeHolder: "e.g. master-ref-barcode-parser-jcb",
+          prompt: "Add new dev branch",
+        });
 
-      if (input === undefined) {
-        return;
-      }
-
-      if (input === "") {
-        vscode.window.showErrorMessage("Empty input is invalid.");
-        return;
-      }
-
-      const base = inferBaseBranch(input);
-
-      return refreshTreeOnSuccessOrShowError(async () => {
-        const odooDevConfig = vscode.workspace.getConfiguration("odooDev");
-        const baseBrances = odooDevConfig.baseBranches as Record<string, number>;
-
-        if (!(base in baseBrances)) {
-          await odooDevConfig.update("baseBranches", { ...baseBrances, [base]: 100 }, true);
-        } else if (db.devBranchExists({ base, name: input })) {
-          throw new Error(`'${input}' already exists!`);
+        if (input === undefined) {
+          return;
         }
-        await createDevBranch(base, input);
-        db.addDevBranch({ base, name: input });
-      });
-    }),
-    vscode.commands.registerCommand("odoo-dev-plugin.removeBranch", async () => {
-      const devBranches = getBaseBranches()
-        .map((base) => db.getDevBranches(base).map((db) => ({ ...db, base })))
-        .flat();
 
-      const selected = await vscode.window.showQuickPick(
-        devBranches.map((b) => ({ ...b, label: b.name })),
-        { title: "Select the dev branch to remove" }
-      );
-
-      if (selected === undefined) {
-        return;
-      }
-
-      return refreshTreeOnSuccessOrShowError(async () => {
-        if (selected.base === selected.name) {
-          // Not really possible at the moment. But better be sure.
-          throw new Error(`Deleting base branch '${selected.base}' is not allowed.`);
+        if (input === "") {
+          vscode.window.showErrorMessage("Empty input is invalid.");
+          return;
         }
-        if (db.getActiveBranch() === selected.name) {
-          await selectBranch(selected.base);
+
+        const base = inferBaseBranch(input);
+
+        return refreshTreeOnSuccess(async () => {
+          const odooDevConfig = vscode.workspace.getConfiguration("odooDev");
+          const baseBrances = odooDevConfig.baseBranches as Record<string, number>;
+
+          if (!(base in baseBrances)) {
+            await odooDevConfig.update("baseBranches", { ...baseBrances, [base]: 100 }, true);
+          } else if (db.devBranchExists({ base, name: input })) {
+            throw new Error(`'${input}' already exists!`);
+          }
+          await createDevBranch(base, input);
+          db.addDevBranch({ base, name: input });
+        });
+      })
+    ),
+    vscode.commands.registerCommand(
+      "odoo-dev-plugin.removeBranch",
+      screamOnError(async () => {
+        const devBranches = getBaseBranches()
+          .map((base) => db.getDevBranches(base).map((db) => ({ ...db, base })))
+          .flat();
+
+        const selected = await vscode.window.showQuickPick(
+          devBranches.map((b) => ({ ...b, label: b.name })),
+          { title: "Select the dev branch to remove" }
+        );
+
+        if (selected === undefined) {
+          return;
         }
-        await deleteDevBranch(selected.name);
-        db.removeDevBranch(selected);
-      });
-    }),
-    vscode.commands.registerCommand("odoo-dev-plugin.selectBranch", async () => {
-      const devBranches = getBaseBranches()
-        .map((base) => [
-          { base, name: base },
-          ...db.getDevBranches(base).map((db) => ({ ...db, base })),
-        ])
-        .flat();
 
-      const selected = await vscode.window.showQuickPick(
-        devBranches.map((b) => ({ ...b, label: b.name })),
-        { title: "Choose from the list" }
-      );
+        return refreshTreeOnSuccess(async () => {
+          if (selected.base === selected.name) {
+            // Not really possible at the moment. But better be sure.
+            throw new Error(`Deleting base branch '${selected.base}' is not allowed.`);
+          }
+          if (db.getActiveBranch() === selected.name) {
+            await selectBranch(selected.base);
+          }
+          await deleteDevBranch(selected.name);
+          db.removeDevBranch(selected);
+        });
+      })
+    ),
+    vscode.commands.registerCommand(
+      "odoo-dev-plugin.selectBranch",
+      screamOnError(async () => {
+        const devBranches = getBaseBranches()
+          .map((base) => [
+            { base, name: base },
+            ...db.getDevBranches(base).map((db) => ({ ...db, base })),
+          ])
+          .flat();
 
-      if (selected === undefined) {
-        return;
-      }
+        const selected = await vscode.window.showQuickPick(
+          devBranches.map((b) => ({ ...b, label: b.name })),
+          { title: "Choose from the list" }
+        );
 
-      return refreshTreeOnSuccessOrShowError(() => selectBranch(selected.name));
-    }),
-    vscode.commands.registerCommand("odoo-dev-plugin.startServer", async () => {
-      const terminal = getOdooDevTerminal();
-      const python = vscode.workspace.getConfiguration("python").defaultInterpreterPath;
-      const odooBin = `${vscode.workspace.getConfiguration("odooDev").sourceFolder}/odoo/odoo-bin`;
-      const configFile = `${
-        vscode.workspace.getConfiguration("odooDev").sourceFolder
-      }/.odoo-dev-plugin/odoo.conf`;
-      terminal.sendText(`${python} ${odooBin} -c ${configFile}`);
-    }),
-    vscode.commands.registerCommand("odoo-dev-plugin.debugServer", async () => {
-      const debugOdooPythonLaunchConfig: vscode.DebugConfiguration = {
-        name: "Debug Odoo Python",
-        type: "python",
-        request: "launch",
-        stopOnEntry: false,
-        python: "${command:python.interpreterPath}",
-        console: "integratedTerminal",
-        program: "${workspaceFolder:odoo}/odoo-bin",
-        args: ["-c", "${workspaceFolder:.odoo-dev-plugin}/odoo.conf"],
-      };
-      await vscode.debug.startDebugging(undefined, debugOdooPythonLaunchConfig);
-    }),
-    vscode.commands.registerCommand("odoo-dev-plugin.startSelectedTest", async () => {
-      try {
+        if (selected === undefined) {
+          return;
+        }
+
+        return refreshTreeOnSuccess(() => selectBranch(selected.name));
+      })
+    ),
+    vscode.commands.registerCommand(
+      "odoo-dev-plugin.startServer",
+      screamOnError(async () => {
+        const python = vscode.workspace.getConfiguration("python").defaultInterpreterPath;
+        const odooBin = `${
+          vscode.workspace.getConfiguration("odooDev").sourceFolder
+        }/odoo/odoo-bin`;
+        const configFile = `${
+          vscode.workspace.getConfiguration("odooDev").sourceFolder
+        }/.odoo-dev-plugin/odoo.conf`;
+        const terminal = getOdooDevTerminal();
+        terminal.sendText(`${python} ${odooBin} -c ${configFile}`);
+      })
+    ),
+    vscode.commands.registerCommand(
+      "odoo-dev-plugin.debugServer",
+      screamOnError(async () => {
+        const debugOdooPythonLaunchConfig: vscode.DebugConfiguration = {
+          name: "Debug Odoo Python",
+          type: "python",
+          request: "launch",
+          stopOnEntry: false,
+          python: "${command:python.interpreterPath}",
+          console: "integratedTerminal",
+          program: "${workspaceFolder:odoo}/odoo-bin",
+          args: ["-c", "${workspaceFolder:.odoo-dev-plugin}/odoo.conf"],
+        };
+        await vscode.debug.startDebugging(undefined, debugOdooPythonLaunchConfig);
+      })
+    ),
+    vscode.commands.registerCommand(
+      "odoo-dev-plugin.startSelectedTest",
+      screamOnError(async () => {
         const terminal = getOdooDevTerminal();
         const editor = vscode.window.activeTextEditor;
         if (!editor) {
@@ -340,18 +354,15 @@ export async function activate(context: vscode.ExtensionContext) {
         terminal.sendText(
           `${python} ${odooBin} -c ${configFile} --stop-after-init --test-enable --test-tags ${testTag}`
         );
-      } catch (error) {
-        vscode.window.showErrorMessage((error as Error).message);
-      }
-    }),
-    vscode.commands.registerCommand("odoo-dev-plugin.debugSelectedTest", async () => {
-      const editor = vscode.window.activeTextEditor;
-      if (!editor) {
-        vscode.window.showErrorMessage("There is no selected test.");
-        return;
-      }
-
-      try {
+      })
+    ),
+    vscode.commands.registerCommand(
+      "odoo-dev-plugin.debugSelectedTest",
+      screamOnError(async () => {
+        const editor = vscode.window.activeTextEditor;
+        if (!editor) {
+          throw new Error("Open a test file.");
+        }
         const testTag = await getTestTag(editor);
         const debugOdooPythonLaunchConfig: vscode.DebugConfiguration = {
           name: "Debug Odoo Python",
@@ -371,17 +382,16 @@ export async function activate(context: vscode.ExtensionContext) {
           ],
         };
         await vscode.debug.startDebugging(undefined, debugOdooPythonLaunchConfig);
-      } catch (error) {
-        vscode.window.showErrorMessage((error as Error).message);
-      }
-    }),
-    vscode.commands.registerCommand("odoo-dev-plugin.startCurrentTestFile", async () => {
-      try {
-        const terminal = getOdooDevTerminal();
+      })
+    ),
+    vscode.commands.registerCommand(
+      "odoo-dev-plugin.startCurrentTestFile",
+      screamOnError(async () => {
         const editor = vscode.window.activeTextEditor;
         if (!editor) {
           throw new Error("Open a test file.");
         }
+
         const testFilePath = getTestFilePath(editor);
         const python = vscode.workspace.getConfiguration("python").defaultInterpreterPath;
         const odooBin = `${
@@ -391,20 +401,20 @@ export async function activate(context: vscode.ExtensionContext) {
           vscode.workspace.getConfiguration("odooDev").sourceFolder
         }/.odoo-dev-plugin/odoo.conf`;
 
+        const terminal = getOdooDevTerminal();
         terminal.sendText(
           `${python} ${odooBin} -c ${configFile} --stop-after-init --test-file ${testFilePath}`
         );
-      } catch (error) {
-        vscode.window.showErrorMessage((error as Error).message);
-      }
-    }),
-    vscode.commands.registerCommand("odoo-dev-plugin.debugCurrentTestFile", async () => {
-      const editor = vscode.window.activeTextEditor;
-      if (!editor) {
-        vscode.window.showErrorMessage("There is no selected test.");
-        return;
-      }
-      try {
+      })
+    ),
+    vscode.commands.registerCommand(
+      "odoo-dev-plugin.debugCurrentTestFile",
+      screamOnError(async () => {
+        const editor = vscode.window.activeTextEditor;
+        if (!editor) {
+          throw new Error("Open a test file.");
+        }
+
         const testFilePath = getTestFilePath(editor);
         const debugOdooPythonLaunchConfig: vscode.DebugConfiguration = {
           name: "Debug Odoo Python",
@@ -423,28 +433,29 @@ export async function activate(context: vscode.ExtensionContext) {
           ],
         };
         await vscode.debug.startDebugging(undefined, debugOdooPythonLaunchConfig);
-      } catch (error) {
-        vscode.window.showErrorMessage((error as Error).message);
-      }
-    }),
-    vscode.commands.registerCommand("odoo-dev-plugin.getTestTag", async () => {
-      const editor = vscode.window.activeTextEditor;
-      if (editor) {
+      })
+    ),
+    vscode.commands.registerCommand(
+      "odoo-dev-plugin.getTestTag",
+      screamOnError(async () => {
+        const editor = vscode.window.activeTextEditor;
+        if (!editor) {
+          throw new Error("Open a test file.");
+        }
         const testTag = await getTestTag(editor);
         await vscode.env.clipboard.writeText(testTag);
-      }
-    }),
-    vscode.commands.registerCommand("odoo-dev-plugin.getLocalServerUrl", async () => {
-      try {
+      })
+    ),
+    vscode.commands.registerCommand(
+      "odoo-dev-plugin.getLocalServerUrl",
+      screamOnError(async () => {
         const ip = await runShellCommand(
           `ifconfig en0 | grep "inet " | grep -v 127.0.0.1 | awk '{print $2}'`
         );
         const url = `http://${ip.trim()}:8070`;
         await vscode.env.clipboard.writeText(url);
-      } catch (error) {
-        vscode.window.showErrorMessage((error as Error).message);
-      }
-    }),
+      })
+    ),
     vscode.commands.registerCommand("odoo-dev-plugin.openOdooConf", () => {
       const odooDevPluginFolder = vscode.workspace.workspaceFolders?.find(
         (f) => f.name === ".odoo-dev-plugin"
