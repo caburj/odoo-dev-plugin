@@ -4,7 +4,6 @@ import { OdooDevBranches } from "./odoo_dev_branch";
 import { OdooPluginDB } from "./odoo_plugin_db";
 import { GitExtension, Repository } from "./git";
 import { SymbolKind } from "vscode";
-import { DocumentSymbol } from "vscode";
 
 const gitExtension = vscode.extensions.getExtension<GitExtension>("vscode.git")!.exports;
 const git = gitExtension.getAPI(1);
@@ -112,7 +111,6 @@ export async function activate(context: vscode.ExtensionContext) {
         },
       });
     }
-    vscode.window.showInformationMessage(`Successful checkout: ${branch}`);
   };
 
   const checkoutDevBranch = async (branch: string) => {
@@ -128,7 +126,6 @@ export async function activate(context: vscode.ExtensionContext) {
     } catch (error) {
       throw new Error((error as Error & { stderr: string }).stderr);
     }
-    vscode.window.showInformationMessage(`Successful checkout: ${branch}`);
   };
 
   const selectBranch = async (name: string) => {
@@ -145,7 +142,6 @@ export async function activate(context: vscode.ExtensionContext) {
           await odooRepo.deleteBranch(name, true);
         },
       });
-      vscode.window.showInformationMessage(`'${name}' branch deleted.`);
     } catch (error) {
       throw new Error((error as { stderr: string }).stderr);
     }
@@ -231,12 +227,8 @@ export async function activate(context: vscode.ExtensionContext) {
 
         if (!(base in baseBrances)) {
           await odooDevConfig.update("baseBranches", { ...baseBrances, [base]: 100 }, true);
-          vscode.window.showInformationMessage(
-            `'${base}' base branch is added in the User config.`
-          );
         } else if (db.devBranchExists({ base, name: input })) {
-          vscode.window.showErrorMessage(`'${input}' already exists!`);
-          return;
+          throw new Error(`'${input}' already exists!`);
         }
         await createDevBranch(base, input);
         db.addDevBranch({ base, name: input });
