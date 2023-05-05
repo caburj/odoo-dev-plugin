@@ -101,7 +101,17 @@
         "odooDev.remoteOdooDevUrl": {
           "type": "string",
           "default": "git@github.com:odoo-dev/odoo.git",
-          "description": "This is where dev branches will be fetched."
+          "description": "This is where odoo dev branches will be fetched."
+        },
+        "odooDev.remoteEnterpriseDevUrl": {
+          "type": "string",
+          "default": "git@github.com:odoo-dev/enterprise.git",
+          "description": "This is where enterprise dev branches will be fetched."
+        },
+        "odooDev.remoteUpgradeUrl": {
+          "type": "string",
+          "default": "git@github.com:odoo/upgrade.git",
+          "description": "This is where upgrade dev branches will be fetched."
         }
       }
     },

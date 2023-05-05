@@ -1,8 +1,8 @@
 import * as vscode from "vscode";
-import { GitExtension } from "./git";
+import { GitExtension, Repository } from "./git";
 import { OdooDevBranches } from "./odoo_dev_branch";
 import { OdooPluginDB } from "./odoo_plugin_db";
-import { callWithSpinner } from "./helpers";
+import { callWithSpinner, ignoreError, inferBaseBranch } from "./helpers";
 
 const gitExtension = vscode.extensions.getExtension<GitExtension>("vscode.git")!.exports;
 const git = gitExtension.getAPI(1);
@@ -30,52 +30,105 @@ export function createContextualUtils(context: vscode.ExtensionContext) {
     return odooDevTerminal;
   };
 
+  const getRemoteOdooDevUrl = () => {
+    const res = vscode.workspace.getConfiguration("odooDev").remoteOdooDevUrl as string;
+    if (!res) {
+      throw new Error("Please provide remote dev url for your odoo repo.");
+    }
+    return res;
+  };
+
+  const getRemoteEnterpriseDevUrl = () =>
+    vscode.workspace.getConfiguration("odooDev").remoteEnterpriseDevUrl as string;
+
+  const getRemoteUpgradeUrl = () =>
+    vscode.workspace.getConfiguration("odooDev").remoteUpgradeUrl as string;
+
   const rootPath =
     vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0
       ? vscode.workspace.workspaceFolders[0].uri.fsPath
       : undefined;
 
-  const getOdooRepo = () => {
+  const getRepo = (name: string) => {
     const sourceFolder = vscode.workspace.getConfiguration("odooDev").sourceFolder as string;
-    const odooUri = vscode.Uri.joinPath(vscode.Uri.file(sourceFolder), "odoo");
-    const odooRepo = git.getRepository(odooUri);
-    if (odooRepo === null) {
-      throw new Error(`Unable to checkout. 'odoo' repo is not found in '${sourceFolder}'.`);
-    }
-    return odooRepo;
+    const uri = vscode.Uri.joinPath(vscode.Uri.file(sourceFolder), name);
+    const repo = git.getRepository(uri);
+    return repo;
   };
 
-  const createDevBranch = async (base: string, branch: string) => {
-    const odooRepo = getOdooRepo();
+  const getOdooRepo = () => {
+    const repo = getRepo("odoo");
+    if (!repo) {
+      throw new Error("'odoo' repo not found.");
+    }
+    return repo;
+  };
+
+  const tryFetchBeforeCreate = async (
+    repoName: string,
+    repo: Repository,
+    base: string,
+    branch: string
+  ) => {
     try {
       await callWithSpinner({
-        message: "Fetching branch from odoo-dev...",
-        cb: () => odooRepo.fetch("odoo-dev", branch),
+        message: `Fetching branch from ${repoName}...`,
+        cb: () => repo.fetch("dev", branch),
       });
-      await odooRepo.checkout(branch);
-      db.setActiveBranch(branch);
+      await repo.checkout(branch);
     } catch (error) {
       await callWithSpinner({
         message: "Remote branch not found, creating new branch locally...",
         cb: async () => {
           // Checkout base first as basis for creating the new branch.
-          await odooRepo.checkout(base);
-          await odooRepo.createBranch(branch, true);
-          db.setActiveBranch(branch);
+          await repo.checkout(base);
+          await repo.createBranch(branch, true);
         },
       });
     }
   };
 
-  const checkoutDevBranch = async (branch: string) => {
-    const odooRepo = getOdooRepo();
-    if (odooRepo.state.HEAD?.name === branch) {
-      throw new Error(`The current branch is already '${branch}`);
+  const createBranch = async (base: string, branch: string) => {
+    const odoo = getOdooRepo();
+    await tryFetchBeforeCreate("odoo", odoo, base, branch);
+
+    const enterprise = getRepo("enterprise");
+    if (enterprise) {
+      await tryFetchBeforeCreate("enterprise", enterprise, base, branch);
     }
+
+    const upgrade = getRepo("upgrade");
+    if (upgrade && base === "master") {
+      await tryFetchBeforeCreate("upgrade", upgrade, base, branch);
+    }
+
+    db.setActiveBranch(branch);
+  };
+
+  const checkoutBranch = async (name: string) => {
+    const odoo = getOdooRepo();
     try {
       await callWithSpinner({
-        message: `Checking out '${branch}' in odoo...`,
-        cb: () => odooRepo.checkout(branch),
+        message: `Checking out '${name}' in odoo...`,
+        cb: () => odoo.checkout(name),
+      });
+
+      const enterprise = getRepo("enterprise");
+      if (enterprise) {
+        await callWithSpinner({
+          message: `Checking out '${name}' in enterprise...`,
+          cb: () => enterprise.checkout(name),
+        });
+      }
+
+      await ignoreError(async () => {
+        const upgrade = getRepo("upgrade");
+        if (upgrade) {
+          await callWithSpinner({
+            message: `Checking out '${name}' in upgrade...`,
+            cb: () => upgrade.checkout(name),
+          });
+        }
       });
     } catch (error) {
       throw new Error((error as Error & { stderr: string }).stderr);
@@ -83,22 +136,37 @@ export function createContextualUtils(context: vscode.ExtensionContext) {
   };
 
   const selectBranch = async (name: string) => {
-    await checkoutDevBranch(name);
+    await checkoutBranch(name);
     db.setActiveBranch(name);
   };
 
   const deleteDevBranch = async (name: string) => {
-    const odooRepo = getOdooRepo();
-    try {
+    const odoo = getOdooRepo();
+    await ignoreError(async () => {
       await callWithSpinner({
-        message: `Deleting '${name}' branch in odoo...`,
-        cb: async () => {
-          await odooRepo.deleteBranch(name, true);
-        },
+        message: `Deleting '${name}' in odoo...`,
+        cb: () => odoo.deleteBranch(name, true),
       });
-    } catch (error) {
-      throw new Error((error as { stderr: string }).stderr);
-    }
+
+      const enterprise = getRepo("enterprise");
+      if (enterprise) {
+        await callWithSpinner({
+          message: `Deleting '${name}' in enterprise...`,
+          cb: () => enterprise.deleteBranch(name, true),
+        });
+      }
+
+      const base = inferBaseBranch(name);
+      if (base === "master") {
+        const upgrade = getRepo("upgrade");
+        if (upgrade) {
+          await callWithSpinner({
+            message: `Deleting '${name}' in upgrade...`,
+            cb: () => upgrade.deleteBranch(name, true),
+          });
+        }
+      }
+    });
   };
 
   const getBaseBranches = () => {
@@ -153,16 +221,19 @@ export function createContextualUtils(context: vscode.ExtensionContext) {
 
   return {
     db,
+    treeDataProvider,
+    getRemoteOdooDevUrl,
+    getRemoteEnterpriseDevUrl,
+    getRemoteUpgradeUrl,
     getOdooDevTerminal,
+    getRepo,
     getOdooRepo,
-    createDevBranch,
-    checkoutDevBranch,
+    createBranch,
     selectBranch,
     deleteDevBranch,
     getBaseBranches,
     getTestTag,
     getTestFilePath,
-    treeDataProvider,
     refreshTreeOnSuccess,
   };
 }

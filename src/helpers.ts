@@ -40,16 +40,15 @@ export function getRemoteConfigStatus(
   return "not-added";
 }
 
-export async function ensureRemoteOdooDevConfig(repo: Repository) {
-  const remoteUrl = vscode.workspace.getConfiguration("odooDev").remoteOdooDevUrl as string;
-  const remoteOdooDevConfigStatus = getRemoteConfigStatus(repo, "odoo-dev", remoteUrl);
+export async function ensureRemoteUrl(repo: Repository, remoteUrl: string) {
+  const remoteOdooDevConfigStatus = getRemoteConfigStatus(repo, "dev", remoteUrl);
   switch (remoteOdooDevConfigStatus) {
     case "wrong":
-      await repo.removeRemote("odoo-dev");
-      await repo.addRemote("odoo-dev", remoteUrl);
+      await repo.removeRemote("dev");
+      await repo.addRemote("dev", remoteUrl);
       break;
     case "not-added":
-      await repo.addRemote("odoo-dev", remoteUrl);
+      await repo.addRemote("dev", remoteUrl);
       break;
   }
 }
@@ -93,4 +92,10 @@ export function callWithSpinner(options: { message: string; cb: () => Thenable<v
       await options.cb();
     }
   );
+}
+
+export async function ignoreError(cb: () => Promise<void>) {
+  try {
+    await cb();
+  } catch (error) {}
 }

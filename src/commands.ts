@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import {
-  ensureRemoteOdooDevConfig,
+  ensureRemoteUrl,
   inferBaseBranch,
   multiSelectAddons,
   runShellCommand,
@@ -17,7 +17,19 @@ function createCommand<T>(name: string, cb: (utils: ContextualUtils) => Promise<
 export const addBranch = createCommand(
   "odoo-dev-plugin.addBranch",
   screamOnError(async (utils) => {
-    await ensureRemoteOdooDevConfig(utils.getOdooRepo());
+    await ensureRemoteUrl(utils.getOdooRepo(), utils.getRemoteOdooDevUrl());
+
+    const enterprise = utils.getRepo("enterprise");
+    const enterpriseDevUrl = utils.getRemoteEnterpriseDevUrl();
+    if (enterprise && enterpriseDevUrl !== "") {
+      await ensureRemoteUrl(enterprise, enterpriseDevUrl);
+    }
+
+    const upgrade = utils.getRepo("upgrade");
+    const upgradeUrl = utils.getRemoteUpgradeUrl();
+    if (upgrade && upgradeUrl !== "") {
+      await ensureRemoteUrl(upgrade, upgradeUrl);
+    }
 
     const input = await vscode.window.showInputBox({
       placeHolder: "e.g. master-ref-barcode-parser-jcb",
@@ -44,7 +56,7 @@ export const addBranch = createCommand(
       } else if (utils.db.devBranchExists({ base, name: input })) {
         throw new Error(`'${input}' already exists!`);
       }
-      await utils.createDevBranch(base, input);
+      await utils.createBranch(base, input);
       utils.db.addDevBranch({ base, name: input });
     });
   })
