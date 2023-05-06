@@ -14,23 +14,9 @@ function createCommand<T>(name: string, cb: (utils: ContextualUtils) => Promise<
   };
 }
 
-export const addBranch = createCommand(
-  "odoo-dev-plugin.addBranch",
+export const createBranch = createCommand(
+  "odoo-dev-plugin.createBranch",
   screamOnError(async (utils) => {
-    await ensureRemoteUrl(utils.getOdooRepo(), utils.getRemoteOdooDevUrl());
-
-    const enterprise = utils.getRepo("enterprise");
-    const enterpriseDevUrl = utils.getRemoteEnterpriseDevUrl();
-    if (enterprise && enterpriseDevUrl !== "") {
-      await ensureRemoteUrl(enterprise, enterpriseDevUrl);
-    }
-
-    const upgrade = utils.getRepo("upgrade");
-    const upgradeUrl = utils.getRemoteUpgradeUrl();
-    if (upgrade && upgradeUrl !== "") {
-      await ensureRemoteUrl(upgrade, upgradeUrl);
-    }
-
     const input = await vscode.window.showInputBox({
       placeHolder: "e.g. master-ref-barcode-parser-jcb",
       prompt: "Add new dev branch",
@@ -56,7 +42,57 @@ export const addBranch = createCommand(
       } else if (utils.db.devBranchExists({ base, name: input })) {
         throw new Error(`'${input}' already exists!`);
       }
-      await utils.createBranch(base, input);
+      await utils.createBranches(base, input);
+      utils.db.setActiveBranch(input);
+      utils.db.addDevBranch({ base, name: input });
+    });
+  })
+);
+
+export const fetchBranch = createCommand(
+  "odoo-dev-plugin.fetchBranch",
+  screamOnError(async (utils) => {
+    await ensureRemoteUrl(utils.getOdooRepo(), utils.getRemoteOdooDevUrl());
+
+    const enterprise = utils.getRepo("enterprise");
+    const enterpriseDevUrl = utils.getRemoteEnterpriseDevUrl();
+    if (enterprise && enterpriseDevUrl !== "") {
+      await ensureRemoteUrl(enterprise, enterpriseDevUrl);
+    }
+
+    const upgrade = utils.getRepo("upgrade");
+    const upgradeUrl = utils.getRemoteUpgradeUrl();
+    if (upgrade && upgradeUrl !== "") {
+      await ensureRemoteUrl(upgrade, upgradeUrl);
+    }
+
+    const input = await vscode.window.showInputBox({
+      placeHolder: "e.g. master-ref-barcode-parser-jcb",
+      prompt: "What is the name of the branch to fetch?",
+    });
+
+    if (input === undefined) {
+      return;
+    }
+
+    if (input === "") {
+      vscode.window.showErrorMessage("Empty input is invalid.");
+      return;
+    }
+
+    const base = inferBaseBranch(input);
+
+    return utils.refreshTreeOnSuccess(async () => {
+      const odooDevConfig = vscode.workspace.getConfiguration("odooDev");
+      const baseBrances = odooDevConfig.baseBranches as Record<string, number>;
+
+      if (!(base in baseBrances)) {
+        await odooDevConfig.update("baseBranches", { ...baseBrances, [base]: 100 }, true);
+      } else if (utils.db.devBranchExists({ base, name: input })) {
+        throw new Error(`'${input}' already exists!`);
+      }
+      await utils.fetchBranches(base, input);
+      utils.db.setActiveBranch(input);
       utils.db.addDevBranch({ base, name: input });
     });
   })
@@ -80,14 +116,16 @@ export const deleteBranch = createCommand(
     }
 
     return utils.refreshTreeOnSuccess(async () => {
-      if (selected.base === selected.name) {
+      const { base, name: branch } = selected;
+      if (base === branch) {
         // Not really possible at the moment. But better be sure.
-        throw new Error(`Deleting base branch '${selected.base}' is not allowed.`);
+        throw new Error(`Deleting base branch '${base}' is not allowed.`);
       }
-      if (utils.db.getActiveBranch() === selected.name) {
-        await utils.checkoutBranch(selected.base);
+      if (utils.db.getActiveBranch() === branch) {
+        await utils.checkoutBranches(base);
+        utils.db.setActiveBranch(base);
       }
-      await utils.deleteDevBranch(selected.name);
+      await utils.deleteDevBranch(branch);
       utils.db.removeDevBranch(selected);
     });
   })
@@ -113,7 +151,10 @@ export const checkoutBranch = createCommand(
       return;
     }
 
-    return utils.refreshTreeOnSuccess(() => utils.checkoutBranch(selected.name));
+    return utils.refreshTreeOnSuccess(async () => {
+      await utils.checkoutBranches(selected.name);
+      utils.db.setActiveBranch(selected.name);
+    });
   })
 );
 

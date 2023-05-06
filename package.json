@@ -17,8 +17,12 @@
   "contributes": {
     "commands": [
       {
-        "command": "odoo-dev-plugin.addBranch",
-        "title": "Odoo Dev: Add Branch"
+        "command": "odoo-dev-plugin.fetchBranch",
+        "title": "Odoo Dev: Fetch"
+      },
+      {
+        "command": "odoo-dev-plugin.createBranch",
+        "title": "Odoo Dev: Create"
       },
       {
         "command": "odoo-dev-plugin.deleteBranch",

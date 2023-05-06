@@ -9,6 +9,33 @@ const git = gitExtension.getAPI(1);
 
 export type ContextualUtils = ReturnType<typeof createContextualUtils>;
 
+type Result<T, E> = [success: true, value: T] | [success: false, error: E];
+
+class ResultGenerator<T> {
+  success(val: T) {
+    return [true, val] as Result<T, string>;
+  }
+  error(e: string) {
+    return [false, e] as Result<T, string>;
+  }
+  isSuccess(result: Result<T, string>): result is [success: true, value: T] {
+    return result[0] === true;
+  }
+  isError(result: Result<T, string>): result is [success: false, error: string] {
+    return result[0] === false;
+  }
+  async runAsync(cb: () => Promise<T>) {
+    try {
+      const result = await cb();
+      return this.success(result);
+    } catch (error) {
+      return this.error((error as Error).message);
+    }
+  }
+}
+
+const Result = new ResultGenerator<undefined>();
+
 export function createContextualUtils(context: vscode.ExtensionContext) {
   const db = new OdooPluginDB(context.globalState);
 
@@ -64,80 +91,201 @@ export function createContextualUtils(context: vscode.ExtensionContext) {
     return repo;
   };
 
-  const tryFetchBeforeCreate = async (
+  const fetchBranch = async (
     repoName: string,
     repo: Repository,
-    base: string,
     branch: string
-  ) => {
+  ): Promise<Result<undefined, string>> => {
     try {
       await callWithSpinner({
-        message: `Fetching branch from ${repoName}...`,
+        message: `Fetching '${branch}' from ${repoName}...`,
         cb: () => repo.fetch("dev", branch),
       });
-      await repo.checkout(branch);
+      return Result.success(undefined);
     } catch (error) {
-      await callWithSpinner({
-        message: "Remote branch not found, creating new branch locally...",
-        cb: async () => {
-          // Checkout base first as basis for creating the new branch.
-          await repo.checkout(base);
-          await repo.createBranch(branch, true);
-        },
-      });
+      return Result.error((error as { stderr: string }).stderr);
     }
   };
 
-  const createBranch = async (base: string, branch: string) => {
+  const checkout = async (repoName: string, repo: Repository, branch: string) => {
+    try {
+      await callWithSpinner({
+        message: `Checking out '${branch}' from ${repoName}...`,
+        cb: () => repo.checkout(branch),
+      });
+      return Result.success(undefined);
+    } catch (error) {
+      return Result.error((error as { stderr: string }).stderr);
+    }
+  };
+
+  /**
+   * TODO: Regarding `toCheckout`. Perhaps it's better if it's based on user's config.
+   * @param branch
+   * @param toCheckout
+   */
+  const fetchBranches = async (base: string, branch: string, toCheckout: boolean = true) => {
+    const errorMessages: string[] = [];
+
     const odoo = getOdooRepo();
-    await tryFetchBeforeCreate("odoo", odoo, base, branch);
+    let res = await fetchBranch("odoo", odoo, branch);
+    if (Result.isError(res)) {
+      errorMessages.push("odoo");
+      if (toCheckout) {
+        await checkout("odoo", odoo, base);
+      }
+    } else if (toCheckout) {
+      await checkout("odoo", odoo, branch);
+    }
 
     const enterprise = getRepo("enterprise");
     if (enterprise) {
-      await tryFetchBeforeCreate("enterprise", enterprise, base, branch);
-    }
-
-    const upgrade = getRepo("upgrade");
-    if (upgrade && base === "master") {
-      await tryFetchBeforeCreate("upgrade", upgrade, base, branch);
-    }
-
-    db.setActiveBranch(branch);
-  };
-
-  const _checkoutBranch = async (name: string) => {
-    const odoo = getOdooRepo();
-    try {
-      await callWithSpinner({
-        message: `Checking out '${name}' in odoo...`,
-        cb: () => odoo.checkout(name),
-      });
-
-      const enterprise = getRepo("enterprise");
-      if (enterprise) {
-        await callWithSpinner({
-          message: `Checking out '${name}' in enterprise...`,
-          cb: () => enterprise.checkout(name),
-        });
-      }
-
-      await ignoreError(async () => {
-        const upgrade = getRepo("upgrade");
-        if (upgrade) {
-          await callWithSpinner({
-            message: `Checking out '${name}' in upgrade...`,
-            cb: () => upgrade.checkout(name),
-          });
+      res = await fetchBranch("enterprise", enterprise, branch);
+      if (Result.isError(res)) {
+        errorMessages.push("enterprise");
+        if (toCheckout) {
+          await checkout("enterprise", enterprise, base);
         }
-      });
-    } catch (error) {
-      throw new Error((error as Error & { stderr: string }).stderr);
+      } else if (toCheckout) {
+        await checkout("enterprise", enterprise, branch);
+      }
+    }
+
+    if (inferBaseBranch(branch) === "master") {
+      const upgrade = getRepo("upgrade");
+      if (upgrade) {
+        res = await fetchBranch("upgrade", upgrade, branch);
+        if (Result.isError(res)) {
+          errorMessages.push("upgrade");
+          if (toCheckout) {
+            await checkout("upgrade", upgrade, base);
+          }
+        } else if (toCheckout) {
+          await checkout("upgrade", upgrade, branch);
+        }
+      }
+    }
+
+    if (errorMessages.length > 0) {
+      vscode.window.showErrorMessage(
+        `Failed to fetch from the following repos:\n${errorMessages.join("\n")}`
+      );
     }
   };
 
-  const checkoutBranch = async (name: string) => {
-    await _checkoutBranch(name);
-    db.setActiveBranch(name);
+  const checkoutBranches = async (branch: string) => {
+    const failedCheckout: string[] = [];
+
+    const odoo = getOdooRepo();
+    let res = await checkout("odoo", odoo, branch);
+    if (Result.isError(res)) {
+      failedCheckout.push("odoo");
+      const base = inferBaseBranch(branch);
+      if (base) {
+        await checkout("odoo", odoo, base);
+      }
+    }
+
+    const enterprise = getRepo("enterprise");
+    if (enterprise) {
+      res = await checkout("enterprise", enterprise, branch);
+      if (Result.isError(res)) {
+        failedCheckout.push("enterprise");
+        const base = inferBaseBranch(branch);
+        if (base) {
+          await checkout("enterprise", enterprise, base);
+        }
+      }
+    }
+
+    const upgradeBranch = inferBaseBranch(branch) === "master" ? branch : "master";
+    const upgrade = getRepo("upgrade");
+    if (upgrade) {
+      res = await checkout("upgrade", upgrade, upgradeBranch);
+      if (Result.isError(res)) {
+        failedCheckout.push("upgrade");
+        await checkout("upgrade", upgrade, "master");
+      }
+    }
+
+    if (failedCheckout.length > 0) {
+      vscode.window.showErrorMessage(
+        `Failed to checkout in the following repos:\n${failedCheckout.join("\n")}`
+      );
+    }
+  };
+
+  /**
+   * - Checks out to the base.
+   * - Create and checkout the branch.
+   * @param base
+   * @param branch
+   */
+  const createBranches = async (base: string, branch: string) => {
+    const errorMessages: string[] = [];
+    const odoo = getOdooRepo();
+    let res = await Result.runAsync(async () => {
+      await callWithSpinner({
+        message: "Creating new branch locally in odoo...",
+        cb: async () => {
+          // Checkout base first as basis for creating the new branch.
+          await odoo.checkout(base);
+          await odoo.createBranch(branch, true);
+        },
+      });
+      // FIXME: This return should not be needed.
+      return undefined;
+    });
+
+    if (Result.isError(res)) {
+      errorMessages.push(res[1]);
+    }
+
+    const enterprise = getRepo("enterprise");
+    if (enterprise) {
+      res = await Result.runAsync(async () => {
+        await callWithSpinner({
+          message: "Creating new branch locally in enterprise...",
+          cb: async () => {
+            // Checkout base first as basis for creating the new branch.
+            await enterprise.checkout(base);
+            await enterprise.createBranch(branch, true);
+          },
+        });
+        // FIXME: This return should not be needed.
+        return undefined;
+      });
+      if (Result.isError(res)) {
+        errorMessages.push(res[1]);
+      }
+    }
+
+    if (inferBaseBranch(branch) === "master") {
+      const upgrade = getRepo("upgrade");
+      if (upgrade) {
+        res = await Result.runAsync(async () => {
+          await callWithSpinner({
+            message: "Creating new branch locally in upgrade...",
+            cb: async () => {
+              // Checkout base first as basis for creating the new branch.
+              await upgrade.checkout(base);
+              await upgrade.createBranch(branch, true);
+            },
+          });
+          // FIXME: This return should not be needed.
+          return undefined;
+        });
+        if (Result.isError(res)) {
+          errorMessages.push(res[1]);
+        }
+      }
+    }
+
+    if (errorMessages.length > 0) {
+      vscode.window.showErrorMessage(
+        `There were errors while creating the branches:\n${errorMessages.join("\n")}`
+      );
+    }
   };
 
   const deleteDevBranch = async (name: string) => {
@@ -228,8 +376,9 @@ export function createContextualUtils(context: vscode.ExtensionContext) {
     getOdooDevTerminal,
     getRepo,
     getOdooRepo,
-    createBranch,
-    checkoutBranch,
+    fetchBranches,
+    createBranches,
+    checkoutBranches,
     deleteDevBranch,
     getBaseBranches,
     getTestTag,
