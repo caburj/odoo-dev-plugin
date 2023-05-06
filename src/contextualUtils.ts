@@ -36,6 +36,29 @@ class ResultGenerator<T> {
 
 const Result = new ResultGenerator<undefined>();
 
+type SimpleResult = string | undefined;
+
+function success(): SimpleResult {
+  return;
+}
+
+function error(msg: string): SimpleResult {
+  return msg;
+}
+
+async function runAsync(cb: () => Promise<any>): Promise<SimpleResult> {
+  try {
+    await cb();
+    return success();
+  } catch (e) {
+    return error((e as Error).message);
+  }
+}
+
+function isSuccess(res: SimpleResult): res is undefined {
+  return res === undefined;
+}
+
 export function createContextualUtils(context: vscode.ExtensionContext) {
   const db = new OdooPluginDB(context.globalState);
 
@@ -173,45 +196,59 @@ export function createContextualUtils(context: vscode.ExtensionContext) {
     }
   };
 
-  const checkoutBranches = async (branch: string) => {
-    const failedCheckout: string[] = [];
-
-    const odoo = getOdooRepo();
-    let res = await checkout("odoo", odoo, branch);
-    if (Result.isError(res)) {
-      failedCheckout.push("odoo");
+  const simpleCheckout = async (repo: Repository, branch: string) => {
+    const checkoutBranchRes = await runAsync(() => repo.checkout(branch));
+    if (!isSuccess(checkoutBranchRes)) {
       const base = inferBaseBranch(branch);
       if (base) {
-        await checkout("odoo", odoo, base);
-      }
-    }
-
-    const enterprise = getRepo("enterprise");
-    if (enterprise) {
-      res = await checkout("enterprise", enterprise, branch);
-      if (Result.isError(res)) {
-        failedCheckout.push("enterprise");
-        const base = inferBaseBranch(branch);
-        if (base) {
-          await checkout("enterprise", enterprise, base);
+        const checkoutBaseRes = await runAsync(() => repo.checkout(base));
+        if (!isSuccess(checkoutBaseRes)) {
+          return error(`${checkoutBranchRes} & ${checkoutBaseRes}`);
         }
       }
     }
+    return success();
+  };
 
+  const checkoutEnterprise = async (branch: string) => {
+    const enterprise = getRepo("enterprise");
+    if (enterprise) {
+      return simpleCheckout(enterprise, branch);
+    }
+    return success();
+  };
+
+  const checkoutUpgrade = async (branch: string) => {
     const upgradeBranch = inferBaseBranch(branch) === "master" ? branch : "master";
     const upgrade = getRepo("upgrade");
     if (upgrade) {
-      res = await checkout("upgrade", upgrade, upgradeBranch);
-      if (Result.isError(res)) {
-        failedCheckout.push("upgrade");
-        await checkout("upgrade", upgrade, "master");
+      const checkoutBranchRes = await runAsync(() => upgrade.checkout(upgradeBranch));
+      if (!isSuccess(checkoutBranchRes) && upgradeBranch !== "master") {
+        const checkoutMasterRes = await runAsync(() => upgrade.checkout("master"));
+        if (!isSuccess(checkoutMasterRes)) {
+          return error(`${checkoutBranchRes} & ${checkoutMasterRes}`);
+        }
       }
     }
+    return success();
+  };
 
-    if (failedCheckout.length > 0) {
-      vscode.window.showErrorMessage(
-        `Failed to checkout in the following repos: ${failedCheckout.join(",")}`
-      );
+  const checkoutBranches = async (branch: string) => {
+    const checkoutProms = [
+      simpleCheckout(getOdooRepo(), branch),
+      checkoutEnterprise(branch),
+      checkoutUpgrade(branch),
+    ];
+    let checkoutResults: SimpleResult[] = [];
+    await callWithSpinner({
+      message: `Checking out '${branch}' in the repos...`,
+      cb: async () => {
+        checkoutResults = await Promise.all(checkoutProms);
+      },
+    });
+    const errors = checkoutResults.filter((res) => !isSuccess(res)) as string[];
+    if (error.length > 0) {
+      vscode.window.showErrorMessage(errors.join("; "));
     }
   };
 
