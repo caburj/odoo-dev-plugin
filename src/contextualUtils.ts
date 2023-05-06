@@ -10,44 +10,17 @@ const git = gitExtension.getAPI(1);
 
 export type ContextualUtils = ReturnType<typeof createContextualUtils>;
 
-type Result<T, E> = [success: true, value: T] | [success: false, error: E];
+type Result = string | undefined;
 
-class ResultGenerator<T> {
-  success(val: T) {
-    return [true, val] as Result<T, string>;
-  }
-  error(e: string) {
-    return [false, e] as Result<T, string>;
-  }
-  isSuccess(result: Result<T, string>): result is [success: true, value: T] {
-    return result[0] === true;
-  }
-  isError(result: Result<T, string>): result is [success: false, error: string] {
-    return result[0] === false;
-  }
-  async runAsync(cb: () => Promise<T>) {
-    try {
-      const result = await cb();
-      return this.success(result);
-    } catch (error) {
-      return this.error((error as Error).message);
-    }
-  }
-}
-
-const Result = new ResultGenerator<undefined>();
-
-type SimpleResult = string | undefined;
-
-function success(): SimpleResult {
+function success(): Result {
   return;
 }
 
-function error(msg: string): SimpleResult {
+function error(msg: string): Result {
   return msg;
 }
 
-async function runAsync(cb: () => Promise<any>): Promise<SimpleResult> {
+async function runAsync(cb: () => Promise<any>): Promise<Result> {
   try {
     await cb();
     return success();
@@ -56,7 +29,7 @@ async function runAsync(cb: () => Promise<any>): Promise<SimpleResult> {
   }
 }
 
-function isSuccess(res: SimpleResult): res is undefined {
+function isSuccess(res: Result): res is undefined {
   return res === undefined;
 }
 
@@ -115,85 +88,61 @@ export function createContextualUtils(context: vscode.ExtensionContext) {
     return repo;
   };
 
-  const fetchBranch = async (
+  const fetchBranch2 = async (
     repoName: string,
     repo: Repository,
-    branch: string
-  ): Promise<Result<undefined, string>> => {
-    try {
-      await callWithSpinner({
-        message: `Fetching '${branch}' from ${repoName}...`,
-        cb: () => repo.fetch("dev", branch),
-      });
-      return Result.success(undefined);
-    } catch (error) {
-      return Result.error((error as { stderr: string }).stderr);
+    base: string,
+    branch: string,
+    // TODO: Maybe this should be based on configuration.
+    checkout: boolean = true
+  ) => {
+    let branchToCheckout = branch;
+    const fetchRes = await runAsync(() => repo.fetch("dev", branch));
+    if (!isSuccess(fetchRes)) {
+      branchToCheckout = base;
     }
+    if (checkout) {
+      const checkoutRes = await runAsync(() => repo.checkout(branchToCheckout));
+      if (!isSuccess(checkoutRes)) {
+        if (branchToCheckout !== branch) {
+          return error(
+            `Failed to fetch '${branch}' (and checkout '${branchToCheckout}' as an alternative) in '${repoName}' because of "${checkoutRes}".`
+          );
+        } else {
+          return error(
+            `Failed to checkout '${branch}' in '${repoName}' because of "${checkoutRes}".`
+          );
+        }
+      }
+    }
+    return success();
   };
 
-  const checkout = async (repoName: string, repo: Repository, branch: string) => {
-    try {
-      await callWithSpinner({
-        message: `Checking out '${branch}' from ${repoName}...`,
-        cb: () => repo.checkout(branch),
-      });
-      return Result.success(undefined);
-    } catch (error) {
-      return Result.error((error as { stderr: string }).stderr);
-    }
-  };
-
-  /**
-   * TODO: Regarding `toCheckout`. Perhaps it's better if it's based on user's config.
-   * @param branch
-   * @param toCheckout
-   */
-  const fetchBranches = async (base: string, branch: string, toCheckout: boolean = true) => {
-    const errorMessages: string[] = [];
-
+  const fetchBranches = async (base: string, branch: string) => {
     const odoo = getOdooRepo();
-    let res = await fetchBranch("odoo", odoo, branch);
-    if (Result.isError(res)) {
-      errorMessages.push("odoo");
-      if (toCheckout) {
-        await checkout("odoo", odoo, base);
-      }
-    } else if (toCheckout) {
-      await checkout("odoo", odoo, branch);
-    }
-
     const enterprise = getRepo("enterprise");
-    if (enterprise) {
-      res = await fetchBranch("enterprise", enterprise, branch);
-      if (Result.isError(res)) {
-        errorMessages.push("enterprise");
-        if (toCheckout) {
-          await checkout("enterprise", enterprise, base);
-        }
-      } else if (toCheckout) {
-        await checkout("enterprise", enterprise, branch);
-      }
-    }
+    const upgrade = getRepo("upgrade");
 
-    if (inferBaseBranch(branch) === "master") {
-      const upgrade = getRepo("upgrade");
-      if (upgrade) {
-        res = await fetchBranch("upgrade", upgrade, branch);
-        if (Result.isError(res)) {
-          errorMessages.push("upgrade");
-          if (toCheckout) {
-            await checkout("upgrade", upgrade, base);
-          }
-        } else if (toCheckout) {
-          await checkout("upgrade", upgrade, branch);
-        }
-      }
-    }
+    const fetchProms = [
+      fetchBranch2("odoo", odoo, base, branch),
+      enterprise
+        ? fetchBranch2("enterprise", enterprise, base, branch)
+        : Promise.resolve(success()),
+      upgrade && base === "master"
+        ? fetchBranch2("upgrade", upgrade, base, branch)
+        : Promise.resolve(success()),
+    ];
 
-    if (errorMessages.length > 0) {
-      vscode.window.showErrorMessage(
-        `Failed to fetch from the following repos: ${errorMessages.join(",")}`
-      );
+    let fetchResults: Result[] = [];
+    await callWithSpinner({
+      message: `Fetching '${branch}' in the repos...`,
+      cb: async () => {
+        fetchResults = await Promise.all(fetchProms);
+      },
+    });
+    const errors = fetchResults.filter((res) => !isSuccess(res)) as string[];
+    if (error.length > 0) {
+      vscode.window.showErrorMessage(errors.join("; "));
     }
   };
 
@@ -240,9 +189,9 @@ export function createContextualUtils(context: vscode.ExtensionContext) {
       checkoutEnterprise(branch),
       checkoutUpgrade(branch),
     ];
-    let checkoutResults: SimpleResult[] = [];
+    let checkoutResults: Result[] = [];
     await callWithSpinner({
-      message: `Checking out '${branch}' in the repos (in parallel)...`,
+      message: `Checking out '${branch}' in the repos...`,
       cb: async () => {
         checkoutResults = await Promise.all(checkoutProms);
       },
@@ -297,9 +246,9 @@ export function createContextualUtils(context: vscode.ExtensionContext) {
       upgrade ? createUpgradeBranch(upgrade, base, branch) : Promise.resolve(success()),
     ];
 
-    let createResults: SimpleResult[] = [];
+    let createResults: Result[] = [];
     await callWithSpinner({
-      message: `Creating '${branch}' in the repos (in parallel)...`,
+      message: `Creating '${branch}' in the repos...`,
       cb: async () => {
         createResults = await Promise.all(createBranchProms);
       },
@@ -347,9 +296,9 @@ export function createContextualUtils(context: vscode.ExtensionContext) {
         : Promise.resolve(success()),
     ];
 
-    let deleteResults: SimpleResult[] = [];
+    let deleteResults: Result[] = [];
     await callWithSpinner({
-      message: `Deleting '${branch}' in the repos (in parallel)...`,
+      message: `Deleting '${branch}' in the repos...`,
       cb: async () => {
         deleteResults = await Promise.all(deleteProms);
       },
