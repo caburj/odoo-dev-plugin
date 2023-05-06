@@ -241,7 +241,7 @@ export function createContextualUtils(context: vscode.ExtensionContext) {
     ];
     let checkoutResults: SimpleResult[] = [];
     await callWithSpinner({
-      message: `Checking out '${branch}' in the repos...`,
+      message: `Checking out '${branch}' in the repos (in parallel)...`,
       cb: async () => {
         checkoutResults = await Promise.all(checkoutProms);
       },
@@ -252,6 +252,29 @@ export function createContextualUtils(context: vscode.ExtensionContext) {
     }
   };
 
+  const createBranch = async (repo: Repository, base: string, branch: string) => {
+    // Checkout base first as basis for creating the new branch.
+    const checkoutBase = await runAsync(() => repo.checkout(base));
+    if (!isSuccess(checkoutBase)) {
+      return error(`Failed at checking out the base branch '${base}' because of "${checkoutBase}"`);
+    }
+    const createAndCheckoutBranch = await runAsync(() => repo.createBranch(branch, true));
+    if (!isSuccess(createAndCheckoutBranch)) {
+      return error(
+        `Failed at creating the branch '${branch}' because of "${createAndCheckoutBranch}"`
+      );
+    }
+    return success();
+  };
+
+  const createUpgradeBranch = async (repo: Repository, base: string, branch: string) => {
+    if (base === "master") {
+      return createBranch(repo, base, branch);
+    } else {
+      return runAsync(() => repo.checkout("master"));
+    }
+  };
+
   /**
    * - Checks out to the base.
    * - Create and checkout the branch.
@@ -259,69 +282,30 @@ export function createContextualUtils(context: vscode.ExtensionContext) {
    * @param branch
    */
   const createBranches = async (base: string, branch: string) => {
-    const failedCreation: string[] = [];
-    const odoo = getOdooRepo();
-    let res = await Result.runAsync(async () => {
-      await callWithSpinner({
-        message: "Creating new branch locally in odoo...",
-        cb: async () => {
-          // Checkout base first as basis for creating the new branch.
-          await odoo.checkout(base);
-          await odoo.createBranch(branch, true);
-        },
-      });
-      // FIXME: This return should not be needed.
-      return undefined;
-    });
-
-    if (Result.isError(res)) {
-      failedCreation.push("odoo");
-    }
-
     const enterprise = getRepo("enterprise");
-    if (enterprise) {
-      res = await Result.runAsync(async () => {
-        await callWithSpinner({
-          message: "Creating new branch locally in enterprise...",
-          cb: async () => {
-            // Checkout base first as basis for creating the new branch.
-            await enterprise.checkout(base);
-            await enterprise.createBranch(branch, true);
-          },
-        });
-        // FIXME: This return should not be needed.
-        return undefined;
-      });
-      if (Result.isError(res)) {
-        failedCreation.push("enterprise");
-      }
-    }
+    const upgrade = getRepo("upgrade");
 
-    if (inferBaseBranch(branch) === "master") {
-      const upgrade = getRepo("upgrade");
-      if (upgrade) {
-        res = await Result.runAsync(async () => {
-          await callWithSpinner({
-            message: "Creating new branch locally in upgrade...",
-            cb: async () => {
-              // Checkout base first as basis for creating the new branch.
-              await upgrade.checkout(base);
-              await upgrade.createBranch(branch, true);
-            },
-          });
-          // FIXME: This return should not be needed.
-          return undefined;
-        });
-        if (Result.isError(res)) {
-          failedCreation.push("upgrade");
-        }
-      }
-    }
+    const createBranchProms = [
+      // branch in odoo
+      createBranch(getOdooRepo(), base, branch),
 
-    if (failedCreation.length > 0) {
-      vscode.window.showErrorMessage(
-        `Failed to create branches in the following repo: ${failedCreation.join(",")}`
-      );
+      // branch in enterprise
+      enterprise ? createBranch(enterprise, base, branch) : Promise.resolve(success()),
+
+      // branch in upgrade
+      upgrade ? createUpgradeBranch(upgrade, base, branch) : Promise.resolve(success()),
+    ];
+
+    let createResults: SimpleResult[] = [];
+    await callWithSpinner({
+      message: `Creating '${branch}' in the repos (in parallel)...`,
+      cb: async () => {
+        createResults = await Promise.all(createBranchProms);
+      },
+    });
+    const errors = createResults.filter((res) => !isSuccess(res)) as string[];
+    if (error.length > 0) {
+      vscode.window.showErrorMessage(errors.join("; "));
     }
   };
 
