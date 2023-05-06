@@ -121,11 +121,11 @@ export const deleteBranch = createCommand(
         // Not really possible at the moment. But better be sure.
         throw new Error(`Deleting base branch '${base}' is not allowed.`);
       }
-      if (utils.db.getActiveBranch() === branch) {
-        await utils.checkoutBranches(base);
+      const activeBranch = utils.db.getActiveBranch();
+      await utils.deleteBranches(base, branch, activeBranch);
+      if (activeBranch === branch) {
         utils.db.setActiveBranch(base);
       }
-      await utils.deleteDevBranch(branch);
       utils.db.removeDevBranch(selected);
     });
   })

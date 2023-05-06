@@ -3,6 +3,7 @@ import { GitExtension, Repository } from "./git";
 import { OdooDevBranches } from "./odoo_dev_branch";
 import { OdooPluginDB } from "./odoo_plugin_db";
 import { callWithSpinner, ignoreError, inferBaseBranch } from "./helpers";
+import { assert } from "console";
 
 const gitExtension = vscode.extensions.getExtension<GitExtension>("vscode.git")!.exports;
 const git = gitExtension.getAPI(1);
@@ -309,33 +310,54 @@ export function createContextualUtils(context: vscode.ExtensionContext) {
     }
   };
 
-  const deleteDevBranch = async (name: string) => {
-    const odoo = getOdooRepo();
-    await ignoreError(async () => {
-      await callWithSpinner({
-        message: `Deleting '${name}' in odoo...`,
-        cb: () => odoo.deleteBranch(name, true),
-      });
-
-      const enterprise = getRepo("enterprise");
-      if (enterprise) {
-        await callWithSpinner({
-          message: `Deleting '${name}' in enterprise...`,
-          cb: () => enterprise.deleteBranch(name, true),
-        });
+  const deleteBranch = async (
+    repo: Repository,
+    base: string,
+    branch: string,
+    activeBranch?: string
+  ) => {
+    assert(base !== branch);
+    if (activeBranch === branch) {
+      // If the branch to delete is the active branch, we need to checkout to the base branch first.
+      const checkoutBaseRes = await simpleCheckout(repo, base);
+      if (!isSuccess(checkoutBaseRes)) {
+        return error(
+          `Failed to delete '${branch}' because it is the active branch and unable to checkout to the '${base}' base branch.`
+        );
       }
+    }
+    const deleteBranchRes = await runAsync(() => repo.deleteBranch(branch, true));
+    if (!isSuccess(deleteBranchRes)) {
+      return error(`Failed to delete '${branch}' because of "${deleteBranchRes}"`);
+    }
+    return success();
+  };
 
-      const base = inferBaseBranch(name);
-      if (base === "master") {
-        const upgrade = getRepo("upgrade");
-        if (upgrade) {
-          await callWithSpinner({
-            message: `Deleting '${name}' in upgrade...`,
-            cb: () => upgrade.deleteBranch(name, true),
-          });
-        }
-      }
+  const deleteBranches = async (base: string, branch: string, activeBranch?: string) => {
+    const enterprise = getRepo("enterprise");
+    const upgrade = getRepo("upgrade");
+
+    const deleteProms = [
+      deleteBranch(getOdooRepo(), base, branch, activeBranch),
+      enterprise
+        ? deleteBranch(enterprise, base, branch, activeBranch)
+        : Promise.resolve(success()),
+      upgrade && base === "master"
+        ? deleteBranch(upgrade, base, branch, activeBranch)
+        : Promise.resolve(success()),
+    ];
+
+    let deleteResults: SimpleResult[] = [];
+    await callWithSpinner({
+      message: `Deleting '${branch}' in the repos (in parallel)...`,
+      cb: async () => {
+        deleteResults = await Promise.all(deleteProms);
+      },
     });
+    const errors = deleteResults.filter((res) => !isSuccess(res)) as string[];
+    if (error.length > 0) {
+      vscode.window.showErrorMessage(errors.join("; "));
+    }
   };
 
   const getBaseBranches = () => {
@@ -400,7 +422,7 @@ export function createContextualUtils(context: vscode.ExtensionContext) {
     fetchBranches,
     createBranches,
     checkoutBranches,
-    deleteDevBranch,
+    deleteBranches,
     getBaseBranches,
     getTestTag,
     getTestFilePath,
