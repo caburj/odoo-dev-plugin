@@ -168,7 +168,7 @@ export function createContextualUtils(context: vscode.ExtensionContext) {
 
     if (errorMessages.length > 0) {
       vscode.window.showErrorMessage(
-        `Failed to fetch from the following repos:\n${errorMessages.join("\n")}`
+        `Failed to fetch from the following repos: ${errorMessages.join(",")}`
       );
     }
   };
@@ -210,7 +210,7 @@ export function createContextualUtils(context: vscode.ExtensionContext) {
 
     if (failedCheckout.length > 0) {
       vscode.window.showErrorMessage(
-        `Failed to checkout in the following repos:\n${failedCheckout.join("\n")}`
+        `Failed to checkout in the following repos: ${failedCheckout.join(",")}`
       );
     }
   };
@@ -222,7 +222,7 @@ export function createContextualUtils(context: vscode.ExtensionContext) {
    * @param branch
    */
   const createBranches = async (base: string, branch: string) => {
-    const errorMessages: string[] = [];
+    const failedCreation: string[] = [];
     const odoo = getOdooRepo();
     let res = await Result.runAsync(async () => {
       await callWithSpinner({
@@ -238,7 +238,7 @@ export function createContextualUtils(context: vscode.ExtensionContext) {
     });
 
     if (Result.isError(res)) {
-      errorMessages.push(res[1]);
+      failedCreation.push("odoo");
     }
 
     const enterprise = getRepo("enterprise");
@@ -256,7 +256,7 @@ export function createContextualUtils(context: vscode.ExtensionContext) {
         return undefined;
       });
       if (Result.isError(res)) {
-        errorMessages.push(res[1]);
+        failedCreation.push("enterprise");
       }
     }
 
@@ -276,14 +276,14 @@ export function createContextualUtils(context: vscode.ExtensionContext) {
           return undefined;
         });
         if (Result.isError(res)) {
-          errorMessages.push(res[1]);
+          failedCreation.push("upgrade");
         }
       }
     }
 
-    if (errorMessages.length > 0) {
+    if (failedCreation.length > 0) {
       vscode.window.showErrorMessage(
-        `There were errors while creating the branches:\n${errorMessages.join("\n")}`
+        `Failed to create branches in the following repo: ${failedCreation.join(",")}`
       );
     }
   };
