@@ -21,12 +21,12 @@
         "title": "Odoo Dev: Add Branch"
       },
       {
-        "command": "odoo-dev-plugin.removeBranch",
-        "title": "Odoo Dev: Remove Branch"
+        "command": "odoo-dev-plugin.deleteBranch",
+        "title": "Odoo Dev: Delete"
       },
       {
-        "command": "odoo-dev-plugin.selectBranch",
-        "title": "Odoo Dev: Select Branch"
+        "command": "odoo-dev-plugin.checkoutBranch",
+        "title": "Odoo Dev: Checkout"
       },
       {
         "command": "odoo-dev-plugin.startServer",

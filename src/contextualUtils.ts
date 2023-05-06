@@ -105,7 +105,7 @@ export function createContextualUtils(context: vscode.ExtensionContext) {
     db.setActiveBranch(branch);
   };
 
-  const checkoutBranch = async (name: string) => {
+  const _checkoutBranch = async (name: string) => {
     const odoo = getOdooRepo();
     try {
       await callWithSpinner({
@@ -135,8 +135,8 @@ export function createContextualUtils(context: vscode.ExtensionContext) {
     }
   };
 
-  const selectBranch = async (name: string) => {
-    await checkoutBranch(name);
+  const checkoutBranch = async (name: string) => {
+    await _checkoutBranch(name);
     db.setActiveBranch(name);
   };
 
@@ -229,7 +229,7 @@ export function createContextualUtils(context: vscode.ExtensionContext) {
     getRepo,
     getOdooRepo,
     createBranch,
-    selectBranch,
+    checkoutBranch,
     deleteDevBranch,
     getBaseBranches,
     getTestTag,

@@ -62,8 +62,8 @@ export const addBranch = createCommand(
   })
 );
 
-export const removeBranch = createCommand(
-  "odoo-dev-plugin.removeBranch",
+export const deleteBranch = createCommand(
+  "odoo-dev-plugin.deleteBranch",
   screamOnError(async (utils) => {
     const devBranches = utils
       .getBaseBranches()
@@ -72,7 +72,7 @@ export const removeBranch = createCommand(
 
     const selected = await vscode.window.showQuickPick(
       devBranches.map((b) => ({ ...b, label: b.name })),
-      { title: "Select the dev branch to remove" }
+      { title: "Select the dev branch to delete" }
     );
 
     if (selected === undefined) {
@@ -85,7 +85,7 @@ export const removeBranch = createCommand(
         throw new Error(`Deleting base branch '${selected.base}' is not allowed.`);
       }
       if (utils.db.getActiveBranch() === selected.name) {
-        await utils.selectBranch(selected.base);
+        await utils.checkoutBranch(selected.base);
       }
       await utils.deleteDevBranch(selected.name);
       utils.db.removeDevBranch(selected);
@@ -93,8 +93,8 @@ export const removeBranch = createCommand(
   })
 );
 
-export const selectBranch = createCommand(
-  "odoo-dev-plugin.selectBranch",
+export const checkoutBranch = createCommand(
+  "odoo-dev-plugin.checkoutBranch",
   screamOnError(async (utils) => {
     const devBranches = utils
       .getBaseBranches()
@@ -113,7 +113,7 @@ export const selectBranch = createCommand(
       return;
     }
 
-    return utils.refreshTreeOnSuccess(() => utils.selectBranch(selected.name));
+    return utils.refreshTreeOnSuccess(() => utils.checkoutBranch(selected.name));
   })
 );
 
