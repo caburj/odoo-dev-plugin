@@ -116,6 +116,12 @@
           "type": "string",
           "default": "git@github.com:odoo/upgrade.git",
           "description": "This is where upgrade dev branches will be fetched."
+        },
+        "odooDev.branchNameAsDB": {
+          "title": "Branch Name as DB",
+          "type": "boolean",
+          "default": false,
+          "description": "Use the name of the branch as the name of the db."
         }
       }
     },

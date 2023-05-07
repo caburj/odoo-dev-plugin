@@ -54,6 +54,46 @@ export function createContextualUtils(context: vscode.ExtensionContext) {
     return odooDevTerminal;
   };
 
+  const getStartServerArgs = () => {
+    const configFile = `${
+      vscode.workspace.getConfiguration("odooDev").sourceFolder
+    }/.odoo-dev-plugin/odoo.conf`;
+    const args = ["-c", configFile];
+    if (vscode.workspace.getConfiguration("odooDev").branchNameAsDB as boolean) {
+      const branch = db.getActiveBranch();
+      if (branch) {
+        args.push("-d", branch);
+      }
+    }
+    return args;
+  };
+
+  const getStartServerWithInstallArgs = (selectedAddons: string[]) => {
+    const args = getStartServerArgs();
+    if (selectedAddons.length >= 1) {
+      args.push("-i", selectedAddons.join(","));
+    }
+    return args;
+  };
+
+  const getStartServerWithUpdateArgs = (selectedAddons: string[]) => {
+    const args = getStartServerArgs();
+    if (selectedAddons.length >= 1) {
+      args.push("-u", selectedAddons.join(","));
+    }
+    return args;
+  };
+
+  const getstartSelectedTestArgs = (testTag: string) => {
+    const args = getStartServerArgs();
+    return [...args, "--stop-after-init", "--test-enable", "--test-tags", testTag];
+  };
+
+  const getStartCurrentTestFileArgs = (testFilePath: string) => {
+    const args = getStartServerArgs();
+    return [...args, "--stop-after-init", "--test-file", testFilePath];
+  };
+
   const getRemoteOdooDevUrl = () => {
     const res = vscode.workspace.getConfiguration("odooDev").remoteOdooDevUrl as string;
     if (!res) {
@@ -366,6 +406,11 @@ export function createContextualUtils(context: vscode.ExtensionContext) {
     getRemoteEnterpriseDevUrl,
     getRemoteUpgradeUrl,
     getOdooDevTerminal,
+    getStartServerArgs,
+    getStartServerWithInstallArgs,
+    getStartServerWithUpdateArgs,
+    getstartSelectedTestArgs,
+    getStartCurrentTestFileArgs,
     getRepo,
     getOdooRepo,
     fetchBranches,

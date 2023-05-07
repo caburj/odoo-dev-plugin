@@ -66,7 +66,13 @@ export async function multiSelectAddons() {
   const addons = getFoldersInDirectory(
     `${vscode.workspace.getConfiguration("odooDev").sourceFolder}/odoo/addons`
   );
-  return vscode.window.showQuickPick(addons, { canPickMany: true });
+  let enterprise: string[] = [];
+  try {
+    enterprise = getFoldersInDirectory(
+      `${vscode.workspace.getConfiguration("odooDev").sourceFolder}/enterprise`
+    );
+  } catch (error) {}
+  return vscode.window.showQuickPick([...addons, ...enterprise], { canPickMany: true });
 }
 
 export function runShellCommand(command: string): Promise<string> {
