@@ -17,79 +17,79 @@
   "contributes": {
     "commands": [
       {
-        "command": "odoo-dev-plugin.fetchBranch",
+        "command": "odooDev.fetchBranch",
         "title": "Odoo Dev: Fetch"
       },
       {
-        "command": "odoo-dev-plugin.createBranch",
+        "command": "odooDev.createBranch",
         "title": "Odoo Dev: Create"
       },
       {
-        "command": "odoo-dev-plugin.deleteBranch",
+        "command": "odooDev.deleteBranch",
         "title": "Odoo Dev: Delete"
       },
       {
-        "command": "odoo-dev-plugin.checkoutBranch",
+        "command": "odooDev.checkoutBranch",
         "title": "Odoo Dev: Checkout"
       },
       {
-        "command": "odoo-dev-plugin.startServer",
+        "command": "odooDev.startServer",
         "title": "Odoo Dev: Start Server"
       },
       {
-        "command": "odoo-dev-plugin.debugServer",
+        "command": "odooDev.debugServer",
         "title": "Odoo Dev: Debug Server"
       },
       {
-        "command": "odoo-dev-plugin.startServerWithInstall",
+        "command": "odooDev.startServerWithInstall",
         "title": "Odoo Dev: Start Server With Install..."
       },
       {
-        "command": "odoo-dev-plugin.startFreshServer",
+        "command": "odooDev.startFreshServer",
         "title": "Odoo Dev: Start Fresh Server"
       },
       {
-        "command": "odoo-dev-plugin.debugServerWithInstall",
+        "command": "odooDev.debugServerWithInstall",
         "title": "Odoo Dev: Debug Server With Install..."
       },
       {
-        "command": "odoo-dev-plugin.startServerWithUpdate",
+        "command": "odooDev.startServerWithUpdate",
         "title": "Odoo Dev: Start Server With Update..."
       },
       {
-        "command": "odoo-dev-plugin.debugServerWithUpdate",
+        "command": "odooDev.debugServerWithUpdate",
         "title": "Odoo Dev: Debug Server With Update..."
       },
       {
-        "command": "odoo-dev-plugin.startSelectedTest",
+        "command": "odooDev.startSelectedTest",
         "title": "Odoo Dev: Start Selected Test"
       },
       {
-        "command": "odoo-dev-plugin.debugSelectedTest",
+        "command": "odooDev.debugSelectedTest",
         "title": "Odoo Dev: Debug Selected Test"
       },
       {
-        "command": "odoo-dev-plugin.startCurrentTestFile",
+        "command": "odooDev.startCurrentTestFile",
         "title": "Odoo Dev: Start Current Test File"
       },
       {
-        "command": "odoo-dev-plugin.debugCurrentTestFile",
+        "command": "odooDev.debugCurrentTestFile",
         "title": "Odoo Dev: Debug Current Test File"
       },
       {
-        "command": "odoo-dev-plugin.dropActiveDB",
+        "command": "odooDev.dropActiveDB",
         "title": "Odoo Dev: Drop Active DB"
       },
       {
-        "command": "odoo-dev-plugin.getTestTag",
+        "command": "odooDev.getTestTag",
         "title": "Odoo Dev: Get Test Tag"
       },
       {
-        "command": "odoo-dev-plugin.getLocalServerUrl",
+        "command": "odooDev.getLocalServerUrl",
         "title": "Odoo Dev: Get Server Url"
       },
       {
-        "command": "odoo-dev-plugin.openOdooConf",
+        "command": "odooDev.openOdooConf",
         "title": "Odoo Dev: Open Config File"
       }
     ],

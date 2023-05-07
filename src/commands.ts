@@ -15,7 +15,7 @@ function createCommand<T>(name: string, cb: (utils: ContextualUtils) => Promise<
 }
 
 export const createBranch = createCommand(
-  "odoo-dev-plugin.createBranch",
+  "odooDev.createBranch",
   screamOnError(async (utils) => {
     const input = await vscode.window.showInputBox({
       placeHolder: "e.g. master-ref-barcode-parser-jcb",
@@ -50,7 +50,7 @@ export const createBranch = createCommand(
 );
 
 export const fetchBranch = createCommand(
-  "odoo-dev-plugin.fetchBranch",
+  "odooDev.fetchBranch",
   screamOnError(async (utils) => {
     await ensureRemoteUrl(utils.getOdooRepo(), utils.getRemoteOdooDevUrl());
 
@@ -99,7 +99,7 @@ export const fetchBranch = createCommand(
 );
 
 export const deleteBranch = createCommand(
-  "odoo-dev-plugin.deleteBranch",
+  "odooDev.deleteBranch",
   screamOnError(async (utils) => {
     const devBranches = utils
       .getBaseBranches()
@@ -132,7 +132,7 @@ export const deleteBranch = createCommand(
 );
 
 export const checkoutBranch = createCommand(
-  "odoo-dev-plugin.checkoutBranch",
+  "odooDev.checkoutBranch",
   screamOnError(async (utils) => {
     const devBranches = utils
       .getBaseBranches()
@@ -159,7 +159,7 @@ export const checkoutBranch = createCommand(
 );
 
 export const startServer = createCommand(
-  "odoo-dev-plugin.startServer",
+  "odooDev.startServer",
   screamOnError(async ({ getOdooDevTerminal, getStartServerArgs }) => {
     const python = vscode.workspace.getConfiguration("python").defaultInterpreterPath;
     const odooBin = `${vscode.workspace.getConfiguration("odooDev").sourceFolder}/odoo/odoo-bin`;
@@ -168,7 +168,7 @@ export const startServer = createCommand(
 );
 
 export const debugServer = createCommand(
-  "odoo-dev-plugin.debugServer",
+  "odooDev.debugServer",
   screamOnError(async ({ getStartServerArgs }) => {
     const debugOdooPythonLaunchConfig: vscode.DebugConfiguration = {
       name: "Debug Odoo Python",
@@ -185,7 +185,7 @@ export const debugServer = createCommand(
 );
 
 export const startServerWithInstall = createCommand(
-  "odoo-dev-plugin.startServerWithInstall",
+  "odooDev.startServerWithInstall",
   screamOnError(async ({ getOdooDevTerminal, getStartServerWithInstallArgs }) => {
     const selectedAddons = await multiSelectAddons();
     if (!selectedAddons) {
@@ -200,18 +200,18 @@ export const startServerWithInstall = createCommand(
 );
 
 export const startFreshServer = createCommand(
-  "odoo-dev-plugin.startFreshServer",
+  "odooDev.startFreshServer",
   screamOnError(async ({ getActiveDBName }) => {
     const dbName = getActiveDBName();
     if (dbName) {
       await runShellCommand(`dropdb ${dbName}`);
     }
-    return vscode.commands.executeCommand("odoo-dev-plugin.startServerWithInstall");
+    return vscode.commands.executeCommand("odooDev.startServerWithInstall");
   })
 );
 
 export const debugServerWithInstall = createCommand(
-  "odoo-dev-plugin.debugServerWithInstall",
+  "odooDev.debugServerWithInstall",
   screamOnError(async ({ getStartServerWithInstallArgs }) => {
     const selectedAddons = await multiSelectAddons();
     if (!selectedAddons) {
@@ -232,7 +232,7 @@ export const debugServerWithInstall = createCommand(
 );
 
 export const startServerWithUpdate = createCommand(
-  "odoo-dev-plugin.startServerWithUpdate",
+  "odooDev.startServerWithUpdate",
   screamOnError(async ({ getOdooDevTerminal, getStartServerWithUpdateArgs }) => {
     const selectedAddons = await multiSelectAddons();
     if (!selectedAddons) {
@@ -247,7 +247,7 @@ export const startServerWithUpdate = createCommand(
 );
 
 export const debugServerWithUpdate = createCommand(
-  "odoo-dev-plugin.debugServerWithUpdate",
+  "odooDev.debugServerWithUpdate",
   screamOnError(async ({ getStartServerWithUpdateArgs }) => {
     const selectedAddons = await multiSelectAddons();
     if (!selectedAddons) {
@@ -268,7 +268,7 @@ export const debugServerWithUpdate = createCommand(
 );
 
 export const startSelectedTest = createCommand(
-  "odoo-dev-plugin.startSelectedTest",
+  "odooDev.startSelectedTest",
   screamOnError(async ({ getOdooDevTerminal, getTestTag, getstartSelectedTestArgs }) => {
     const editor = vscode.window.activeTextEditor;
     if (!editor) {
@@ -286,7 +286,7 @@ export const startSelectedTest = createCommand(
 );
 
 export const debugSelectedTest = createCommand(
-  "odoo-dev-plugin.debugSelectedTest",
+  "odooDev.debugSelectedTest",
   screamOnError(async ({ getTestTag, getstartSelectedTestArgs }) => {
     const editor = vscode.window.activeTextEditor;
     if (!editor) {
@@ -308,7 +308,7 @@ export const debugSelectedTest = createCommand(
 );
 
 export const startCurrentTestFile = createCommand(
-  "odoo-dev-plugin.startCurrentTestFile",
+  "odooDev.startCurrentTestFile",
   screamOnError(async ({ getTestFilePath, getOdooDevTerminal, getStartCurrentTestFileArgs }) => {
     const editor = vscode.window.activeTextEditor;
     if (!editor) {
@@ -324,7 +324,7 @@ export const startCurrentTestFile = createCommand(
 );
 
 export const debugCurrentTestFile = createCommand(
-  "odoo-dev-plugin.debugCurrentTestFile",
+  "odooDev.debugCurrentTestFile",
   screamOnError(async ({ getTestFilePath, getStartCurrentTestFileArgs }) => {
     const editor = vscode.window.activeTextEditor;
     if (!editor) {
@@ -346,7 +346,7 @@ export const debugCurrentTestFile = createCommand(
 );
 
 export const dropActiveDB = createCommand(
-  "odoo-dev-plugin.dropActiveDB",
+  "odooDev.dropActiveDB",
   screamOnError(async ({ getOdooDevTerminal, getActiveDBName }) => {
     const dbName = getActiveDBName();
     if (dbName) {
@@ -356,7 +356,7 @@ export const dropActiveDB = createCommand(
 );
 
 export const getTestTag = createCommand(
-  "odoo-dev-plugin.getTestTag",
+  "odooDev.getTestTag",
   screamOnError(async ({ getTestTag }) => {
     const editor = vscode.window.activeTextEditor;
     if (!editor) {
@@ -368,7 +368,7 @@ export const getTestTag = createCommand(
 );
 
 export const getLocalServerUrl = createCommand(
-  "odoo-dev-plugin.getLocalServerUrl",
+  "odooDev.getLocalServerUrl",
   screamOnError(async () => {
     const ip = await runShellCommand(
       `ifconfig en0 | grep "inet " | grep -v 127.0.0.1 | awk '{print $2}'`
@@ -379,7 +379,7 @@ export const getLocalServerUrl = createCommand(
 );
 
 export const openOdooConf = createCommand(
-  "odoo-dev-plugin.openOdooConf",
+  "odooDev.openOdooConf",
   screamOnError(async ({ getConfigFilePath }) => {
     const filePath = getConfigFilePath();
     const confUri = vscode.Uri.file(filePath);
