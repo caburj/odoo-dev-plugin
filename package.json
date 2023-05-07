@@ -33,6 +33,10 @@
         "title": "Odoo Dev: Checkout"
       },
       {
+        "command": "odooDev.fetchStableBranch",
+        "title": "Odoo Dev: Fetch Stable"
+      },
+      {
         "command": "odooDev.startServer",
         "title": "Odoo Dev: Start Server"
       },

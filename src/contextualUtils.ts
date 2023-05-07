@@ -250,6 +250,48 @@ export function createContextualUtils(context: vscode.ExtensionContext) {
     }
   };
 
+  const fetchStableBranch = async (
+    repoName: string,
+    repo: Repository,
+    name: string,
+    checkout: boolean = true
+  ) => {
+    const fetchRes = await runAsync(() => repo.fetch("origin", name));
+    if (!isSuccess(fetchRes)) {
+      return error(`Failed to fetch '${name}' in '${repoName}' because of "${fetchRes}".`);
+    }
+    if (checkout) {
+      const checkoutRes = await runAsync(() => repo.checkout(name));
+      if (!isSuccess(checkoutRes)) {
+        return error(`Failed to checkout '${name}' in '${repoName}' because of "${checkoutRes}".`);
+      }
+    }
+    return success();
+  };
+
+  const fetchStableBranches = async (name: string) => {
+    const odoo = getOdooRepo();
+    const enterprise = getRepo("enterprise");
+
+    const fetchProms = [
+      fetchStableBranch("odoo", odoo, name),
+      enterprise ? fetchStableBranch("enterprise", enterprise, name) : Promise.resolve(success()),
+    ];
+
+    let fetchResults: Result[] = [];
+    await callWithSpinner({
+      message: `Fetching '${name}'...`,
+      cb: async () => {
+        fetchResults = await Promise.all(fetchProms);
+      },
+    });
+
+    const errors = fetchResults.filter((res) => !isSuccess(res)) as string[];
+    if (error.length > 0) {
+      vscode.window.showErrorMessage(errors.join(" "));
+    }
+  };
+
   const simpleCheckout = async (repo: Repository, branch: string) => {
     const checkoutBranchRes = await runAsync(() => repo.checkout(branch));
     if (!isSuccess(checkoutBranchRes)) {
@@ -481,6 +523,7 @@ export function createContextualUtils(context: vscode.ExtensionContext) {
     getRepo,
     getOdooRepo,
     fetchBranches,
+    fetchStableBranches,
     createBranches,
     checkoutBranches,
     deleteBranches,

@@ -98,6 +98,36 @@ export const fetchBranch = createCommand(
   })
 );
 
+export const fetchStableBranch = createCommand(
+  "odooDev.fetchStableBranch",
+  screamOnError(async (utils) => {
+    const branch = await vscode.window.showInputBox({
+      placeHolder: "e.g. saas-16.3",
+      prompt: "What is the name of the stable branch to fetch?",
+    });
+
+    if (branch === undefined) {
+      return;
+    }
+
+    if (branch === "") {
+      vscode.window.showErrorMessage("Empty input is invalid.");
+      return;
+    }
+
+    return utils.refreshTreeOnSuccess(async () => {
+      const odooDevConfig = vscode.workspace.getConfiguration("odooDev");
+      const baseBrances = odooDevConfig.baseBranches as Record<string, number>;
+
+      if (!(branch in baseBrances)) {
+        await odooDevConfig.update("baseBranches", { ...baseBrances, [branch]: 100 }, true);
+      }
+      await utils.fetchStableBranches(branch);
+      utils.db.setActiveBranch(branch);
+    });
+  })
+);
+
 export const deleteBranch = createCommand(
   "odooDev.deleteBranch",
   screamOnError(async (utils) => {
