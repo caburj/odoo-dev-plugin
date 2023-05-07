@@ -1,4 +1,6 @@
 import * as vscode from "vscode";
+import * as fs from "fs";
+import * as ini from "ini";
 import { GitExtension, Repository } from "./git";
 import { OdooDevBranches } from "./odoo_dev_branch";
 import { OdooPluginDB } from "./odoo_plugin_db";
@@ -93,6 +95,25 @@ export function createContextualUtils(context: vscode.ExtensionContext) {
     const args = getStartServerArgs();
     return [...args, "--stop-after-init", "--test-file", testFilePath];
   };
+
+  function getOdooConfigValue(key: string) {
+    const configFilePath = `${
+      vscode.workspace.getConfiguration("odooDev").sourceFolder
+    }/.odoo-dev-plugin/odoo.conf`;
+    const configFileData = fs.readFileSync(configFilePath, "utf-8");
+    const config = ini.parse(configFileData);
+    return config?.options?.[key] as string | undefined;
+  }
+
+  function getActiveDBName() {
+    let dbName: string | undefined;
+    if (vscode.workspace.getConfiguration("odooDev").branchNameAsDB as boolean) {
+      dbName = db.getActiveBranch();
+    } else {
+      dbName = getOdooConfigValue("db_name");
+    }
+    return dbName;
+  }
 
   const getRemoteOdooDevUrl = () => {
     const res = vscode.workspace.getConfiguration("odooDev").remoteOdooDevUrl as string;
@@ -411,6 +432,8 @@ export function createContextualUtils(context: vscode.ExtensionContext) {
     getStartServerWithUpdateArgs,
     getstartSelectedTestArgs,
     getStartCurrentTestFileArgs,
+    getOdooConfigValue,
+    getActiveDBName,
     getRepo,
     getOdooRepo,
     fetchBranches,

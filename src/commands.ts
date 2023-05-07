@@ -199,6 +199,17 @@ export const startServerWithInstall = createCommand(
   })
 );
 
+export const startFreshServer = createCommand(
+  "odoo-dev-plugin.startFreshServer",
+  screamOnError(async ({ getActiveDBName }) => {
+    const dbName = getActiveDBName();
+    if (dbName) {
+      await runShellCommand(`dropdb ${dbName}`);
+    }
+    return vscode.commands.executeCommand("odoo-dev-plugin.startServerWithInstall");
+  })
+);
+
 export const debugServerWithInstall = createCommand(
   "odoo-dev-plugin.debugServerWithInstall",
   screamOnError(async ({ getStartServerWithInstallArgs }) => {
@@ -331,6 +342,16 @@ export const debugCurrentTestFile = createCommand(
       args: getStartCurrentTestFileArgs(testFilePath),
     };
     await vscode.debug.startDebugging(undefined, debugOdooPythonLaunchConfig);
+  })
+);
+
+export const dropActiveDB = createCommand(
+  "odoo-dev-plugin.dropActiveDB",
+  screamOnError(async ({ getOdooDevTerminal, getActiveDBName }) => {
+    const dbName = getActiveDBName();
+    if (dbName) {
+      getOdooDevTerminal().sendText(`dropdb ${dbName}`);
+    }
   })
 );
 

@@ -99,9 +99,3 @@ export function callWithSpinner(options: { message: string; cb: () => Thenable<v
     }
   );
 }
-
-export async function ignoreError(cb: () => Promise<void>) {
-  try {
-    await cb();
-  } catch (error) {}
-}
