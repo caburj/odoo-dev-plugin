@@ -1,4 +1,5 @@
 import * as vscode from "vscode";
+import * as os from "os";
 import * as fs from "fs";
 import * as ini from "ini";
 import { GitExtension, Repository } from "./git";
@@ -20,6 +21,15 @@ function success(): Result {
 
 function error(msg: string): Result {
   return msg;
+}
+
+function run(cb: () => any): Result {
+  try {
+    cb();
+    return success();
+  } catch (e) {
+    return error((e as Error).message);
+  }
 }
 
 async function runAsync(cb: () => Promise<any>): Promise<Result> {
@@ -56,11 +66,46 @@ export function createContextualUtils(context: vscode.ExtensionContext) {
     return odooDevTerminal;
   };
 
+  const getConfigFilePath = () => {
+    let configFilePath: string | undefined;
+    let res = run(() => {
+      const odooConfigPath = vscode.workspace.getConfiguration("odooDev").odooConfigPath;
+      if (odooConfigPath) {
+        const stat = fs.statSync(odooConfigPath as string);
+        if (stat.isFile()) {
+          configFilePath = odooConfigPath;
+        } else {
+          throw new Error(`${odooConfigPath} is not a file`);
+        }
+      } else {
+        throw new Error("No config file path specified.");
+      }
+    });
+
+    if (!isSuccess(res)) {
+      res = run(() => {
+        const homeOdooRc = `${os.homedir()}/.odoorc`;
+        const homeOdooConfStat = fs.statSync(homeOdooRc);
+        if (homeOdooConfStat.isFile()) {
+          configFilePath = homeOdooRc;
+        } else {
+          throw new Error(".odoorc is not a file.");
+        }
+      });
+    }
+
+    if (!isSuccess(res)) {
+      throw new Error(
+        `Unable to find an odoo config file. Generate a config file using '--save' option when executing 'odoo-bin' or if you already have a config file, specify it in the settings "Odoo Dev Config Path".`
+      );
+    }
+
+    return configFilePath!;
+  };
+
   const getStartServerArgs = () => {
-    const configFile = `${
-      vscode.workspace.getConfiguration("odooDev").sourceFolder
-    }/.odoo-dev-plugin/odoo.conf`;
-    const args = ["-c", configFile];
+    const configFilePath = getConfigFilePath();
+    const args = ["-c", configFilePath];
     if (vscode.workspace.getConfiguration("odooDev").branchNameAsDB as boolean) {
       const branch = db.getActiveBranch();
       if (branch) {
@@ -97,9 +142,7 @@ export function createContextualUtils(context: vscode.ExtensionContext) {
   };
 
   function getOdooConfigValue(key: string) {
-    const configFilePath = `${
-      vscode.workspace.getConfiguration("odooDev").sourceFolder
-    }/.odoo-dev-plugin/odoo.conf`;
+    const configFilePath = getConfigFilePath();
     const configFileData = fs.readFileSync(configFilePath, "utf-8");
     const config = ini.parse(configFileData);
     return config?.options?.[key] as string | undefined;
@@ -423,6 +466,7 @@ export function createContextualUtils(context: vscode.ExtensionContext) {
   return {
     db,
     treeDataProvider,
+    getConfigFilePath,
     getRemoteOdooDevUrl,
     getRemoteEnterpriseDevUrl,
     getRemoteUpgradeUrl,

@@ -380,18 +380,11 @@ export const getLocalServerUrl = createCommand(
 
 export const openOdooConf = createCommand(
   "odoo-dev-plugin.openOdooConf",
-  screamOnError(async () => {
-    const odooDevPluginFolder = vscode.workspace.workspaceFolders?.find(
-      (f) => f.name === ".odoo-dev-plugin"
-    );
-    if (!odooDevPluginFolder) {
-      throw new Error(`'.odoo-dev-plugin' folder is missing from the source folder.`);
-    }
-    const confUri = vscode.Uri.joinPath(odooDevPluginFolder.uri, "odoo.conf");
+  screamOnError(async ({ getConfigFilePath }) => {
+    const filePath = getConfigFilePath();
+    const confUri = vscode.Uri.file(filePath);
     if (confUri) {
       vscode.window.showTextDocument(confUri);
-    } else {
-      throw new Error(`'odoo.conf' file is missing in the '.odoo-dev-plugin' folder.`);
     }
   })
 );

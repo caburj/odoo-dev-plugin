@@ -130,6 +130,12 @@
           "type": "boolean",
           "default": false,
           "description": "Use the name of the branch as the name of the db."
+        },
+        "odooDev.odooConfigPath": {
+          "title": "Config Path",
+          "type": "string",
+          "default": "",
+          "description": "The required config file to start odoo server. If not provided, we'll look for `.odoorc` file in the home directory."
         }
       }
     },
