@@ -2,7 +2,7 @@ import * as vscode from "vscode";
 import { GitExtension, Repository } from "./git";
 import { OdooDevBranches } from "./odoo_dev_branch";
 import { OdooPluginDB } from "./odoo_plugin_db";
-import { callWithSpinner, ignoreError, inferBaseBranch } from "./helpers";
+import { callWithSpinner, inferBaseBranch } from "./helpers";
 import { assert } from "console";
 
 const gitExtension = vscode.extensions.getExtension<GitExtension>("vscode.git")!.exports;
@@ -135,7 +135,7 @@ export function createContextualUtils(context: vscode.ExtensionContext) {
 
     let fetchResults: Result[] = [];
     await callWithSpinner({
-      message: `Fetching '${branch}' in the repos...`,
+      message: `Fetching '${branch}'...`,
       cb: async () => {
         fetchResults = await Promise.all(fetchProms);
       },
@@ -191,7 +191,7 @@ export function createContextualUtils(context: vscode.ExtensionContext) {
     ];
     let checkoutResults: Result[] = [];
     await callWithSpinner({
-      message: `Checking out '${branch}' in the repos...`,
+      message: `Checking out '${branch}'...`,
       cb: async () => {
         checkoutResults = await Promise.all(checkoutProms);
       },
@@ -248,7 +248,7 @@ export function createContextualUtils(context: vscode.ExtensionContext) {
 
     let createResults: Result[] = [];
     await callWithSpinner({
-      message: `Creating '${branch}' in the repos...`,
+      message: `Creating '${branch}'...`,
       cb: async () => {
         createResults = await Promise.all(createBranchProms);
       },
@@ -298,7 +298,7 @@ export function createContextualUtils(context: vscode.ExtensionContext) {
 
     let deleteResults: Result[] = [];
     await callWithSpinner({
-      message: `Deleting '${branch}' in the repos...`,
+      message: `Deleting '${branch}'...`,
       cb: async () => {
         deleteResults = await Promise.all(deleteProms);
       },
