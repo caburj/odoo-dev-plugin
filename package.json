@@ -114,20 +114,20 @@
           },
           "description": "List of base branches. Value serves as the sequence number for ordering the items in the Tree View."
         },
-        "odooDev.remoteOdooDevUrl": {
+        "odooDev.remote.odoo": {
           "type": "string",
-          "default": "git@github.com:odoo-dev/odoo.git",
-          "description": "This should be named as 'dev' remote in your odoo repository. The dev branches will be fetched from this remote."
+          "default": "",
+          "description": "Remote to use to fetch branches in odoo repository."
         },
-        "odooDev.remoteEnterpriseDevUrl": {
+        "odooDev.remote.enterprise": {
           "type": "string",
-          "default": "git@github.com:odoo-dev/enterprise.git",
-          "description": "This should be named as 'dev' remote in your enterprise repository. The dev branches will be fetched from this remote."
+          "default": "",
+          "description": "Remote to use to fetch branches in enterprise repository."
         },
-        "odooDev.remoteUpgradeUrl": {
+        "odooDev.remote.upgrade": {
           "type": "string",
-          "default": "git@github.com:odoo/upgrade.git",
-          "description": "This should be named as 'dev' remote in your upgrade repository. The dev branches will be fetched from this remote."
+          "default": "",
+          "description": "Remote to use to fetch branches in upgrade repository."
         },
         "odooDev.branchNameAsDB": {
           "title": "Branch Name as DB",

@@ -23,33 +23,45 @@ function getFoldersInDirectory(directoryPath: string) {
   });
 }
 
-export function getRemoteConfigStatus(
-  repo: Repository,
-  remoteName: string,
-  remoteUrl: string
-): "not-added" | "wrong" | "okay" {
-  for (const remote of repo.state.remotes) {
-    if (remote.name === remoteName) {
-      if (remote.fetchUrl === remoteUrl) {
-        return "okay";
-      } else {
-        return "wrong";
-      }
+export async function ensureRemote(name: "odoo" | "enterprise" | "upgrade", repo: Repository) {
+  const remoteConfig = vscode.workspace.getConfiguration("odooDev.remote");
+  const currentRemote = remoteConfig[name] as string;
+  let selectedRemote: string | undefined;
+  const createError = () => {
+    return new Error(`'${name}' remote not set.`);
+  };
+  if (currentRemote === "") {
+    const addNew = "Add new remote...";
+    const userResponse = await vscode.window.showQuickPick(
+      [...repo.state.remotes.map((remote) => remote.name), addNew],
+      { title: `Select the remote to use for fetching branches in ${name} repository.` }
+    );
+    if (!userResponse) {
+      throw createError();
     }
-  }
-  return "not-added";
-}
-
-export async function ensureRemoteUrl(repo: Repository, remoteUrl: string) {
-  const remoteOdooDevConfigStatus = getRemoteConfigStatus(repo, "dev", remoteUrl);
-  switch (remoteOdooDevConfigStatus) {
-    case "wrong":
-      await repo.removeRemote("dev");
-      await repo.addRemote("dev", remoteUrl);
-      break;
-    case "not-added":
-      await repo.addRemote("dev", remoteUrl);
-      break;
+    if (userResponse === addNew) {
+      const newRemoteName = await vscode.window.showInputBox({
+        title: "Remote Name",
+        prompt: "What is the remote name?",
+        placeHolder: `e.g. ${name}-dev`,
+      });
+      if (!newRemoteName) {
+        throw createError();
+      }
+      const remoteUrl = await vscode.window.showInputBox({
+        title: "Remote URL",
+        prompt: "What is the remote url?",
+        placeHolder: `e.g. git@github.com:odoo-dev/${name}`,
+      });
+      if (!remoteUrl) {
+        throw createError();
+      }
+      await repo.addRemote(newRemoteName, remoteUrl);
+      selectedRemote = newRemoteName;
+    } else {
+      selectedRemote = userResponse;
+    }
+    remoteConfig.update(name, selectedRemote, true);
   }
 }
 

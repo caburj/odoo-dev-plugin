@@ -158,20 +158,6 @@ export function createContextualUtils(context: vscode.ExtensionContext) {
     return dbName;
   }
 
-  const getRemoteOdooDevUrl = () => {
-    const res = vscode.workspace.getConfiguration("odooDev").remoteOdooDevUrl as string;
-    if (!res) {
-      throw new Error("Please provide remote dev url for your odoo repo.");
-    }
-    return res;
-  };
-
-  const getRemoteEnterpriseDevUrl = () =>
-    vscode.workspace.getConfiguration("odooDev").remoteEnterpriseDevUrl as string;
-
-  const getRemoteUpgradeUrl = () =>
-    vscode.workspace.getConfiguration("odooDev").remoteUpgradeUrl as string;
-
   const rootPath =
     vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0
       ? vscode.workspace.workspaceFolders[0].uri.fsPath
@@ -502,9 +488,6 @@ export function createContextualUtils(context: vscode.ExtensionContext) {
     db,
     treeDataProvider,
     getConfigFilePath,
-    getRemoteOdooDevUrl,
-    getRemoteEnterpriseDevUrl,
-    getRemoteUpgradeUrl,
     getOdooDevTerminal,
     getStartServerArgs,
     getStartServerWithInstallArgs,

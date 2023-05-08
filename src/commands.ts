@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import {
-  ensureRemoteUrl,
+  ensureRemote,
   getBaseBranches,
   inferBaseBranch,
   multiSelectAddons,
@@ -53,21 +53,20 @@ export const createBranch = createCommand(
 export const fetchBranch = createCommand(
   "odooDev.fetchBranch",
   screamOnError(async (utils) => {
-    await ensureRemoteUrl(utils.getOdooRepo(), utils.getRemoteOdooDevUrl());
+    await ensureRemote("odoo", utils.getOdooRepo());
 
     const enterprise = utils.getRepo("enterprise");
-    const enterpriseDevUrl = utils.getRemoteEnterpriseDevUrl();
-    if (enterprise && enterpriseDevUrl !== "") {
-      await ensureRemoteUrl(enterprise, enterpriseDevUrl);
+    if (enterprise) {
+      await ensureRemote("enterprise", enterprise);
     }
 
     const upgrade = utils.getRepo("upgrade");
-    const upgradeUrl = utils.getRemoteUpgradeUrl();
-    if (upgrade && upgradeUrl !== "") {
-      await ensureRemoteUrl(upgrade, upgradeUrl);
+    if (upgrade) {
+      await ensureRemote("upgrade", upgrade);
     }
 
     const input = await vscode.window.showInputBox({
+      title: "Branch Name",
       placeHolder: "e.g. master-ref-barcode-parser-jcb",
       prompt: "What is the name of the branch to fetch?",
     });
