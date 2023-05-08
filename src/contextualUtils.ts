@@ -189,6 +189,9 @@ export function createContextualUtils(context: vscode.ExtensionContext) {
     let branchToCheckout = branch;
     const fetchRes = await runAsync(() => repo.fetch("dev", branch));
     if (!isSuccess(fetchRes)) {
+      if (!base) {
+        throw new Error("Unable to checkout the branch even its base.");
+      }
       branchToCheckout = base;
     }
     if (checkout) {
@@ -231,7 +234,10 @@ export function createContextualUtils(context: vscode.ExtensionContext) {
       },
     });
     const errors = fetchResults.filter((res) => !isSuccess(res)) as string[];
-    if (error.length > 0) {
+    const successes = fetchResults.filter((res) => isSuccess(res));
+    if (successes.length === 0) {
+      throw new Error("Failed to fetch the branch from any of the repositories.");
+    } else if (error.length > 0) {
       vscode.window.showErrorMessage(errors.join("; "));
     }
   };
@@ -273,7 +279,10 @@ export function createContextualUtils(context: vscode.ExtensionContext) {
     });
 
     const errors = fetchResults.filter((res) => !isSuccess(res)) as string[];
-    if (error.length > 0) {
+    const successes = fetchResults.filter((res) => isSuccess(res));
+    if (successes.length === 0) {
+      throw new Error("Failed to fetch the branch from any of the repositories.");
+    } else if (error.length > 0) {
       vscode.window.showErrorMessage(errors.join(" "));
     }
   };
@@ -329,7 +338,10 @@ export function createContextualUtils(context: vscode.ExtensionContext) {
       },
     });
     const errors = checkoutResults.filter((res) => !isSuccess(res)) as string[];
-    if (error.length > 0) {
+    const successes = checkoutResults.filter((res) => isSuccess(res));
+    if (successes.length === 0) {
+      throw new Error("Failed to checkout the branch from any of the repositories.");
+    } else if (error.length > 0) {
       vscode.window.showErrorMessage(errors.join("; "));
     }
   };
@@ -386,7 +398,10 @@ export function createContextualUtils(context: vscode.ExtensionContext) {
       },
     });
     const errors = createResults.filter((res) => !isSuccess(res)) as string[];
-    if (error.length > 0) {
+    const successes = createResults.filter((res) => isSuccess(res));
+    if (successes.length === 0) {
+      throw new Error("Failed to create the branch from any of the repositories.");
+    } else if (error.length > 0) {
       vscode.window.showErrorMessage(errors.join("; "));
     }
   };
@@ -436,7 +451,10 @@ export function createContextualUtils(context: vscode.ExtensionContext) {
       },
     });
     const errors = deleteResults.filter((res) => !isSuccess(res)) as string[];
-    if (error.length > 0) {
+    const successes = deleteResults.filter((res) => isSuccess(res));
+    if (successes.length === 0) {
+      throw new Error("Failed to delete the branch from any of the repositories.");
+    } else if (error.length > 0) {
       vscode.window.showErrorMessage(errors.join("; "));
     }
   };
