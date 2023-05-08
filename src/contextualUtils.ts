@@ -46,7 +46,7 @@ function isSuccess(res: Result): res is undefined {
 }
 
 export function createContextualUtils(context: vscode.ExtensionContext) {
-  const db = new OdooPluginDB(context.globalState);
+  const db = new OdooPluginDB(context);
 
   let odooDevTerminal: vscode.Terminal | undefined;
 
@@ -455,13 +455,6 @@ export function createContextualUtils(context: vscode.ExtensionContext) {
     }
   };
 
-  const getBaseBranches = () => {
-    const odooConfig = vscode.workspace.getConfiguration("odooDev");
-    const baseBranches = Object.entries(odooConfig.baseBranches as Record<string, number>);
-    baseBranches.sort((a, b) => a[1] - b[1]);
-    return baseBranches.map((b) => b[0]);
-  };
-
   const getTestTag = async (editor: vscode.TextEditor) => {
     const match = editor.document.uri.path.match(/.*\/addons\/(.*)\/tests\/test_.*\.py/);
     const [, addon] = match || [undefined, undefined];
@@ -498,7 +491,7 @@ export function createContextualUtils(context: vscode.ExtensionContext) {
     return editor.document.uri.path;
   };
 
-  const treeDataProvider = new OdooDevBranches(rootPath, db, getBaseBranches);
+  const treeDataProvider = new OdooDevBranches(rootPath, db);
 
   const refreshTreeOnSuccess = async (cb: () => void | Promise<void>) => {
     await cb();
@@ -527,7 +520,6 @@ export function createContextualUtils(context: vscode.ExtensionContext) {
     createBranches,
     checkoutBranches,
     deleteBranches,
-    getBaseBranches,
     getTestTag,
     getTestFilePath,
     refreshTreeOnSuccess,

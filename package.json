@@ -102,7 +102,7 @@
       "properties": {
         "odooDev.sourceFolder": {
           "type": "string",
-          "description": "Folder where odoo/odoo repository is clone. This folder is also expected to have odoo/enterprise, odoo/upgrade and your custom addons folder."
+          "description": "Folder where odoo/odoo repository is cloned. This folder is also expected to have odoo/enterprise and odoo/upgrade repositories."
         },
         "odooDev.baseBranches": {
           "type": "object",
@@ -117,17 +117,17 @@
         "odooDev.remoteOdooDevUrl": {
           "type": "string",
           "default": "git@github.com:odoo-dev/odoo.git",
-          "description": "This is where odoo dev branches will be fetched."
+          "description": "This should be named as 'dev' remote in your odoo repository. The dev branches will be fetched from this remote."
         },
         "odooDev.remoteEnterpriseDevUrl": {
           "type": "string",
           "default": "git@github.com:odoo-dev/enterprise.git",
-          "description": "This is where enterprise dev branches will be fetched."
+          "description": "This should be named as 'dev' remote in your enterprise repository. The dev branches will be fetched from this remote."
         },
         "odooDev.remoteUpgradeUrl": {
           "type": "string",
           "default": "git@github.com:odoo/upgrade.git",
-          "description": "This is where upgrade dev branches will be fetched."
+          "description": "This should be named as 'dev' remote in your upgrade repository. The dev branches will be fetched from this remote."
         },
         "odooDev.branchNameAsDB": {
           "title": "Branch Name as DB",
@@ -183,10 +183,10 @@
     "mocha": "^10.2.0",
     "typescript": "^4.9.5"
   },
-  "prettier": {
-    "printWidth": 100
-  },
   "dependencies": {
     "ini": "^4.1.0"
+  },
+  "prettier": {
+    "printWidth": 100
   }
 }

@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 import { OdooPluginDB } from "./odoo_plugin_db";
+import { getBaseBranches } from "./helpers";
 
 export class OdooDevBranches implements vscode.TreeDataProvider<OdooDevBranch> {
   private _onDidChangeTreeData: vscode.EventEmitter<OdooDevBranch | undefined | void> =
@@ -7,11 +8,7 @@ export class OdooDevBranches implements vscode.TreeDataProvider<OdooDevBranch> {
   readonly onDidChangeTreeData: vscode.Event<OdooDevBranch | undefined | void> =
     this._onDidChangeTreeData.event;
 
-  constructor(
-    private workspaceRoot: string | undefined,
-    private db: OdooPluginDB,
-    private getBaseBranches: () => string[]
-  ) {}
+  constructor(private workspaceRoot: string | undefined, private db: OdooPluginDB) {}
 
   refresh(): void {
     this._onDidChangeTreeData.fire();
@@ -32,7 +29,7 @@ export class OdooDevBranches implements vscode.TreeDataProvider<OdooDevBranch> {
 
   async getChildren(element?: OdooDevBranch): Promise<OdooDevBranch[]> {
     if (!element) {
-      const baseBranches = this.getBaseBranches();
+      const baseBranches = getBaseBranches();
       return baseBranches.map((name) => {
         const devBranches = this.db.getDevBranches(name);
         return new OdooDevBranch(

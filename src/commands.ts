@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import {
   ensureRemoteUrl,
+  getBaseBranches,
   inferBaseBranch,
   multiSelectAddons,
   runShellCommand,
@@ -131,8 +132,7 @@ export const fetchStableBranch = createCommand(
 export const deleteBranch = createCommand(
   "odooDev.deleteBranch",
   screamOnError(async (utils) => {
-    const devBranches = utils
-      .getBaseBranches()
+    const devBranches = getBaseBranches()
       .map((base) => utils.db.getDevBranches(base).map((branch) => ({ ...branch, base })))
       .flat();
 
@@ -164,8 +164,7 @@ export const deleteBranch = createCommand(
 export const checkoutBranch = createCommand(
   "odooDev.checkoutBranch",
   screamOnError(async (utils) => {
-    const devBranches = utils
-      .getBaseBranches()
+    const devBranches = getBaseBranches()
       .map((base) => [
         { base, name: base },
         ...utils.db.getDevBranches(base).map((branch) => ({ ...branch, base })),

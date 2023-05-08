@@ -99,3 +99,10 @@ export function callWithSpinner(options: { message: string; cb: () => Thenable<v
     }
   );
 }
+
+export const getBaseBranches = () => {
+  const odooConfig = vscode.workspace.getConfiguration("odooDev");
+  const baseBranches = Object.entries(odooConfig.baseBranches as Record<string, number>);
+  baseBranches.sort((a, b) => a[1] - b[1]);
+  return baseBranches.map((b) => b[0]);
+};
