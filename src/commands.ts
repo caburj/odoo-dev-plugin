@@ -232,7 +232,16 @@ export const startFreshServer = createCommand(
   screamOnError(async ({ getActiveDBName }) => {
     const dbName = getActiveDBName();
     if (dbName) {
-      await runShellCommand(`dropdb ${dbName}`);
+      try {
+        await runShellCommand(`dropdb ${dbName}`);
+      } catch (error) {
+        if (error instanceof Error) {
+          const rx = new RegExp(`database .${dbName}. does not exist`);
+          if (!rx.test(error.message)) {
+            throw error;
+          }
+        }
+      }
     }
     return vscode.commands.executeCommand("odooDev.startServerWithInstall");
   })
