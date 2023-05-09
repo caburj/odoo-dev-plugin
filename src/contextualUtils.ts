@@ -226,9 +226,7 @@ export function createContextualUtils(context: vscode.ExtensionContext) {
 
     const fetchProms = [
       fetchBranch("odoo", odoo, base, branch),
-      enterprise
-        ? fetchBranch("enterprise", enterprise, base, branch)
-        : Promise.resolve(success()),
+      enterprise ? fetchBranch("enterprise", enterprise, base, branch) : Promise.resolve(success()),
       upgrade && base === "master"
         ? fetchBranch("upgrade", upgrade, base, branch)
         : Promise.resolve(success()),

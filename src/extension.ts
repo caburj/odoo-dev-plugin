@@ -1,7 +1,14 @@
+/* eslint-disable @typescript-eslint/naming-convention */
+
 import * as vscode from "vscode";
 import { createContextualUtils } from "./contextualUtils";
 import * as commands from "./commands";
 import { migrate } from "./odoo_plugin_db";
+
+const ALIASES: Record<string, string[]> = {
+  "odooDev.checkoutBranch": ["odooDev.selectBranch"],
+  "odooDev.deleteBranch": ["odooDev.removeBranch"],
+};
 
 export async function activate(context: vscode.ExtensionContext) {
   const utils = createContextualUtils(context);
@@ -20,10 +27,16 @@ export async function activate(context: vscode.ExtensionContext) {
 
   const disposables = Object.values(commands).map((command) => {
     const { name, method } = command(utils);
-    return vscode.commands.registerCommand(name, method);
+    const registrations = [vscode.commands.registerCommand(name, method)];
+    if (name in ALIASES) {
+      for (const alias of ALIASES[name]) {
+        registrations.push(vscode.commands.registerCommand(alias, method));
+      }
+    }
+    return registrations;
   });
 
-  for (const disposable of disposables) {
+  for (const disposable of disposables.flat()) {
     context.subscriptions.push(disposable);
   }
 }
