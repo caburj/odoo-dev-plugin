@@ -146,6 +146,12 @@
           "default": false,
           "description": "Use the name of the branch as the name of the db."
         },
+        "odooDev.pullBaseOnCreate": {
+          "title": "Pull Base Branch on Create",
+          "type": "boolean",
+          "default": false,
+          "description": "Activating this will try to pull from remote the base branch before creating (and checking out) the new branch."
+        },
         "odooDev.odooConfigPath": {
           "title": "Config Path",
           "type": "string",

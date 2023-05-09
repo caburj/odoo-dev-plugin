@@ -358,6 +358,13 @@ export function createContextualUtils(context: vscode.ExtensionContext) {
     if (!isSuccess(checkoutBase)) {
       return error(`Failed at checking out the base branch '${base}' because of "${checkoutBase}"`);
     }
+    if (vscode.workspace.getConfiguration("odooDev")["pullBaseOnCreate"]) {
+      try {
+        await repo.pull();
+      } catch (error) {
+        // Creation of branch should continue even if the pull failed so we ignore the error.
+      }
+    }
     const createAndCheckoutBranch = await runAsync(() => repo.createBranch(branch, true));
     if (!isSuccess(createAndCheckoutBranch)) {
       return error(
