@@ -40,6 +40,10 @@
         "title": "Odoo Dev: Checkout"
       },
       {
+        "command": "odooDev.checkoutBranch",
+        "title": "Odoo Dev: Select"
+      },
+      {
         "command": "odooDev.fetchStableBranch",
         "title": "Odoo Dev: Fetch Stable"
       },
