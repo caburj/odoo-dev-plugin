@@ -32,6 +32,10 @@
         "title": "Odoo Dev: Delete"
       },
       {
+        "command": "odooDev.deleteBranch",
+        "title": "Odoo Dev: Remove"
+      },
+      {
         "command": "odooDev.checkoutBranch",
         "title": "Odoo Dev: Checkout"
       },
