@@ -2,7 +2,7 @@ import * as vscode from "vscode";
 import * as os from "os";
 import * as fs from "fs";
 import * as ini from "ini";
-import { GitExtension, Repository } from "./git";
+import { Branch, GitExtension, Repository } from "./git";
 import { OdooDevBranches } from "./odoo_dev_branch";
 import { OdooPluginDB } from "./odoo_plugin_db";
 import { callWithSpinner, inferBaseBranch } from "./helpers";
@@ -43,6 +43,14 @@ async function runAsync(cb: () => Promise<any>): Promise<Result> {
 
 function isSuccess(res: Result): res is undefined {
   return res === undefined;
+}
+
+async function getBranch(repo: Repository, name: string): Promise<Branch | undefined> {
+  try {
+    return await repo.getBranch(name);
+  } catch (error) {
+    return undefined;
+  }
 }
 
 export function createContextualUtils(context: vscode.ExtensionContext) {
@@ -178,7 +186,7 @@ export function createContextualUtils(context: vscode.ExtensionContext) {
     return repo;
   };
 
-  const fetchBranch2 = async (
+  const fetchBranch = async (
     repoName: string,
     repo: Repository,
     base: string,
@@ -217,12 +225,12 @@ export function createContextualUtils(context: vscode.ExtensionContext) {
     const upgrade = getRepo("upgrade");
 
     const fetchProms = [
-      fetchBranch2("odoo", odoo, base, branch),
+      fetchBranch("odoo", odoo, base, branch),
       enterprise
-        ? fetchBranch2("enterprise", enterprise, base, branch)
+        ? fetchBranch("enterprise", enterprise, base, branch)
         : Promise.resolve(success()),
       upgrade && base === "master"
-        ? fetchBranch2("upgrade", upgrade, base, branch)
+        ? fetchBranch("upgrade", upgrade, base, branch)
         : Promise.resolve(success()),
     ];
 
@@ -233,11 +241,11 @@ export function createContextualUtils(context: vscode.ExtensionContext) {
         fetchResults = await Promise.all(fetchProms);
       },
     });
-    const errors = fetchResults.filter((res) => !isSuccess(res)) as string[];
+    const errors = fetchResults.filter((res) => !isSuccess(res));
     const successes = fetchResults.filter((res) => isSuccess(res));
     if (successes.length === 0) {
       throw new Error("Failed to fetch the branch from any of the repositories.");
-    } else if (error.length > 0) {
+    } else if (errors.length > 0) {
       vscode.window.showErrorMessage(errors.join("; "));
     }
   };
@@ -278,11 +286,11 @@ export function createContextualUtils(context: vscode.ExtensionContext) {
       },
     });
 
-    const errors = fetchResults.filter((res) => !isSuccess(res)) as string[];
+    const errors = fetchResults.filter((res) => !isSuccess(res));
     const successes = fetchResults.filter((res) => isSuccess(res));
     if (successes.length === 0) {
       throw new Error("Failed to fetch the branch from any of the repositories.");
-    } else if (error.length > 0) {
+    } else if (errors.length > 0) {
       vscode.window.showErrorMessage(errors.join(" "));
     }
   };
@@ -337,11 +345,11 @@ export function createContextualUtils(context: vscode.ExtensionContext) {
         checkoutResults = await Promise.all(checkoutProms);
       },
     });
-    const errors = checkoutResults.filter((res) => !isSuccess(res)) as string[];
+    const errors = checkoutResults.filter((res) => !isSuccess(res));
     const successes = checkoutResults.filter((res) => isSuccess(res));
     if (successes.length === 0) {
       throw new Error("Failed to checkout the branch from any of the repositories.");
-    } else if (error.length > 0) {
+    } else if (errors.length > 0) {
       vscode.window.showErrorMessage(errors.join("; "));
     }
   };
@@ -397,11 +405,11 @@ export function createContextualUtils(context: vscode.ExtensionContext) {
         createResults = await Promise.all(createBranchProms);
       },
     });
-    const errors = createResults.filter((res) => !isSuccess(res)) as string[];
+    const errors = createResults.filter((res) => !isSuccess(res));
     const successes = createResults.filter((res) => isSuccess(res));
     if (successes.length === 0) {
       throw new Error("Failed to create the branch from any of the repositories.");
-    } else if (error.length > 0) {
+    } else if (errors.length > 0) {
       vscode.window.showErrorMessage(errors.join("; "));
     }
   };
@@ -412,7 +420,7 @@ export function createContextualUtils(context: vscode.ExtensionContext) {
     branch: string,
     activeBranch?: string
   ) => {
-    assert(base !== branch);
+    assert(base !== branch, "Value of the base can't be the same as branch.");
     if (activeBranch === branch) {
       // If the branch to delete is the active branch, we need to checkout to the base branch first.
       const checkoutBaseRes = await simpleCheckout(repo, base);
@@ -421,6 +429,10 @@ export function createContextualUtils(context: vscode.ExtensionContext) {
           `Failed to delete '${branch}' because it is the active branch and unable to checkout to the '${base}' base branch.`
         );
       }
+    }
+    const repoBranch = await getBranch(repo, branch);
+    if (!repoBranch) {
+      return success();
     }
     const deleteBranchRes = await runAsync(() => repo.deleteBranch(branch, true));
     if (!isSuccess(deleteBranchRes)) {
@@ -450,11 +462,11 @@ export function createContextualUtils(context: vscode.ExtensionContext) {
         deleteResults = await Promise.all(deleteProms);
       },
     });
-    const errors = deleteResults.filter((res) => !isSuccess(res)) as string[];
+    const errors = deleteResults.filter((res) => !isSuccess(res));
     const successes = deleteResults.filter((res) => isSuccess(res));
     if (successes.length === 0) {
       throw new Error("Failed to delete the branch from any of the repositories.");
-    } else if (error.length > 0) {
+    } else if (errors.length > 0) {
       vscode.window.showErrorMessage(errors.join("; "));
     }
   };
