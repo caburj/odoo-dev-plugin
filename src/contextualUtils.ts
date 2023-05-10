@@ -6,6 +6,7 @@ import { Branch, GitExtension, Repository } from "./git";
 import { OdooDevBranches } from "./odoo_dev_branch";
 import { OdooPluginDB } from "./odoo_plugin_db";
 import { callWithSpinner, inferBaseBranch, runShellCommand } from "./helpers";
+import { Result, error, isSuccess, run, runAsync, success } from "./Result";
 import { assert } from "console";
 
 const gitExtension = vscode.extensions.getExtension<GitExtension>("vscode.git")!.exports;
@@ -13,36 +14,12 @@ const git = gitExtension.getAPI(1);
 
 export type ContextualUtils = ReturnType<typeof createContextualUtils>;
 
-type Result = string | undefined;
-
-function success(): Result {
-  return;
-}
-
-function error(msg: string): Result {
-  return msg;
-}
-
-function run(cb: () => any): Result {
-  try {
-    cb();
-    return success();
-  } catch (e) {
-    return error((e as Error).message);
-  }
-}
-
-async function runAsync(cb: () => Promise<any>): Promise<Result> {
-  try {
-    await cb();
-    return success();
-  } catch (e) {
-    return error((e as Error).message);
-  }
-}
-
-function isSuccess(res: Result): res is undefined {
-  return res === undefined;
+async function taggedCall<T>(
+  tag: string,
+  cb: () => Promise<T>
+): Promise<{ tag: string; result: T }> {
+  const result = await cb();
+  return { tag, result };
 }
 
 async function getBranch(repo: Repository, name: string): Promise<Branch | undefined> {
@@ -184,6 +161,55 @@ export function createContextualUtils(context: vscode.ExtensionContext) {
       throw new Error("'odoo' repo not found.");
     }
     return repo;
+  };
+
+  const isRepoClean = async (repo: Repository) => {
+    const status = await runShellCommand("git status --porcelain", {
+      cwd: repo.rootUri.fsPath,
+    });
+    return status.trim().length === 0;
+  };
+
+  const ensureCleanRepos = async (currentCommand: string) => {
+    const odoo = getOdooRepo();
+    const enterprise = getRepo("enterprise");
+    const upgrade = getRepo("upgrade");
+
+    const results = await Promise.all([
+      taggedCall("odoo", () => isRepoClean(odoo)),
+      taggedCall("enterprise", async () => (enterprise ? isRepoClean(enterprise) : true)),
+      taggedCall("upgrade", async () => (upgrade ? isRepoClean(upgrade) : true)),
+    ]);
+
+    const dirtyRepos = results.filter((r) => !r.result).map((r) => r.tag);
+    if (dirtyRepos.length === 0) {
+      return success();
+    }
+
+    const message = `The following repos are dirty: ${dirtyRepos.join(
+      ", "
+    )}. Do you want to stash?`;
+
+    const stashName = await vscode.window.showInputBox({
+      prompt: message,
+      placeHolder: "E.g. i-dont-know-this-diff-just-stash",
+      title: "Stash Name",
+    });
+
+    if (stashName === undefined) {
+      return error(`${currentCommand} aborted.`);
+    }
+
+    await Promise.all(
+      dirtyRepos.map(async (name) => {
+        const repo = getRepo(name)!;
+        await runShellCommand("git add .", { cwd: repo.rootUri.fsPath });
+        const stashCommand = stashName === "" ? "git stash" : `git stash save ${stashName}`;
+        await runShellCommand(stashCommand, { cwd: repo.rootUri.fsPath });
+      })
+    );
+
+    return success();
   };
 
   const fetchBranch = async (
@@ -589,5 +615,6 @@ export function createContextualUtils(context: vscode.ExtensionContext) {
     getTestTag,
     getTestFilePath,
     refreshTreeOnSuccess,
+    ensureCleanRepos,
   };
 }

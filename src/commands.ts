@@ -8,6 +8,7 @@ import {
   screamOnError,
 } from "./helpers";
 import { type ContextualUtils } from "./contextualUtils";
+import { isSuccess } from "./Result";
 
 function createCommand<T>(name: string, cb: (utils: ContextualUtils) => Promise<T>) {
   return (utils: ContextualUtils) => {
@@ -30,6 +31,11 @@ export const createBranch = createCommand(
     if (input === "") {
       vscode.window.showErrorMessage("Empty input is invalid.");
       return;
+    }
+
+    const ensureResult = await utils.ensureCleanRepos("Odoo Dev: Create");
+    if (!isSuccess(ensureResult)) {
+      throw new Error(ensureResult);
     }
 
     const base = inferBaseBranch(input);
@@ -80,6 +86,11 @@ export const fetchBranch = createCommand(
       return;
     }
 
+    const ensureResult = await utils.ensureCleanRepos("Odoo Dev: Fetch");
+    if (!isSuccess(ensureResult)) {
+      throw new Error(ensureResult);
+    }
+
     const base = inferBaseBranch(input);
 
     return utils.refreshTreeOnSuccess(async () => {
@@ -115,6 +126,11 @@ export const fetchStableBranch = createCommand(
       return;
     }
 
+    const ensureResult = await utils.ensureCleanRepos("Odoo Dev: Fetch Stable");
+    if (!isSuccess(ensureResult)) {
+      throw new Error(ensureResult);
+    }
+
     return utils.refreshTreeOnSuccess(async () => {
       const odooDevConfig = vscode.workspace.getConfiguration("odooDev");
       const baseBrances = odooDevConfig.baseBranches as Record<string, number>;
@@ -142,6 +158,11 @@ export const deleteBranch = createCommand(
 
     if (selected === undefined) {
       return;
+    }
+
+    const ensureResult = await utils.ensureCleanRepos("Odoo Dev: Delete");
+    if (!isSuccess(ensureResult)) {
+      throw new Error(ensureResult);
     }
 
     return utils.refreshTreeOnSuccess(async () => {
@@ -179,6 +200,11 @@ export const checkoutBranch = createCommand(
       return;
     }
 
+    const ensureResult = await utils.ensureCleanRepos("Odoo Dev: Checkout");
+    if (!isSuccess(ensureResult)) {
+      throw new Error(ensureResult);
+    }
+
     return utils.refreshTreeOnSuccess(async () => {
       await utils.checkoutBranches(selected.name);
       utils.db.setActiveBranch(selected.name);
@@ -189,6 +215,11 @@ export const checkoutBranch = createCommand(
 export const resetActiveBranch = createCommand(
   "odooDev.resetActiveBranch",
   screamOnError(async (utils) => {
+    const ensureResult = await utils.ensureCleanRepos("Odoo Dev: Reset Active Branch");
+    if (!isSuccess(ensureResult)) {
+      throw new Error(ensureResult);
+    }
+
     const activeBranch = utils.db.getActiveBranch();
     if (activeBranch) {
       await utils.resetBranches(activeBranch);

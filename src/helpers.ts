@@ -4,6 +4,10 @@ import * as path from "path";
 import * as child_process from "child_process";
 import { Repository } from "./git";
 
+export class ShellCommandError {
+  constructor(public sourceError: Error, public stderr: string) {}
+}
+
 export function screamOnError<Args extends any[]>(cb: (...args: Args) => Promise<void>) {
   return async (...args: Args) => {
     try {
@@ -94,7 +98,7 @@ export function runShellCommand(
   return new Promise<string>((resolve, reject) => {
     child_process.exec(command, options, (error, stdout, stderr) => {
       if (error) {
-        reject(error);
+        reject(new ShellCommandError(error, stderr));
       } else {
         resolve(stdout.toString());
       }
