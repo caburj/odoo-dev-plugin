@@ -35,6 +35,8 @@ export class OdooDevBranches implements vscode.TreeDataProvider<OdooDevBranch> {
         return new OdooDevBranch(
           name,
           this.computeLabel(name),
+          name,
+          "base-branch",
           devBranches.length > 0
             ? vscode.TreeItemCollapsibleState.Expanded
             : vscode.TreeItemCollapsibleState.None
@@ -46,7 +48,13 @@ export class OdooDevBranches implements vscode.TreeDataProvider<OdooDevBranch> {
         .getDevBranches(branchName)
         .map(
           ({ name }) =>
-            new OdooDevBranch(name, this.computeLabel(name), vscode.TreeItemCollapsibleState.None)
+            new OdooDevBranch(
+              name,
+              this.computeLabel(name),
+              element.base,
+              "dev-branch",
+              vscode.TreeItemCollapsibleState.None
+            )
         );
     }
   }
@@ -56,13 +64,15 @@ export class OdooDevBranch extends vscode.TreeItem {
   constructor(
     public readonly name: string,
     public readonly label: string,
+    public readonly base: string,
+    public readonly contextValue: string,
     public readonly collapsibleState: vscode.TreeItemCollapsibleState,
     public readonly command?: vscode.Command
   ) {
     super(label, collapsibleState);
     this.id = name;
+    this.base = base;
     this.name = name;
+    this.contextValue = contextValue;
   }
-
-  contextValue = "odoo-dev-branch";
 }

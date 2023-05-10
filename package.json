@@ -180,6 +180,18 @@
           "name": "Branches"
         }
       ]
+    },
+    "menus": {
+      "view/item/context": [
+        {
+          "command": "odooDev.checkoutBranch",
+          "when": "viewItem == base-branch || viewItem == dev-branch"
+        },
+        {
+          "command": "odooDev.deleteBranch",
+          "when": "viewItem == dev-branch"
+        }
+      ]
     }
   },
   "scripts": {

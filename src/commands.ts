@@ -9,10 +9,14 @@ import {
 } from "./helpers";
 import { type ContextualUtils } from "./contextualUtils";
 import { isSuccess } from "./Result";
+import { OdooDevBranch } from "./odoo_dev_branch";
 
-function createCommand<T>(name: string, cb: (utils: ContextualUtils) => Promise<T>) {
+function createCommand<T>(
+  name: string,
+  cb: (utils: ContextualUtils, item?: OdooDevBranch) => Promise<T>
+) {
   return (utils: ContextualUtils) => {
-    return { name, method: () => cb(utils) };
+    return { name, method: (item?: OdooDevBranch) => cb(utils, item) };
   };
 }
 
@@ -146,15 +150,21 @@ export const fetchStableBranch = createCommand(
 
 export const deleteBranch = createCommand(
   "odooDev.deleteBranch",
-  screamOnError(async (utils) => {
+  screamOnError(async (utils, item) => {
     const devBranches = getBaseBranches()
       .map((base) => utils.db.getDevBranches(base).map((branch) => ({ ...branch, base })))
       .flat();
 
-    const selected = await vscode.window.showQuickPick(
-      devBranches.map((b) => ({ ...b, label: b.name })),
-      { title: "Select the dev branch to delete" }
-    );
+    const selected = item
+      ? {
+          label: item.label,
+          base: item.base,
+          name: item.name,
+        }
+      : await vscode.window.showQuickPick(
+          devBranches.map((b) => ({ ...b, label: b.name })),
+          { title: "Select the dev branch to delete" }
+        );
 
     if (selected === undefined) {
       return;
@@ -183,7 +193,7 @@ export const deleteBranch = createCommand(
 
 export const checkoutBranch = createCommand(
   "odooDev.checkoutBranch",
-  screamOnError(async (utils) => {
+  screamOnError(async (utils, item) => {
     const devBranches = getBaseBranches()
       .map((base) => [
         { base, name: base },
@@ -191,10 +201,16 @@ export const checkoutBranch = createCommand(
       ])
       .flat();
 
-    const selected = await vscode.window.showQuickPick(
-      devBranches.map((b) => ({ ...b, label: b.name })),
-      { title: "Choose from the list" }
-    );
+    const selected = item
+      ? {
+          label: item.label,
+          base: item.base,
+          name: item.name,
+        }
+      : await vscode.window.showQuickPick(
+          devBranches.map((b) => ({ ...b, label: b.name })),
+          { title: "Choose from the list" }
+        );
 
     if (selected === undefined) {
       return;
