@@ -87,9 +87,12 @@ export async function multiSelectAddons() {
   return vscode.window.showQuickPick([...addons, ...enterprise], { canPickMany: true });
 }
 
-export function runShellCommand(command: string): Promise<string> {
+export function runShellCommand(
+  command: string,
+  options: child_process.ExecOptions = {}
+): Promise<string> {
   return new Promise<string>((resolve, reject) => {
-    child_process.exec(command, (error, stdout, stderr) => {
+    child_process.exec(command, options, (error, stdout, stderr) => {
       if (error) {
         reject(error);
       } else {

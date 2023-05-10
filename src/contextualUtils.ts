@@ -5,7 +5,7 @@ import * as ini from "ini";
 import { Branch, GitExtension, Repository } from "./git";
 import { OdooDevBranches } from "./odoo_dev_branch";
 import { OdooPluginDB } from "./odoo_plugin_db";
-import { callWithSpinner, inferBaseBranch } from "./helpers";
+import { callWithSpinner, inferBaseBranch, runShellCommand } from "./helpers";
 import { assert } from "console";
 
 const gitExtension = vscode.extensions.getExtension<GitExtension>("vscode.git")!.exports;
@@ -476,6 +476,53 @@ export function createContextualUtils(context: vscode.ExtensionContext) {
     }
   };
 
+  const resetBranch = async (repoName: string, repo: Repository, branch: string) => {
+    // TODO: Check first if dirty.
+    if (repo.state.HEAD?.name !== branch) {
+      return success(); // We don't care about resetting a repo that has different active branch.
+    } else {
+      const remote = !inferBaseBranch(branch) ? "origin" : "dev";
+      try {
+        await repo.fetch({ remote, ref: branch });
+        await runShellCommand(`git reset --hard ${remote}/${branch}`, { cwd: repo.rootUri.fsPath });
+      } catch (e) {
+        return error(
+          `Failed to reset the active branch from ${repoName}. Error: ${(e as Error).message}`
+        );
+      }
+      return success();
+    }
+  };
+
+  const resetBranches = async (branch: string) => {
+    const odoo = getOdooRepo();
+    const enterprise = getRepo("enterprise");
+    const upgrade = getRepo("upgrade");
+
+    const deleteProms = [
+      resetBranch("odoo", odoo, branch),
+      enterprise ? resetBranch("enterprise", enterprise, branch) : Promise.resolve(success()),
+      upgrade && (inferBaseBranch(branch) === "master" || branch === "master")
+        ? resetBranch("upgrade", upgrade, branch)
+        : Promise.resolve(success()),
+    ];
+
+    let results: Result[] = [];
+    await callWithSpinner({
+      message: `Resetting '${branch}'...`,
+      cb: async () => {
+        results = await Promise.all(deleteProms);
+      },
+    });
+    const errors = results.filter((res) => !isSuccess(res));
+    const successes = results.filter((res) => isSuccess(res));
+    if (successes.length === 0) {
+      throw new Error("Failed to reset the branch from any of the repositories.");
+    } else if (errors.length > 0) {
+      vscode.window.showErrorMessage(errors.join("; "));
+    }
+  };
+
   const getTestTag = async (editor: vscode.TextEditor) => {
     const match = editor.document.uri.path.match(/.*\/addons\/(.*)\/tests\/test_.*\.py/);
     const [, addon] = match || [undefined, undefined];
@@ -538,6 +585,7 @@ export function createContextualUtils(context: vscode.ExtensionContext) {
     createBranches,
     checkoutBranches,
     deleteBranches,
+    resetBranches,
     getTestTag,
     getTestFilePath,
     refreshTreeOnSuccess,

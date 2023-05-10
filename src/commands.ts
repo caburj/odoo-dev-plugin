@@ -186,6 +186,16 @@ export const checkoutBranch = createCommand(
   })
 );
 
+export const resetActiveBranch = createCommand(
+  "odooDev.resetActiveBranch",
+  screamOnError(async (utils) => {
+    const activeBranch = utils.db.getActiveBranch();
+    if (activeBranch) {
+      await utils.resetBranches(activeBranch);
+    }
+  })
+);
+
 export const startServer = createCommand(
   "odooDev.startServer",
   screamOnError(async ({ getOdooDevTerminal, getStartServerArgs }) => {
