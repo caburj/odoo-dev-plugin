@@ -185,11 +185,15 @@
       "view/item/context": [
         {
           "command": "odooDev.checkoutBranch",
-          "when": "viewItem == base-branch || viewItem == dev-branch"
+          "when": "viewItem == base-branch || viewItem == dev-branch || viewItem == active-base-branch || viewItem == active-dev-branch"
         },
         {
           "command": "odooDev.deleteBranch",
-          "when": "viewItem == dev-branch"
+          "when": "viewItem == dev-branch || viewItem == active-dev-branch"
+        },
+        {
+          "command": "odooDev.resetActiveBranch",
+          "when": "viewItem == active-base-branch || viewItem == active-dev-branch"
         }
       ]
     }

@@ -32,11 +32,12 @@ export class OdooDevBranches implements vscode.TreeDataProvider<OdooDevBranch> {
       const baseBranches = getBaseBranches();
       return baseBranches.map((name) => {
         const devBranches = this.db.getDevBranches(name);
+        const isActive = name === this.db.getActiveBranch();
         return new OdooDevBranch(
           name,
           this.computeLabel(name),
           name,
-          "base-branch",
+          isActive ? "active-base-branch" : "base-branch",
           devBranches.length > 0
             ? vscode.TreeItemCollapsibleState.Expanded
             : vscode.TreeItemCollapsibleState.None
@@ -44,18 +45,16 @@ export class OdooDevBranches implements vscode.TreeDataProvider<OdooDevBranch> {
       });
     } else {
       const branchName = element.name;
-      return this.db
-        .getDevBranches(branchName)
-        .map(
-          ({ name }) =>
-            new OdooDevBranch(
-              name,
-              this.computeLabel(name),
-              element.base,
-              "dev-branch",
-              vscode.TreeItemCollapsibleState.None
-            )
+      return this.db.getDevBranches(branchName).map(({ name }) => {
+        const isActive = name === this.db.getActiveBranch();
+        return new OdooDevBranch(
+          name,
+          this.computeLabel(name),
+          element.base,
+          isActive ? "active-dev-branch" : "dev-branch",
+          vscode.TreeItemCollapsibleState.None
         );
+      });
     }
   }
 }
