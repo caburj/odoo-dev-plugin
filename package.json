@@ -111,6 +111,10 @@
       {
         "command": "odooDev.openOdooConf",
         "title": "Odoo Dev: Open Config File"
+      },
+      {
+        "command": "odooDev.openLinkedNote",
+        "title": "Odoo Dev: Open Linked Note"
       }
     ],
     "configuration": {
@@ -162,6 +166,12 @@
           "type": "string",
           "default": "",
           "description": "The required config file to start odoo server. If not provided, we'll look for `.odoorc` file in the home directory."
+        },
+        "odooDev.notesFolder": {
+          "title": "Notes Folder",
+          "type": "string",
+          "default": "",
+          "description": "This folder will contain the notes that will be linked to the branches."
         }
       }
     },
@@ -195,6 +205,10 @@
         {
           "command": "odooDev.resetActiveBranch",
           "when": "viewItem == active-base-branch || viewItem == active-dev-branch"
+        },
+        {
+          "command": "odooDev.openLinkedNote",
+          "when": "viewItem == base-branch || viewItem == dev-branch || viewItem == active-base-branch || viewItem == active-dev-branch"
         }
       ]
     }

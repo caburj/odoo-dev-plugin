@@ -5,7 +5,7 @@ import * as ini from "ini";
 import { Branch, GitExtension, Repository } from "./git";
 import { OdooDevBranches } from "./odoo_dev_branch";
 import { OdooPluginDB } from "./odoo_plugin_db";
-import { callWithSpinner, inferBaseBranch, runShellCommand } from "./helpers";
+import { callWithSpinner, inferBaseBranch, isValidDirectory, runShellCommand } from "./helpers";
 import { Result, error, isSuccess, run, runAsync, success } from "./Result";
 import { assert } from "console";
 
@@ -86,6 +86,14 @@ export function createContextualUtils(context: vscode.ExtensionContext) {
     }
 
     return configFilePath!;
+  };
+
+  const getNotesFolder = () => {
+    const notesFolder = vscode.workspace.getConfiguration("odooDev").notesFolder as string;
+    if (notesFolder === "") {
+      return undefined;
+    }
+    return isValidDirectory(notesFolder) ? notesFolder : undefined;
   };
 
   const getStartServerArgs = () => {
@@ -614,6 +622,7 @@ export function createContextualUtils(context: vscode.ExtensionContext) {
     resetBranches,
     getTestTag,
     getTestFilePath,
+    getNotesFolder,
     refreshTreeOnSuccess,
     ensureCleanRepos,
   };

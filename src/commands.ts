@@ -1,6 +1,8 @@
 import * as vscode from "vscode";
 import {
+  createTemplateNote,
   ensureRemote,
+  fileExists,
   getBaseBranches,
   inferBaseBranch,
   multiSelectAddons,
@@ -480,5 +482,43 @@ export const openOdooConf = createCommand(
     if (confUri) {
       vscode.window.showTextDocument(confUri);
     }
+  })
+);
+
+export const openLinkedNote = createCommand(
+  "odooDev.openLinkedNote",
+  screamOnError(async ({ getNotesFolder, db }, item) => {
+    const branch = item ? item.name : db.getActiveBranch();
+    if (!branch) {
+      throw new Error(`There is no selected branch.`);
+    }
+
+    let notesFolder = getNotesFolder();
+    if (!notesFolder) {
+      const willSelectFolder = await vscode.window.showQuickPick(["Yes", "No"], {
+        title: "Odoo Dev Notes Folder isn't properly set, do you want to set it?",
+      });
+      if (!willSelectFolder || willSelectFolder === "No") {
+        return;
+      }
+      const dialogSelection = await vscode.window.showOpenDialog({
+        canSelectFolders: true,
+        canSelectMany: false,
+        openLabel: "Select Folder",
+      });
+      if (!dialogSelection) {
+        return;
+      }
+      const [selectedFolder] = dialogSelection;
+      notesFolder = selectedFolder.fsPath;
+      await vscode.workspace.getConfiguration("odooDev").update("notesFolder", notesFolder, true);
+    }
+
+    const notePath = `${notesFolder}/${branch}.md`;
+    if (!fileExists(notePath)) {
+      createTemplateNote(notePath);
+    }
+    const noteUri = vscode.Uri.file(notePath);
+    await vscode.window.showTextDocument(noteUri);
   })
 );

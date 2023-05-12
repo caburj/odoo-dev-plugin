@@ -125,3 +125,37 @@ export const getBaseBranches = () => {
   baseBranches.sort((a, b) => a[1] - b[1]);
   return baseBranches.map((b) => b[0]);
 };
+
+export function isValidDirectory(path: string): boolean {
+  try {
+    const stat = fs.statSync(path);
+    return stat.isDirectory();
+  } catch (err) {
+    return false;
+  }
+}
+
+export function fileExists(path: string): boolean {
+  try {
+    const stat = fs.statSync(path);
+    return stat.isFile();
+  } catch (err) {
+    return false;
+  }
+}
+
+export function createTemplateNote(path: string): void {
+  const fd = fs.openSync(path, "wx");
+  const template = `# Description
+
+Use this note file to track things related to this branch, e.g. tasks list.
+
+
+# Todos
+
+* [ ] First todo
+* [ ] Second todo
+`;
+  fs.writeSync(fd, template);
+  fs.closeSync(fd);
+}
