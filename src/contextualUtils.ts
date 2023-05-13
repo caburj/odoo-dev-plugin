@@ -5,7 +5,14 @@ import * as ini from "ini";
 import { Branch, GitExtension, Repository } from "./git";
 import { OdooDevBranches } from "./odoo_dev_branch";
 import { OdooPluginDB } from "./odoo_plugin_db";
-import { callWithSpinner, inferBaseBranch, isValidDirectory, runShellCommand } from "./helpers";
+import {
+  callWithSpinner,
+  getChildProcs,
+  inferBaseBranch,
+  isValidDirectory,
+  killOdooServer,
+  runShellCommand,
+} from "./helpers";
 import { Result, error, isSuccess, run, runAsync, success } from "./Result";
 import { assert } from "console";
 
@@ -149,6 +156,45 @@ export function createContextualUtils(context: vscode.ExtensionContext) {
       dbName = getOdooConfigValue("db_name");
     }
     return dbName;
+  }
+
+  const isServerRunning = async (terminalPID: number) => {
+    const procs = await getChildProcs(terminalPID);
+    return procs.length > 0;
+  };
+
+  async function ensureNoActiveServer() {
+    const terminalPID = await getOdooDevTerminal().processId;
+    if (!terminalPID) {
+      return;
+    }
+    const hasActiveServer = await isServerRunning(terminalPID);
+    if (hasActiveServer) {
+      const response = await vscode.window.showInformationMessage(
+        "There is an active server, it will be stopped to continue.",
+        "Okay"
+      );
+      if (!response) {
+        return error("There is an active server, it should be stopped before starting a new one.");
+      }
+      await killOdooServer(terminalPID);
+      return success();
+    }
+  }
+
+  async function ensureNoDebugSession() {
+    const debugSession = vscode.debug.activeDebugSession;
+    if (debugSession) {
+      const response = await vscode.window.showInformationMessage(
+        "There is an active debug session, it will be stopped to continue.",
+        "Okay"
+      );
+      if (!response) {
+        return error("There is an active debug session, it should be stopped before starting a new one.");
+      }
+      await vscode.debug.stopDebugging(debugSession);
+      return success();
+    }
   }
 
   const rootPath =
@@ -625,5 +671,7 @@ export function createContextualUtils(context: vscode.ExtensionContext) {
     getNotesFolder,
     refreshTreeOnSuccess,
     ensureCleanRepos,
+    ensureNoActiveServer,
+    ensureNoDebugSession,
   };
 }

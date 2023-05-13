@@ -2,6 +2,7 @@ import * as vscode from "vscode";
 import * as fs from "fs";
 import * as path from "path";
 import * as child_process from "child_process";
+import * as psTree from "ps-tree";
 import { Repository } from "./git";
 
 export class ShellCommandError {
@@ -158,4 +159,53 @@ Use this note file to track things related to this branch, e.g. tasks list.
 `;
   fs.writeSync(fd, template);
   fs.closeSync(fd);
+}
+
+export function getChildProcs(pid: number): Promise<readonly psTree.PS[]> {
+  return new Promise((resolve, reject) => {
+    // Get the list of child processes of the current process ID
+    psTree(pid, (err, children) => {
+      if (err) {
+        reject(err);
+        return;
+      }
+      resolve(children);
+    });
+  });
+}
+
+/**
+ * FIXME: This should only kill odoo processes, not all child processes.
+ */
+export async function killOdooServer(pid: number): Promise<void> {
+  const children = await getChildProcs(pid);
+  if (children.length === 0) {
+    return;
+  } else {
+    const [first] = children;
+    if (first) {
+      process.kill(parseInt(first.PID), "SIGINT");
+    }
+  }
+  let interval: NodeJS.Timeout;
+  return new Promise((resolve, reject) => {
+    interval = setInterval(async () => {
+      try {
+        const children = await getChildProcs(pid);
+        if (children.length === 0) {
+          clearTimeout(interval);
+          resolve();
+        } else {
+          try {
+            const [first] = children;
+            if (first) {
+              process.kill(parseInt(first.PID), "SIGINT");
+            }
+          } catch (e) {}
+        }
+      } catch (e) {
+        reject(e);
+      }
+    }, 100);
+  });
 }
