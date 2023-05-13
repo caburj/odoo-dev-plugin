@@ -22,7 +22,11 @@
     "commands": [
       {
         "command": "odooDev.fetchBranch",
-        "title": "Odoo Dev: Fetch"
+        "title": "Odoo Dev: Fetch",
+        "icon": {
+          "light": "resources/fetch-branch-light.svg",
+          "dark": "resources/fetch-branch-dark.svg"
+        }
       },
       {
         "command": "odooDev.createBranch",
@@ -138,7 +142,23 @@
       },
       {
         "command": "odooDev.openLinkedNote",
-        "title": "Odoo Dev: Open Linked Note"
+        "title": "Odoo Dev: Open Linked Note",
+        "icon": {
+          "light": "resources/linked-note-light.svg",
+          "dark": "resources/linked-note-dark.svg"
+        }
+      },
+      {
+        "command": "odooDev.openPullRequestLink",
+        "title": "Odoo Dev: Open Pull Request Link",
+        "icon": {
+          "light": "resources/pull-request-light.svg",
+          "dark": "resources/pull-request-dark.svg"
+        }
+      },
+      {
+        "command": "odooDev.openRunbotLink",
+        "title": "Odoo Dev: Open Runbot Link"
       }
     ],
     "configuration": {
@@ -220,10 +240,12 @@
       "view/item/context": [
         {
           "command": "odooDev.checkoutBranch",
+          "group": "1_branch",
           "when": "viewItem == base-branch || viewItem == dev-branch || viewItem == active-base-branch || viewItem == active-dev-branch"
         },
         {
           "command": "odooDev.deleteBranch",
+          "group": "1_branch",
           "when": "viewItem == dev-branch || viewItem == active-dev-branch"
         },
         {
@@ -233,11 +255,33 @@
         },
         {
           "command": "odooDev.openLinkedNote",
+          "group": "inline",
           "when": "viewItem == base-branch || viewItem == dev-branch || viewItem == active-base-branch || viewItem == active-dev-branch"
+        },
+        {
+          "command": "odooDev.openPullRequestLink",
+          "group": "inline",
+          "when": "viewItem == dev-branch || viewItem == active-dev-branch"
+        },
+        {
+          "command": "odooDev.openPullRequestLink",
+          "group": "2_links",
+          "when": "viewItem == dev-branch || viewItem == active-dev-branch"
+        },
+        {
+          "command": "odooDev.openRunbotLink",
+          "group": "2_links",
+          "when": "viewItem == dev-branch || viewItem == active-dev-branch"
         }
       ],
-      "view/title": [{
+      "view/title": [
+        {
           "command": "odooDev.createBranch",
+          "when": "view == odoo-dev-branches",
+          "group": "navigation"
+        },
+        {
+          "command": "odooDev.fetchBranch",
           "when": "view == odoo-dev-branches",
           "group": "navigation"
         },
@@ -313,6 +357,7 @@
     "@types/ini": "^1.3.31",
     "@types/mocha": "^10.0.1",
     "@types/node": "16.x",
+    "@types/node-fetch": "^2.6.3",
     "@types/ps-tree": "^1.1.2",
     "@types/vscode": "^1.77.0",
     "@typescript-eslint/eslint-plugin": "^5.56.0",
@@ -325,6 +370,7 @@
   },
   "dependencies": {
     "ini": "^4.1.0",
+    "node-fetch": "^2.6.11",
     "ps-tree": "^1.2.0"
   },
   "prettier": {

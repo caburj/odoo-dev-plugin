@@ -1,10 +1,12 @@
 import * as vscode from "vscode";
+import fetch from "node-fetch";
 import {
   createTemplateNote,
   ensureRemote,
   fileExists,
   getBaseBranches,
   inferBaseBranch,
+  isBaseBranch,
   multiSelectAddons,
   runShellCommand,
   screamOnError,
@@ -629,5 +631,40 @@ export const stopActiveServer = createCommand(
     await utils.ensureNoActiveServer(false);
     await utils.ensureNoDebugSession(false);
     vscode.commands.executeCommand("setContext", "odooDev.hasActiveServer", false);
+  })
+);
+
+export const openPullRequestLink = createCommand(
+  "odooDev.openPullRequestLink",
+  screamOnError(async (utils, item) => {
+    const branchName = item ? item.name : utils.db.getActiveBranch();
+
+    if (!branchName || isBaseBranch(branchName)) {
+      throw new Error(`Please select a dev branch.`);
+    }
+
+    const response = await fetch(
+      `https://api.github.com/repos/odoo/odoo/pulls?head=odoo-dev:${branchName}`
+    );
+    const pullRequests = await response.json();
+    const [pr] = pullRequests;
+    if (!pr) {
+      throw new Error(`There is no pull request for branch ${branchName}.`);
+    }
+    vscode.env.openExternal(vscode.Uri.parse(pr.html_url));
+  })
+);
+
+export const openRunbotLink = createCommand(
+  "odooDev.openRunbotLink",
+  screamOnError(async (utils, item) => {
+    const branchName = item ? item.name : utils.db.getActiveBranch();
+
+    if (!branchName || isBaseBranch(branchName)) {
+      throw new Error(`Please select a dev branch.`);
+    }
+
+    const url = `https://runbot.odoo.com/runbot/r-d-1?search=${branchName}`;
+    vscode.env.openExternal(vscode.Uri.parse(url));
   })
 );

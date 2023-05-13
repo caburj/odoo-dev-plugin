@@ -79,6 +79,10 @@ export function inferBaseBranch(devBranchName: string) {
   return splitWithDashFrom(devBranchName, start)[0];
 }
 
+export function isBaseBranch(branchName: string) {
+  return inferBaseBranch(branchName) === '';
+}
+
 export async function multiSelectAddons() {
   const addons = getFoldersInDirectory(
     `${vscode.workspace.getConfiguration("odooDev").sourceFolder}/odoo/addons`
