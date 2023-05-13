@@ -13,6 +13,10 @@ const ALIASES: Record<string, string[]> = {
 export async function activate(context: vscode.ExtensionContext) {
   const utils = createContextualUtils(context);
 
+  vscode.debug.onDidTerminateDebugSession(() => {
+    vscode.commands.executeCommand("setContext", "odooDev.hasActiveServer", false);
+  });
+
   try {
     migrate(utils.db);
   } catch (error) {

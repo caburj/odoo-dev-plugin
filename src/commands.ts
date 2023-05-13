@@ -261,6 +261,7 @@ export const startServer = createCommand(
     utils
       .getOdooDevTerminal()
       .sendText(`${python} ${odooBin} ${utils.getStartServerArgs().join(" ")}`);
+    vscode.commands.executeCommand("setContext", "odooDev.hasActiveServer", true);
   })
 );
 
@@ -286,6 +287,7 @@ export const debugServer = createCommand(
       args: utils.getStartServerArgs(),
     };
     await vscode.debug.startDebugging(undefined, debugOdooPythonLaunchConfig);
+    vscode.commands.executeCommand("setContext", "odooDev.hasActiveServer", true);
   })
 );
 
@@ -309,6 +311,7 @@ export const startServerWithInstall = createCommand(
     const args = utils.getStartServerWithInstallArgs(selectedAddons);
     const command = `${python} ${odooBin} ${args.join(" ")}`;
     utils.getOdooDevTerminal().sendText(command);
+    vscode.commands.executeCommand("setContext", "odooDev.hasActiveServer", true);
   })
 );
 
@@ -366,6 +369,7 @@ export const debugServerWithInstall = createCommand(
       args: utils.getStartServerWithInstallArgs(selectedAddons),
     };
     await vscode.debug.startDebugging(undefined, debugOdooPythonLaunchConfig);
+    vscode.commands.executeCommand("setContext", "odooDev.hasActiveServer", true);
   })
 );
 
@@ -389,6 +393,7 @@ export const startServerWithUpdate = createCommand(
     const args = utils.getStartServerWithUpdateArgs(selectedAddons);
     const command = `${python} ${odooBin} ${args.join(" ")}`;
     utils.getOdooDevTerminal().sendText(command);
+    vscode.commands.executeCommand("setContext", "odooDev.hasActiveServer", true);
   })
 );
 
@@ -418,6 +423,7 @@ export const debugServerWithUpdate = createCommand(
       args: utils.getStartServerWithUpdateArgs(selectedAddons),
     };
     await vscode.debug.startDebugging(undefined, debugOdooPythonLaunchConfig);
+    vscode.commands.executeCommand("setContext", "odooDev.hasActiveServer", true);
   })
 );
 
@@ -444,6 +450,7 @@ export const startSelectedTest = createCommand(
     const args = utils.getstartSelectedTestArgs(testTag);
     const command = `${python} ${odooBin} ${args.join(" ")}`;
     utils.getOdooDevTerminal().sendText(command);
+    vscode.commands.executeCommand("setContext", "odooDev.hasActiveServer", true);
   })
 );
 
@@ -474,6 +481,7 @@ export const debugSelectedTest = createCommand(
       args: utils.getstartSelectedTestArgs(testTag),
     };
     await vscode.debug.startDebugging(undefined, debugOdooPythonLaunchConfig);
+    vscode.commands.executeCommand("setContext", "odooDev.hasActiveServer", true);
   })
 );
 
@@ -498,6 +506,7 @@ export const startCurrentTestFile = createCommand(
     const args = utils.getStartCurrentTestFileArgs(testFilePath);
     const command = `${python} ${odooBin} ${args.join(" ")}`;
     utils.getOdooDevTerminal().sendText(command);
+    vscode.commands.executeCommand("setContext", "odooDev.hasActiveServer", true);
   })
 );
 
@@ -528,6 +537,7 @@ export const debugCurrentTestFile = createCommand(
       args: utils.getStartCurrentTestFileArgs(testFilePath),
     };
     await vscode.debug.startDebugging(undefined, debugOdooPythonLaunchConfig);
+    vscode.commands.executeCommand("setContext", "odooDev.hasActiveServer", true);
   })
 );
 
@@ -610,5 +620,14 @@ export const openLinkedNote = createCommand(
     }
     const noteUri = vscode.Uri.file(notePath);
     await vscode.window.showTextDocument(noteUri);
+  })
+);
+
+export const stopActiveServer = createCommand(
+  "odooDev.stopActiveServer",
+  screamOnError(async (utils) => {
+    await utils.ensureNoActiveServer(false);
+    await utils.ensureNoDebugSession(false);
+    vscode.commands.executeCommand("setContext", "odooDev.hasActiveServer", false);
   })
 );

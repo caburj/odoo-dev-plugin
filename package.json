@@ -26,7 +26,11 @@
       },
       {
         "command": "odooDev.createBranch",
-        "title": "Odoo Dev: Create"
+        "title": "Odoo Dev: Create",
+        "icon": {
+          "light": "resources/plus-light.svg",
+          "dark": "resources/plus-dark.svg"
+        }
       },
       {
         "command": "odooDev.deleteBranch",
@@ -50,7 +54,23 @@
       },
       {
         "command": "odooDev.resetActiveBranch",
-        "title": "Odoo Dev: Reset Active Branch"
+        "title": "Odoo Dev: Reset Active Branch",
+        "icon": {
+          "light": "resources/refresh-light.svg",
+          "dark": "resources/refresh-dark.svg"
+        }
+      },
+      {
+        "command": "odooDev.startFreshServer",
+        "title": "Odoo Dev: Start Fresh Server"
+      },
+      {
+        "command": "odooDev.stopActiveServer",
+        "title": "Odoo Dev: Stop Active Server",
+        "icon": {
+          "light": "resources/stop-server-light.svg",
+          "dark": "resources/stop-server-dark.svg"
+        }
       },
       {
         "command": "odooDev.startServer",
@@ -63,10 +83,6 @@
       {
         "command": "odooDev.startServerWithInstall",
         "title": "Odoo Dev: Start Server With Install..."
-      },
-      {
-        "command": "odooDev.startFreshServer",
-        "title": "Odoo Dev: Start Fresh Server"
       },
       {
         "command": "odooDev.debugServerWithInstall",
@@ -98,7 +114,11 @@
       },
       {
         "command": "odooDev.dropActiveDB",
-        "title": "Odoo Dev: Drop Active DB"
+        "title": "Odoo Dev: Drop Active DB",
+        "icon": {
+          "light": "resources/drop-db-light.svg",
+          "dark": "resources/drop-db-dark.svg"
+        }
       },
       {
         "command": "odooDev.getTestTag",
@@ -110,7 +130,11 @@
       },
       {
         "command": "odooDev.openOdooConf",
-        "title": "Odoo Dev: Open Config File"
+        "title": "Odoo Dev: Open Config File",
+        "icon": {
+          "light": "resources/config-file-light.svg",
+          "dark": "resources/config-file-dark.svg"
+        }
       },
       {
         "command": "odooDev.openLinkedNote",
@@ -204,11 +228,73 @@
         },
         {
           "command": "odooDev.resetActiveBranch",
+          "group": "inline",
           "when": "viewItem == active-base-branch || viewItem == active-dev-branch"
         },
         {
           "command": "odooDev.openLinkedNote",
           "when": "viewItem == base-branch || viewItem == dev-branch || viewItem == active-base-branch || viewItem == active-dev-branch"
+        }
+      ],
+      "view/title": [{
+          "command": "odooDev.createBranch",
+          "when": "view == odoo-dev-branches",
+          "group": "navigation"
+        },
+        {
+          "command": "odooDev.openOdooConf",
+          "when": "view == odoo-dev-branches",
+          "group": "navigation"
+        },
+        {
+          "command": "odooDev.stopActiveServer",
+          "when": "view == odoo-dev-branches && odooDev.hasActiveServer",
+          "group": "navigation"
+        },
+        {
+          "command": "odooDev.dropActiveDB",
+          "when": "view == odoo-dev-branches && !odooDev.hasActiveServer",
+          "group": "navigation"
+        },
+        {
+          "command": "odooDev.startServer",
+          "when": "view == odoo-dev-branches"
+        },
+        {
+          "command": "odooDev.debugServer",
+          "when": "view == odoo-dev-branches"
+        },
+        {
+          "command": "odooDev.startCurrentTestFile",
+          "when": "view == odoo-dev-branches"
+        },
+        {
+          "command": "odooDev.debugCurrentTestFile",
+          "when": "view == odoo-dev-branches"
+        },
+        {
+          "command": "odooDev.startSelectedTest",
+          "when": "view == odoo-dev-branches"
+        },
+        {
+          "command": "odooDev.debugSelectedTest",
+          "when": "view == odoo-dev-branches"
+        },
+        {
+          "command": "odooDev.startServerWithInstall",
+          "when": "view == odoo-dev-branches"
+        },
+        {
+          "command": "odooDev.debugServerWithInstall",
+          "when": "view == odoo-dev-branches"
+        },
+        {
+          "command": "odooDev.startServerWithUpdate",
+          "when": "view == odoo-dev-branches"
+        },
+        {
+          "command": "odooDev.debugServerWithUpdate",
+          "when": "view == odoo-dev-branches"
         }
       ]
     }

@@ -163,38 +163,42 @@ export function createContextualUtils(context: vscode.ExtensionContext) {
     return procs.length > 0;
   };
 
-  async function ensureNoActiveServer() {
+  async function ensureNoActiveServer(shouldConfirm = true) {
     const terminalPID = await getOdooDevTerminal().processId;
     if (!terminalPID) {
-      return;
+      return success();
     }
     const hasActiveServer = await isServerRunning(terminalPID);
     if (hasActiveServer) {
-      const response = await vscode.window.showInformationMessage(
-        "There is an active server, it will be stopped to continue.",
-        "Okay"
-      );
-      if (!response) {
-        return error("There is an active server, it should be stopped before starting a new one.");
+      if (shouldConfirm) {
+        const response = await vscode.window.showInformationMessage(
+          "There is an active server, it will be stopped to continue.",
+          "Okay"
+        );
+        if (!response) {
+          return error("There is an active server, it should be stopped before starting a new one.");
+        }
       }
       await killOdooServer(terminalPID);
-      return success();
     }
+    return success();
   }
 
-  async function ensureNoDebugSession() {
+  async function ensureNoDebugSession(shouldConfirm = true) {
     const debugSession = vscode.debug.activeDebugSession;
     if (debugSession) {
-      const response = await vscode.window.showInformationMessage(
-        "There is an active debug session, it will be stopped to continue.",
-        "Okay"
-      );
-      if (!response) {
-        return error("There is an active debug session, it should be stopped before starting a new one.");
+      if (shouldConfirm) {
+        const response = await vscode.window.showInformationMessage(
+          "There is an active debug session, it will be stopped to continue.",
+          "Okay"
+        );
+        if (!response) {
+          return error("There is an active debug session, it should be stopped before starting a new one.");
+        }
       }
       await vscode.debug.stopDebugging(debugSession);
-      return success();
     }
+    return success();
   }
 
   const rootPath =
