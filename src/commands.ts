@@ -263,6 +263,7 @@ export const startServer = createCommand(
     utils
       .getOdooDevTerminal()
       .sendText(`${python} ${odooBin} ${utils.getStartServerArgs().join(" ")}`);
+    utils.getOdooDevTerminal().show();
     vscode.commands.executeCommand("setContext", "odooDev.hasActiveServer", true);
   })
 );
@@ -313,6 +314,7 @@ export const startServerWithInstall = createCommand(
     const args = utils.getStartServerWithInstallArgs(selectedAddons);
     const command = `${python} ${odooBin} ${args.join(" ")}`;
     utils.getOdooDevTerminal().sendText(command);
+    utils.getOdooDevTerminal().show();
     vscode.commands.executeCommand("setContext", "odooDev.hasActiveServer", true);
   })
 );
@@ -395,6 +397,7 @@ export const startServerWithUpdate = createCommand(
     const args = utils.getStartServerWithUpdateArgs(selectedAddons);
     const command = `${python} ${odooBin} ${args.join(" ")}`;
     utils.getOdooDevTerminal().sendText(command);
+    utils.getOdooDevTerminal().show();
     vscode.commands.executeCommand("setContext", "odooDev.hasActiveServer", true);
   })
 );
@@ -452,6 +455,7 @@ export const startSelectedTest = createCommand(
     const args = utils.getstartSelectedTestArgs(testTag);
     const command = `${python} ${odooBin} ${args.join(" ")}`;
     utils.getOdooDevTerminal().sendText(command);
+    utils.getOdooDevTerminal().show();
     vscode.commands.executeCommand("setContext", "odooDev.hasActiveServer", true);
   })
 );
@@ -508,6 +512,7 @@ export const startCurrentTestFile = createCommand(
     const args = utils.getStartCurrentTestFileArgs(testFilePath);
     const command = `${python} ${odooBin} ${args.join(" ")}`;
     utils.getOdooDevTerminal().sendText(command);
+    utils.getOdooDevTerminal().show();
     vscode.commands.executeCommand("setContext", "odooDev.hasActiveServer", true);
   })
 );
