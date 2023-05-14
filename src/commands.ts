@@ -570,14 +570,47 @@ export const getTestTag = createCommand(
   })
 );
 
-export const getLocalServerUrl = createCommand(
-  "odooDev.getLocalServerUrl",
-  screamOnError(async () => {
+export const openChromeLocalServer = createCommand(
+  "odooDev.openChromeLocalServer",
+  screamOnError(async ({ getOdooConfigValue }) => {
+    // TODO: check if there is an active server
     const ip = await runShellCommand(
       `ifconfig en0 | grep "inet " | grep -v 127.0.0.1 | awk '{print $2}'`
     );
-    const url = `http://${ip.trim()}:8070`;
-    await vscode.env.clipboard.writeText(url);
+    const httpPort = getOdooConfigValue("http_port") || "8069";
+    const url = `http://${ip.trim()}:${httpPort}`;
+    switch (process.platform) {
+      case "darwin": {
+        const chromePath = await runShellCommand(
+          `mdfind 'kMDItemCFBundleIdentifier == "com.google.Chrome"'`
+        );
+        const chrome = chromePath.trim();
+        if (chrome === "") {
+          vscode.window.showErrorMessage(
+            "Chrome is not installed, opened in the default browser instead."
+          );
+          vscode.env.openExternal(vscode.Uri.parse(url));
+        } else {
+          await runShellCommand(`open -a "${chrome}" ${url}`);
+        }
+        break;
+      }
+      case "linux": {
+        try {
+          await runShellCommand(`which google-chrome`);
+          await runShellCommand(`google-chrome ${url}`);
+        } catch (error) {
+          vscode.window.showErrorMessage(
+            "Chrome is not installed, opened in the default browser instead."
+          );
+          vscode.env.openExternal(vscode.Uri.parse(url));
+        }
+        break;
+      }
+      default: {
+        throw new Error(`Unsupported platform: ${process.platform}`);
+      }
+    }
   })
 );
 

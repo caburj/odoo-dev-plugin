@@ -129,8 +129,12 @@
         "title": "Odoo Dev: Get Test Tag"
       },
       {
-        "command": "odooDev.getLocalServerUrl",
-        "title": "Odoo Dev: Get Server Url"
+        "command": "odooDev.openChromeLocalServer",
+        "title": "Odoo Dev: Open Chrome (Local Server)",
+        "icon": {
+          "light": "resources/chrome-browser-light.svg",
+          "dark": "resources/chrome-browser-dark.svg"
+        }
       },
       {
         "command": "odooDev.openOdooConf",
@@ -292,6 +296,11 @@
         },
         {
           "command": "odooDev.stopActiveServer",
+          "when": "view == odoo-dev-branches && odooDev.hasActiveServer",
+          "group": "navigation"
+        },
+        {
+          "command": "odooDev.openChromeLocalServer",
           "when": "view == odoo-dev-branches && odooDev.hasActiveServer",
           "group": "navigation"
         },
