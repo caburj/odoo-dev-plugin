@@ -174,11 +174,6 @@ export const deleteBranch = createCommand(
       return;
     }
 
-    const ensureResult = await utils.ensureCleanRepos("Odoo Dev: Delete");
-    if (!isSuccess(ensureResult)) {
-      throw new Error(ensureResult);
-    }
-
     return utils.refreshTreeOnSuccess(async () => {
       const { base, name: branch } = selected;
       if (base === branch) {

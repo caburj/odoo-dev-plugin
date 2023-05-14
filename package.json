@@ -224,6 +224,12 @@
           "type": "string",
           "default": "",
           "description": "This folder will contain the notes that will be linked to the branches."
+        },
+        "odooDev.autoStash": {
+          "title": "Auto Stash",
+          "type": "boolean",
+          "default": false,
+          "description": "Before switching (or creating) branches, stash the changes. When switching back, unstash the changes."
         }
       }
     },
