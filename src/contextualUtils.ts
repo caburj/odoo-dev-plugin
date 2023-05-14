@@ -7,6 +7,7 @@ import { OdooDevBranches } from "./odoo_dev_branch";
 import { OdooPluginDB } from "./odoo_plugin_db";
 import {
   callWithSpinner,
+  fileExists,
   getChildProcs,
   inferBaseBranch,
   isValidDirectory,
@@ -95,6 +96,18 @@ export function createContextualUtils(context: vscode.ExtensionContext) {
     return configFilePath!;
   };
 
+  const getPythonPath = () => {
+    const pythonPath = vscode.workspace.getConfiguration("python").defaultInterpreterPath as
+      | string
+      | undefined;
+
+    if (!pythonPath) {
+      return "python";
+    }
+
+    return fileExists(pythonPath) ? pythonPath : "python";
+  };
+
   const getNotesFolder = () => {
     const notesFolder = vscode.workspace.getConfiguration("odooDev").notesFolder as string;
     if (notesFolder === "") {
@@ -176,7 +189,9 @@ export function createContextualUtils(context: vscode.ExtensionContext) {
           "Okay"
         );
         if (!response) {
-          return error("There is an active server, it should be stopped before starting a new one.");
+          return error(
+            "There is an active server, it should be stopped before starting a new one."
+          );
         }
       }
       await killOdooServer(terminalPID);
@@ -193,7 +208,9 @@ export function createContextualUtils(context: vscode.ExtensionContext) {
           "Okay"
         );
         if (!response) {
-          return error("There is an active debug session, it should be stopped before starting a new one.");
+          return error(
+            "There is an active debug session, it should be stopped before starting a new one."
+          );
         }
       }
       await vscode.debug.stopDebugging(debugSession);
@@ -655,6 +672,7 @@ export function createContextualUtils(context: vscode.ExtensionContext) {
     treeDataProvider,
     getConfigFilePath,
     getOdooDevTerminal,
+    getPythonPath,
     getStartServerArgs,
     getStartServerWithInstallArgs,
     getStartServerWithUpdateArgs,

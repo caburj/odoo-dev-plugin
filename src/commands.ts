@@ -258,7 +258,7 @@ export const startServer = createCommand(
       return;
     }
 
-    const python = vscode.workspace.getConfiguration("python").defaultInterpreterPath;
+    const python = utils.getPythonPath();
     const odooBin = `${vscode.workspace.getConfiguration("odooDev").sourceFolder}/odoo/odoo-bin`;
     utils
       .getOdooDevTerminal()
@@ -309,7 +309,7 @@ export const startServerWithInstall = createCommand(
     if (!selectedAddons) {
       return;
     }
-    const python = vscode.workspace.getConfiguration("python").defaultInterpreterPath;
+    const python = utils.getPythonPath();
     const odooBin = `${vscode.workspace.getConfiguration("odooDev").sourceFolder}/odoo/odoo-bin`;
     const args = utils.getStartServerWithInstallArgs(selectedAddons);
     const command = `${python} ${odooBin} ${args.join(" ")}`;
@@ -392,7 +392,7 @@ export const startServerWithUpdate = createCommand(
     if (!selectedAddons) {
       return;
     }
-    const python = vscode.workspace.getConfiguration("python").defaultInterpreterPath;
+    const python = utils.getPythonPath();
     const odooBin = `${vscode.workspace.getConfiguration("odooDev").sourceFolder}/odoo/odoo-bin`;
     const args = utils.getStartServerWithUpdateArgs(selectedAddons);
     const command = `${python} ${odooBin} ${args.join(" ")}`;
@@ -450,7 +450,7 @@ export const startSelectedTest = createCommand(
       );
     }
     const testTag = await utils.getTestTag(editor);
-    const python = vscode.workspace.getConfiguration("python").defaultInterpreterPath;
+    const python = utils.getPythonPath();
     const odooBin = `${vscode.workspace.getConfiguration("odooDev").sourceFolder}/odoo/odoo-bin`;
     const args = utils.getstartSelectedTestArgs(testTag);
     const command = `${python} ${odooBin} ${args.join(" ")}`;
@@ -507,7 +507,7 @@ export const startCurrentTestFile = createCommand(
       throw new Error("Open a test file.");
     }
     const testFilePath = utils.getTestFilePath(editor);
-    const python = vscode.workspace.getConfiguration("python").defaultInterpreterPath;
+    const python = utils.getPythonPath();
     const odooBin = `${vscode.workspace.getConfiguration("odooDev").sourceFolder}/odoo/odoo-bin`;
     const args = utils.getStartCurrentTestFileArgs(testFilePath);
     const command = `${python} ${odooBin} ${args.join(" ")}`;
