@@ -263,7 +263,7 @@ export function createContextualUtils(context: vscode.ExtensionContext) {
 
     const message = `The following repos are dirty: ${dirtyRepos.join(
       ", "
-    )}. Do you want to stash?`;
+    )}. The changes will be stashed. What is the stash name?`;
 
     const stashName = await vscode.window.showInputBox({
       prompt: message,
