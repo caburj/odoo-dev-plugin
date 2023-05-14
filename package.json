@@ -46,7 +46,11 @@
       },
       {
         "command": "odooDev.checkoutBranch",
-        "title": "Odoo Dev: Checkout"
+        "title": "Odoo Dev: Checkout",
+        "icon": {
+          "light": "resources/checkout-light.svg",
+          "dark": "resources/checkout-dark.svg"
+        }
       },
       {
         "command": "odooDev.selectBranch",
@@ -251,6 +255,11 @@
           "command": "odooDev.deleteBranch",
           "group": "1_branch",
           "when": "viewItem == dev-branch || viewItem == active-dev-branch"
+        },
+        {
+          "command": "odooDev.checkoutBranch",
+          "group": "inline",
+          "when": "viewItem != active-base-branch && viewItem != active-dev-branch"
         },
         {
           "command": "odooDev.resetActiveBranch",
