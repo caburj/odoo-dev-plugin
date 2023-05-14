@@ -259,7 +259,7 @@
         {
           "command": "odooDev.checkoutBranch",
           "group": "inline",
-          "when": "viewItem != active-base-branch && viewItem != active-dev-branch"
+          "when": "(viewItem == base-branch || viewItem == dev-branch) && (viewItem != active-base-branch && viewItem != active-dev-branch)"
         },
         {
           "command": "odooDev.resetActiveBranch",
