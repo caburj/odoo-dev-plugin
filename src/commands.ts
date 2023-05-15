@@ -193,6 +193,16 @@ export const deleteBranch = createCommand(
 export const checkoutBranch = createCommand(
   "odooDev.checkoutBranch",
   screamOnError(async (utils, item) => {
+    if (!isSuccess(await utils.ensureNoActiveServer())) {
+      return;
+    }
+
+    if (!isSuccess(await utils.ensureNoDebugSession())) {
+      return;
+    }
+
+    await vscode.commands.executeCommand("setContext", "odooDev.hasActiveServer", false);
+
     const devBranches = getBaseBranches()
       .map((base) => [
         { base, name: base },
