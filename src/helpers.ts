@@ -80,7 +80,7 @@ export function inferBaseBranch(devBranchName: string) {
 }
 
 export function isBaseBranch(branchName: string) {
-  return inferBaseBranch(branchName) === '';
+  return inferBaseBranch(branchName) === "";
 }
 
 export async function multiSelectAddons() {
@@ -178,18 +178,35 @@ export function getChildProcs(pid: number): Promise<readonly psTree.PS[]> {
   });
 }
 
-/**
- * FIXME: This should only kill odoo processes, not all child processes.
- */
+export function isOdooServer(pid: number): Promise<boolean> {
+  return new Promise((resolve, reject) => {
+    child_process.exec(
+      `ps -o command -p ${pid} | grep odoo-bin | head -1`,
+      (err, stdout, _stderr) => {
+        if (err) {
+          reject(err);
+          return;
+        }
+        resolve(stdout.toString() !== "");
+      }
+    );
+  });
+}
+
 export async function killOdooServer(pid: number): Promise<void> {
   const children = await getChildProcs(pid);
   if (children.length === 0) {
     return;
   } else {
-    const [first] = children;
-    if (first) {
-      process.kill(parseInt(first.PID), "SIGINT");
-    }
+    try {
+      for (const child of children) {
+        const pid = parseInt(child.PID);
+        const isOdoo = await isOdooServer(pid);
+        if (isOdoo) {
+          process.kill(pid, "SIGINT");
+        }
+      }
+    } catch (error) {}
   }
   let interval: NodeJS.Timeout;
   return new Promise((resolve, reject) => {
@@ -200,12 +217,13 @@ export async function killOdooServer(pid: number): Promise<void> {
           clearTimeout(interval);
           resolve();
         } else {
-          try {
-            const [first] = children;
-            if (first) {
-              process.kill(parseInt(first.PID), "SIGINT");
+          for (const child of children) {
+            const pid = parseInt(child.PID);
+            const isOdoo = await isOdooServer(pid);
+            if (isOdoo) {
+              process.kill(pid, "SIGINT");
             }
-          } catch (e) {}
+          }
         }
       } catch (e) {
         reject(e);

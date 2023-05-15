@@ -11,6 +11,7 @@ import {
   getChildProcs,
   inferBaseBranch,
   isBaseBranch,
+  isOdooServer,
   isValidDirectory,
   killOdooServer,
   runShellCommand,
@@ -196,9 +197,10 @@ export function createContextualUtils(context: vscode.ExtensionContext) {
     return dbName;
   }
 
-  const isServerRunning = async (terminalPID: number) => {
+  const isOdooServerRunning = async (terminalPID: number) => {
     const procs = await getChildProcs(terminalPID);
-    return procs.length > 0;
+    const serverProcs = await Promise.all(procs.map((proc) => isOdooServer(parseInt(proc.PID))));
+    return serverProcs.filter((x) => x).length > 0;
   };
 
   async function ensureNoActiveServer(shouldConfirm = true) {
@@ -206,7 +208,7 @@ export function createContextualUtils(context: vscode.ExtensionContext) {
     if (!terminalPID) {
       return success();
     }
-    const hasActiveServer = await isServerRunning(terminalPID);
+    const hasActiveServer = await isOdooServerRunning(terminalPID);
     if (hasActiveServer) {
       if (shouldConfirm) {
         const response = await vscode.window.showInformationMessage(
