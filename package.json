@@ -70,7 +70,11 @@
       },
       {
         "command": "odooDev.startFreshServer",
-        "title": "Odoo Dev: Start Fresh Server"
+        "title": "Odoo Dev: Start Fresh Server",
+        "icon": {
+          "light": "resources/start-fresh-light.svg",
+          "dark": "resources/start-fresh-dark.svg"
+        }
       },
       {
         "command": "odooDev.stopActiveServer",
@@ -82,7 +86,11 @@
       },
       {
         "command": "odooDev.startServer",
-        "title": "Odoo Dev: Start Server"
+        "title": "Odoo Dev: Start Server",
+        "icon": {
+          "light": "resources/start-server-light.svg",
+          "dark": "resources/start-server-dark.svg"
+        }
       },
       {
         "command": "odooDev.debugServer",
@@ -273,6 +281,11 @@
           "when": "viewItem == active-base-branch || viewItem == active-dev-branch"
         },
         {
+          "command": "odooDev.startFreshServer",
+          "group": "inline",
+          "when": "(viewItem == active-base-branch || viewItem == active-dev-branch) && !odooDev.hasActiveServer"
+        },
+        {
           "command": "odooDev.openLinkedNote",
           "group": "inline",
           "when": "viewItem == base-branch || viewItem == dev-branch || viewItem == active-base-branch || viewItem == active-dev-branch"
@@ -321,6 +334,11 @@
         },
         {
           "command": "odooDev.dropActiveDB",
+          "when": "view == odoo-dev-branches && !odooDev.hasActiveServer",
+          "group": "navigation"
+        },
+        {
+          "command": "odooDev.startServer",
           "when": "view == odoo-dev-branches && !odooDev.hasActiveServer",
           "group": "navigation"
         },
