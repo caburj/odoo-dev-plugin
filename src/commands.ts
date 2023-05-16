@@ -252,6 +252,34 @@ export const resetActiveBranch = createCommand(
   })
 );
 
+export const startFreshServer = createCommand(
+  "odooDev.startFreshServer",
+  screamOnError(async (utils) => {
+    if (!isSuccess(await utils.ensureNoActiveServer())) {
+      return;
+    }
+
+    if (!isSuccess(await utils.ensureNoDebugSession())) {
+      return;
+    }
+
+    const dbName = utils.getActiveDBName();
+    if (dbName) {
+      try {
+        await runShellCommand(`dropdb ${dbName}`);
+      } catch (error) {
+        if (error instanceof Error) {
+          const rx = new RegExp(`database .${dbName}. does not exist`);
+          if (!rx.test(error.message)) {
+            throw error;
+          }
+        }
+      }
+    }
+    return vscode.commands.executeCommand("odooDev.startServerWithInstall");
+  })
+);
+
 export const startServer = createCommand(
   "odooDev.startServer",
   screamOnError(async (utils) => {
@@ -316,35 +344,6 @@ export const startServerWithInstall = createCommand(
     const odooBin = `${vscode.workspace.getConfiguration("odooDev").sourceFolder}/odoo/odoo-bin`;
     const args = utils.getStartServerWithInstallArgs(selectedAddons);
     utils.startServer(`${python} ${odooBin} ${args.join(" ")}`);
-    
-  })
-);
-
-export const startFreshServer = createCommand(
-  "odooDev.startFreshServer",
-  screamOnError(async (utils) => {
-    if (!isSuccess(await utils.ensureNoActiveServer())) {
-      return;
-    }
-
-    if (!isSuccess(await utils.ensureNoDebugSession())) {
-      return;
-    }
-
-    const dbName = utils.getActiveDBName();
-    if (dbName) {
-      try {
-        await runShellCommand(`dropdb ${dbName}`);
-      } catch (error) {
-        if (error instanceof Error) {
-          const rx = new RegExp(`database .${dbName}. does not exist`);
-          if (!rx.test(error.message)) {
-            throw error;
-          }
-        }
-      }
-    }
-    return vscode.commands.executeCommand("odooDev.startServerWithInstall");
   })
 );
 
