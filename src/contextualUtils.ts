@@ -741,26 +741,23 @@ export function createContextualUtils(context: vscode.ExtensionContext) {
     const terminal = getOdooDevTerminal();
     terminal.show();
     terminal.sendText(command);
-    vscode.commands.executeCommand("setContext", "odooDev.hasActiveServer", true);
 
     // when the server stops, set the context to false
-    const poll = async () => {
+    let timeout = setTimeout(async function poll() {
       const pid = await terminal.processId;
       if (!pid) {
         vscode.commands.executeCommand("setContext", "odooDev.hasActiveServer", false);
       } else {
         const isRunning = await isOdooServerRunning(pid);
-        if (!isRunning) {
-          vscode.commands.executeCommand("setContext", "odooDev.hasActiveServer", false);
-          if (timeout) {
-            clearTimeout(timeout);
-          }
-        } else {
+        if (isRunning) {
+          vscode.commands.executeCommand("setContext", "odooDev.hasActiveServer", true);
           timeout = setTimeout(poll, 500);
+        } else {
+          vscode.commands.executeCommand("setContext", "odooDev.hasActiveServer", false);
+          clearTimeout(timeout);
         }
       }
-    };
-    let timeout = setTimeout(poll, 3000);
+    }, 2000);
   };
 
   return {
