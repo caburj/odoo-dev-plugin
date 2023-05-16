@@ -208,13 +208,13 @@ export async function killOdooServer(pid: number): Promise<void> {
       }
     } catch (error) {}
   }
-  let interval: NodeJS.Timeout;
+  let timeout: NodeJS.Timeout;
   return new Promise((resolve, reject) => {
-    interval = setInterval(async () => {
+    const retry = async () => {
       try {
         const children = await getChildProcs(pid);
         if (children.length === 0) {
-          clearTimeout(interval);
+          clearTimeout(timeout);
           resolve();
         } else {
           for (const child of children) {
@@ -224,10 +224,12 @@ export async function killOdooServer(pid: number): Promise<void> {
               process.kill(pid, "SIGINT");
             }
           }
+          timeout = setTimeout(retry, 200);
         }
       } catch (e) {
         reject(e);
       }
-    }, 100);
+    };
+    retry();
   });
 }
