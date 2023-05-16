@@ -753,6 +753,32 @@ export function createContextualUtils(context: vscode.ExtensionContext) {
     return commandArgs;
   };
 
+  const startServer = async (command: string) => {
+    const terminal = getOdooDevTerminal();
+    terminal.show();
+    terminal.sendText(command);
+    vscode.commands.executeCommand("setContext", "odooDev.hasActiveServer", true);
+
+    // when the server stops, set the context to false
+    const poll = async () => {
+      const pid = await terminal.processId;
+      if (!pid) {
+        vscode.commands.executeCommand("setContext", "odooDev.hasActiveServer", false);
+      } else {
+        const isRunning = await isOdooServerRunning(pid);
+        if (!isRunning) {
+          vscode.commands.executeCommand("setContext", "odooDev.hasActiveServer", false);
+          if (timeout) {
+            clearTimeout(timeout);
+          }
+        } else {
+          timeout = setTimeout(poll, 500);
+        }
+      }
+    };
+    let timeout = setTimeout(poll, 3000);
+  };
+
   return {
     db,
     treeDataProvider,
@@ -762,6 +788,7 @@ export function createContextualUtils(context: vscode.ExtensionContext) {
     getStartServerWithInstallArgs,
     getStartServerWithUpdateArgs,
     getStartServerArgs,
+    startServer,
     getOdooConfigValue,
     getActiveDBName,
     getRepo,
