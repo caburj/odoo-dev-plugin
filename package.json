@@ -113,22 +113,6 @@
         "title": "Odoo Dev: Debug Server With Update..."
       },
       {
-        "command": "odooDev.startSelectedTest",
-        "title": "Odoo Dev: Start Selected Test"
-      },
-      {
-        "command": "odooDev.debugSelectedTest",
-        "title": "Odoo Dev: Debug Selected Test"
-      },
-      {
-        "command": "odooDev.startCurrentTestFile",
-        "title": "Odoo Dev: Start Current Test File"
-      },
-      {
-        "command": "odooDev.debugCurrentTestFile",
-        "title": "Odoo Dev: Debug Current Test File"
-      },
-      {
         "command": "odooDev.dropActiveDB",
         "title": "Odoo Dev: Drop Active DB",
         "icon": {
@@ -238,6 +222,12 @@
           "type": "boolean",
           "default": false,
           "description": "Before switching (or creating) branches, stash the changes. When switching back, unstash the changes."
+        },
+        "odooDev.autoTest": {
+          "title": "Auto Test",
+          "type": "boolean",
+          "default": false,
+          "description": "If activated, when the cursor is in a test file, the server will be started in test mode."
         }
       }
     },
@@ -348,22 +338,6 @@
         },
         {
           "command": "odooDev.debugServer",
-          "when": "view == odoo-dev-branches"
-        },
-        {
-          "command": "odooDev.startCurrentTestFile",
-          "when": "view == odoo-dev-branches"
-        },
-        {
-          "command": "odooDev.debugCurrentTestFile",
-          "when": "view == odoo-dev-branches"
-        },
-        {
-          "command": "odooDev.startSelectedTest",
-          "when": "view == odoo-dev-branches"
-        },
-        {
-          "command": "odooDev.debugSelectedTest",
           "when": "view == odoo-dev-branches"
         },
         {

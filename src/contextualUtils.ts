@@ -142,7 +142,7 @@ export function createContextualUtils(context: vscode.ExtensionContext) {
     }
   };
 
-  const getStartServerArgs = () => {
+  const getNormalStartServerArgs = () => {
     const configFilePath = getConfigFilePath();
     const args = ["-c", configFilePath];
     if (vscode.workspace.getConfiguration("odooDev").branchNameAsDB as boolean) {
@@ -155,7 +155,7 @@ export function createContextualUtils(context: vscode.ExtensionContext) {
   };
 
   const getStartServerWithInstallArgs = (selectedAddons: string[]) => {
-    const args = getStartServerArgs();
+    const args = getNormalStartServerArgs();
     if (selectedAddons.length >= 1) {
       args.push("-i", selectedAddons.join(","));
     }
@@ -163,7 +163,7 @@ export function createContextualUtils(context: vscode.ExtensionContext) {
   };
 
   const getStartServerWithUpdateArgs = (selectedAddons: string[]) => {
-    const args = getStartServerArgs();
+    const args = getNormalStartServerArgs();
     if (selectedAddons.length >= 1) {
       args.push("-u", selectedAddons.join(","));
     }
@@ -171,12 +171,12 @@ export function createContextualUtils(context: vscode.ExtensionContext) {
   };
 
   const getstartSelectedTestArgs = (testTag: string) => {
-    const args = getStartServerArgs();
+    const args = getNormalStartServerArgs();
     return [...args, "--stop-after-init", "--test-enable", "--test-tags", testTag];
   };
 
   const getStartCurrentTestFileArgs = (testFilePath: string) => {
-    const args = getStartServerArgs();
+    const args = getNormalStartServerArgs();
     return [...args, "--stop-after-init", "--test-file", testFilePath];
   };
 
@@ -667,17 +667,7 @@ export function createContextualUtils(context: vscode.ExtensionContext) {
     }
   };
 
-  const getTestTag = async (editor: vscode.TextEditor) => {
-    const match = editor.document.uri.path.match(/.*\/addons\/(.*)\/tests\/test_.*\.py/);
-    const [, addon] = match || [undefined, undefined];
-    if (!addon) {
-      throw new Error("Current file is not a test file.");
-    }
-    const position = editor.selection.active;
-    const symbols = await vscode.commands.executeCommand<vscode.DocumentSymbol[]>(
-      "vscode.executeDocumentSymbolProvider",
-      editor.document.uri
-    );
+  const getClassAndMethod = async (symbols: vscode.DocumentSymbol[], position: vscode.Position) => {
     // Find the class it belongs, followed by the method.
     const classSymbol = symbols.find(
       (s) => s.kind === vscode.SymbolKind.Class && s.range.contains(position)
@@ -690,6 +680,24 @@ export function createContextualUtils(context: vscode.ExtensionContext) {
             s.range.contains(position)
         )
       : undefined;
+    return { classSymbol, methodSymbol };
+  };
+
+  const getTestTag = async (editor: vscode.TextEditor) => {
+    const match = editor.document.uri.path.match(/.*\/addons\/(.*)\/tests\/test_.*\.py/);
+    const [, addon] = match || [undefined, undefined];
+    if (!addon) {
+      throw new Error("Current file is not a test file.");
+    }
+
+    const position = editor.selection.active;
+    const symbols = await vscode.commands.executeCommand<vscode.DocumentSymbol[]>(
+      "vscode.executeDocumentSymbolProvider",
+      editor.document.uri
+    );
+
+    const { classSymbol, methodSymbol } = await getClassAndMethod(symbols, position);
+
     return `${addon}${classSymbol ? `:${classSymbol.name}` : ""}${
       methodSymbol ? `.${methodSymbol.name}` : ""
     }`;
@@ -710,17 +718,50 @@ export function createContextualUtils(context: vscode.ExtensionContext) {
     treeDataProvider.refresh();
   };
 
+  const getStartServerArgs = async () => {
+    const testFileRegex = /.*\/(addons|enterprise)\/(.*)\/tests\/test_.*\.py/;
+    const autoTest = vscode.workspace.getConfiguration("odooDev")["autoTest"] as boolean;
+    let commandArgs: string[] = [];
+
+    const editor = vscode.window.activeTextEditor;
+    if (autoTest && editor) {
+      const match = editor.document.uri.path.match(testFileRegex);
+      const [, , addon] = match || [undefined, undefined, undefined];
+      if (addon) {
+        const position = editor.selection.active;
+        const symbols = await vscode.commands.executeCommand<vscode.DocumentSymbol[]>(
+          "vscode.executeDocumentSymbolProvider",
+          editor.document.uri
+        );
+
+        const { classSymbol, methodSymbol } = await getClassAndMethod(symbols, position);
+
+        if (!classSymbol && !methodSymbol) {
+          commandArgs = getStartCurrentTestFileArgs(editor.document.uri.path);
+        } else {
+          const testTag = `${addon}${classSymbol ? `:${classSymbol.name}` : ""}${
+            methodSymbol ? `.${methodSymbol.name}` : ""
+          }`;
+          commandArgs = getstartSelectedTestArgs(testTag);
+        }
+      } else {
+        commandArgs = getNormalStartServerArgs();
+      }
+    } else {
+      commandArgs = getNormalStartServerArgs();
+    }
+    return commandArgs;
+  };
+
   return {
     db,
     treeDataProvider,
     getConfigFilePath,
     getOdooDevTerminal,
     getPythonPath,
-    getStartServerArgs,
     getStartServerWithInstallArgs,
     getStartServerWithUpdateArgs,
-    getstartSelectedTestArgs,
-    getStartCurrentTestFileArgs,
+    getStartServerArgs,
     getOdooConfigValue,
     getActiveDBName,
     getRepo,

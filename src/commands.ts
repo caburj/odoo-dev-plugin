@@ -263,11 +263,10 @@ export const startServer = createCommand(
       return;
     }
 
+    const commandArgs = await utils.getStartServerArgs();
     const python = utils.getPythonPath();
     const odooBin = `${vscode.workspace.getConfiguration("odooDev").sourceFolder}/odoo/odoo-bin`;
-    utils
-      .getOdooDevTerminal()
-      .sendText(`${python} ${odooBin} ${utils.getStartServerArgs().join(" ")}`);
+    utils.getOdooDevTerminal().sendText(`${python} ${odooBin} ${commandArgs.join(" ")}`);
     utils.getOdooDevTerminal().show();
     vscode.commands.executeCommand("setContext", "odooDev.hasActiveServer", true);
   })
@@ -284,6 +283,7 @@ export const debugServer = createCommand(
       return;
     }
 
+    const commandArgs = await utils.getStartServerArgs();
     const debugOdooPythonLaunchConfig: vscode.DebugConfiguration = {
       name: "Debug Odoo Python",
       type: "python",
@@ -292,7 +292,7 @@ export const debugServer = createCommand(
       console: "integratedTerminal",
       python: "${command:python.interpreterPath}",
       program: "${workspaceFolder:odoo}/odoo-bin",
-      args: utils.getStartServerArgs(),
+      args: commandArgs,
     };
     await vscode.debug.startDebugging(undefined, debugOdooPythonLaunchConfig);
     vscode.commands.executeCommand("setContext", "odooDev.hasActiveServer", true);
@@ -431,122 +431,6 @@ export const debugServerWithUpdate = createCommand(
       python: "${command:python.interpreterPath}",
       program: "${workspaceFolder:odoo}/odoo-bin",
       args: utils.getStartServerWithUpdateArgs(selectedAddons),
-    };
-    await vscode.debug.startDebugging(undefined, debugOdooPythonLaunchConfig);
-    vscode.commands.executeCommand("setContext", "odooDev.hasActiveServer", true);
-  })
-);
-
-export const startSelectedTest = createCommand(
-  "odooDev.startSelectedTest",
-  screamOnError(async (utils) => {
-    if (!isSuccess(await utils.ensureNoActiveServer())) {
-      return;
-    }
-
-    if (!isSuccess(await utils.ensureNoDebugSession())) {
-      return;
-    }
-
-    const editor = vscode.window.activeTextEditor;
-    if (!editor) {
-      throw new Error(
-        "Open the test file and put the cursor in the test method you want to start."
-      );
-    }
-    const testTag = await utils.getTestTag(editor);
-    const python = utils.getPythonPath();
-    const odooBin = `${vscode.workspace.getConfiguration("odooDev").sourceFolder}/odoo/odoo-bin`;
-    const args = utils.getstartSelectedTestArgs(testTag);
-    const command = `${python} ${odooBin} ${args.join(" ")}`;
-    utils.getOdooDevTerminal().sendText(command);
-    utils.getOdooDevTerminal().show();
-    vscode.commands.executeCommand("setContext", "odooDev.hasActiveServer", true);
-  })
-);
-
-export const debugSelectedTest = createCommand(
-  "odooDev.debugSelectedTest",
-  screamOnError(async (utils) => {
-    if (!isSuccess(await utils.ensureNoActiveServer())) {
-      return;
-    }
-
-    if (!isSuccess(await utils.ensureNoDebugSession())) {
-      return;
-    }
-
-    const editor = vscode.window.activeTextEditor;
-    if (!editor) {
-      throw new Error("Open a test file.");
-    }
-    const testTag = await utils.getTestTag(editor);
-    const debugOdooPythonLaunchConfig: vscode.DebugConfiguration = {
-      name: "Debug Odoo Python",
-      type: "python",
-      request: "launch",
-      stopOnEntry: false,
-      console: "integratedTerminal",
-      python: "${command:python.interpreterPath}",
-      program: "${workspaceFolder:odoo}/odoo-bin",
-      args: utils.getstartSelectedTestArgs(testTag),
-    };
-    await vscode.debug.startDebugging(undefined, debugOdooPythonLaunchConfig);
-    vscode.commands.executeCommand("setContext", "odooDev.hasActiveServer", true);
-  })
-);
-
-export const startCurrentTestFile = createCommand(
-  "odooDev.startCurrentTestFile",
-  screamOnError(async (utils) => {
-    if (!isSuccess(await utils.ensureNoActiveServer())) {
-      return;
-    }
-
-    if (!isSuccess(await utils.ensureNoDebugSession())) {
-      return;
-    }
-
-    const editor = vscode.window.activeTextEditor;
-    if (!editor) {
-      throw new Error("Open a test file.");
-    }
-    const testFilePath = utils.getTestFilePath(editor);
-    const python = utils.getPythonPath();
-    const odooBin = `${vscode.workspace.getConfiguration("odooDev").sourceFolder}/odoo/odoo-bin`;
-    const args = utils.getStartCurrentTestFileArgs(testFilePath);
-    const command = `${python} ${odooBin} ${args.join(" ")}`;
-    utils.getOdooDevTerminal().sendText(command);
-    utils.getOdooDevTerminal().show();
-    vscode.commands.executeCommand("setContext", "odooDev.hasActiveServer", true);
-  })
-);
-
-export const debugCurrentTestFile = createCommand(
-  "odooDev.debugCurrentTestFile",
-  screamOnError(async (utils) => {
-    if (!isSuccess(await utils.ensureNoActiveServer())) {
-      return;
-    }
-
-    if (!isSuccess(await utils.ensureNoDebugSession())) {
-      return;
-    }
-
-    const editor = vscode.window.activeTextEditor;
-    if (!editor) {
-      throw new Error("Open a test file.");
-    }
-    const testFilePath = utils.getTestFilePath(editor);
-    const debugOdooPythonLaunchConfig: vscode.DebugConfiguration = {
-      name: "Debug Odoo Python",
-      type: "python",
-      request: "launch",
-      stopOnEntry: false,
-      console: "integratedTerminal",
-      python: "${command:python.interpreterPath}",
-      program: "${workspaceFolder:odoo}/odoo-bin",
-      args: utils.getStartCurrentTestFileArgs(testFilePath),
     };
     await vscode.debug.startDebugging(undefined, debugOdooPythonLaunchConfig);
     vscode.commands.executeCommand("setContext", "odooDev.hasActiveServer", true);
