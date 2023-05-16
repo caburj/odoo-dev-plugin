@@ -154,22 +154,6 @@ export function createContextualUtils(context: vscode.ExtensionContext) {
     return args;
   };
 
-  const getStartServerWithInstallArgs = (selectedAddons: string[]) => {
-    const args = getNormalStartServerArgs();
-    if (selectedAddons.length >= 1) {
-      args.push("-i", selectedAddons.join(","));
-    }
-    return args;
-  };
-
-  const getStartServerWithUpdateArgs = (selectedAddons: string[]) => {
-    const args = getNormalStartServerArgs();
-    if (selectedAddons.length >= 1) {
-      args.push("-u", selectedAddons.join(","));
-    }
-    return args;
-  };
-
   const getstartSelectedTestArgs = (testTag: string) => {
     const args = getNormalStartServerArgs();
     return [...args, "--stop-after-init", "--test-enable", "--test-tags", testTag];
@@ -785,8 +769,6 @@ export function createContextualUtils(context: vscode.ExtensionContext) {
     getConfigFilePath,
     getOdooDevTerminal,
     getPythonPath,
-    getStartServerWithInstallArgs,
-    getStartServerWithUpdateArgs,
     getStartServerArgs,
     startServer,
     getOdooConfigValue,

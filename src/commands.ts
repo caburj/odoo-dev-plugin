@@ -340,9 +340,12 @@ export const startServerWithInstall = createCommand(
     if (!selectedAddons) {
       return;
     }
+
+    const startServerArgs = await utils.getStartServerArgs();
+    const args = [...startServerArgs, "-i", selectedAddons.join(",")];
+
     const python = utils.getPythonPath();
     const odooBin = `${vscode.workspace.getConfiguration("odooDev").sourceFolder}/odoo/odoo-bin`;
-    const args = utils.getStartServerWithInstallArgs(selectedAddons);
     utils.startServer(`${python} ${odooBin} ${args.join(" ")}`);
   })
 );
@@ -362,6 +365,10 @@ export const debugServerWithInstall = createCommand(
     if (!selectedAddons) {
       return;
     }
+
+    const startServerArgs = await utils.getStartServerArgs();
+    const args = [...startServerArgs, "-i", selectedAddons.join(",")];
+
     const debugOdooPythonLaunchConfig: vscode.DebugConfiguration = {
       name: "Debug Odoo Python",
       type: "python",
@@ -370,7 +377,7 @@ export const debugServerWithInstall = createCommand(
       console: "integratedTerminal",
       python: "${command:python.interpreterPath}",
       program: "${workspaceFolder:odoo}/odoo-bin",
-      args: utils.getStartServerWithInstallArgs(selectedAddons),
+      args,
     };
     await vscode.debug.startDebugging(undefined, debugOdooPythonLaunchConfig);
     vscode.commands.executeCommand("setContext", "odooDev.hasActiveServer", true);
@@ -392,9 +399,12 @@ export const startServerWithUpdate = createCommand(
     if (!selectedAddons) {
       return;
     }
+
+    const startServerArgs = await utils.getStartServerArgs();
+    const args = [...startServerArgs, "-u", selectedAddons.join(",")];
+
     const python = utils.getPythonPath();
     const odooBin = `${vscode.workspace.getConfiguration("odooDev").sourceFolder}/odoo/odoo-bin`;
-    const args = utils.getStartServerWithUpdateArgs(selectedAddons);
     utils.startServer(`${python} ${odooBin} ${args.join(" ")}`);
   })
 );
@@ -414,6 +424,10 @@ export const debugServerWithUpdate = createCommand(
     if (!selectedAddons) {
       return;
     }
+
+    const startServerArgs = await utils.getStartServerArgs();
+    const args = [...startServerArgs, "-u", selectedAddons.join(",")];
+
     const debugOdooPythonLaunchConfig: vscode.DebugConfiguration = {
       name: "Debug Odoo Python",
       type: "python",
@@ -422,7 +436,7 @@ export const debugServerWithUpdate = createCommand(
       console: "integratedTerminal",
       python: "${command:python.interpreterPath}",
       program: "${workspaceFolder:odoo}/odoo-bin",
-      args: utils.getStartServerWithUpdateArgs(selectedAddons),
+      args,
     };
     await vscode.debug.startDebugging(undefined, debugOdooPythonLaunchConfig);
     vscode.commands.executeCommand("setContext", "odooDev.hasActiveServer", true);
