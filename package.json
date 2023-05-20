@@ -38,11 +38,19 @@
       },
       {
         "command": "odooDev.deleteBranch",
-        "title": "Odoo Dev: Delete"
+        "title": "Odoo Dev: Delete",
+        "icon": {
+          "light": "resources/delete-branch-light.svg",
+          "dark": "resources/delete-branch-dark.svg"
+        }
       },
       {
         "command": "odooDev.removeBranch",
-        "title": "Odoo Dev: Remove"
+        "title": "Odoo Dev: Remove",
+        "icon": {
+          "light": "resources/delete-branch-light.svg",
+          "dark": "resources/delete-branch-dark.svg"
+        }
       },
       {
         "command": "odooDev.checkoutBranch",
@@ -54,7 +62,11 @@
       },
       {
         "command": "odooDev.selectBranch",
-        "title": "Odoo Dev: Select"
+        "title": "Odoo Dev: Select",
+        "icon": {
+          "light": "resources/checkout-light.svg",
+          "dark": "resources/checkout-dark.svg"
+        }
       },
       {
         "command": "odooDev.fetchStableBranch",
@@ -252,51 +264,37 @@
         }
       ]
     },
+    "submenus": [],
     "menus": {
       "view/item/context": [
         {
-          "command": "odooDev.checkoutBranch",
-          "group": "1_branch",
-          "when": "viewItem == base-branch || viewItem == dev-branch || viewItem == active-base-branch || viewItem == active-dev-branch"
-        },
-        {
-          "command": "odooDev.deleteBranch",
-          "group": "1_branch",
-          "when": "viewItem == dev-branch || viewItem == active-dev-branch"
-        },
-        {
-          "command": "odooDev.checkoutBranch",
-          "group": "inline",
-          "when": "(viewItem == base-branch || viewItem == dev-branch) && (viewItem != active-base-branch && viewItem != active-dev-branch)"
-        },
-        {
-          "command": "odooDev.resetActiveBranch",
-          "group": "inline",
-          "when": "viewItem == active-base-branch || viewItem == active-dev-branch"
-        },
-        {
-          "command": "odooDev.startFreshServer",
-          "group": "inline",
-          "when": "(viewItem == active-base-branch || viewItem == active-dev-branch) && !odooDev.hasActiveServer"
-        },
-        {
-          "command": "odooDev.openLinkedNote",
-          "group": "inline",
-          "when": "viewItem == base-branch || viewItem == dev-branch || viewItem == active-base-branch || viewItem == active-dev-branch"
-        },
-        {
           "command": "odooDev.openPullRequestLink",
-          "group": "inline",
-          "when": "viewItem == dev-branch || viewItem == active-dev-branch"
-        },
-        {
-          "command": "odooDev.openPullRequestLink",
-          "group": "2_links",
+          "group": "1_links@10",
           "when": "viewItem == dev-branch || viewItem == active-dev-branch"
         },
         {
           "command": "odooDev.openRunbotLink",
-          "group": "2_links",
+          "group": "1_links@20",
+          "when": "viewItem == dev-branch || viewItem == active-dev-branch"
+        },
+        {
+          "command": "odooDev.selectBranch",
+          "group": "inline@10",
+          "when": "(viewItem == base-branch || viewItem == dev-branch) && (viewItem != active-base-branch && viewItem != active-dev-branch)"
+        },
+        {
+          "command": "odooDev.openLinkedNote",
+          "group": "inline@20",
+          "when": "viewItem == base-branch || viewItem == dev-branch || viewItem == active-base-branch || viewItem == active-dev-branch"
+        },
+        {
+          "command": "odooDev.resetActiveBranch",
+          "group": "inline@30",
+          "when": "viewItem == active-base-branch || viewItem == active-dev-branch"
+        },
+        {
+          "command": "odooDev.deleteBranch",
+          "group": "inline@40",
           "when": "viewItem == dev-branch || viewItem == active-dev-branch"
         }
       ],
@@ -304,70 +302,77 @@
         {
           "command": "odooDev.createBranch",
           "when": "view == odoo-dev-branches",
-          "group": "navigation"
+          "group": "navigation@10"
         },
         {
           "command": "odooDev.fetchBranch",
           "when": "view == odoo-dev-branches",
-          "group": "navigation"
+          "group": "navigation@20"
         },
         {
           "command": "odooDev.openOdooConf",
           "when": "view == odoo-dev-branches",
-          "group": "navigation"
-        },
-        {
-          "command": "odooDev.stopActiveServer",
-          "when": "view == odoo-dev-branches && odooDev.hasActiveServer",
-          "group": "navigation"
-        },
-        {
-          "command": "odooDev.openChromeLocalServer",
-          "when": "view == odoo-dev-branches && odooDev.hasActiveServer",
-          "group": "navigation"
+          "group": "navigation@30"
         },
         {
           "command": "odooDev.dropActiveDB",
           "when": "view == odoo-dev-branches && !odooDev.hasActiveServer",
-          "group": "navigation"
+          "group": "navigation@40"
         },
         {
           "command": "odooDev.startServer",
           "when": "view == odoo-dev-branches && !odooDev.hasActiveServer",
-          "group": "navigation"
+          "group": "navigation@50"
         },
         {
           "command": "odooDev.debugServer",
           "when": "view == odoo-dev-branches && !odooDev.hasActiveServer",
-          "group": "navigation"
+          "group": "navigation@60"
+        },
+        {
+          "command": "odooDev.stopActiveServer",
+          "when": "view == odoo-dev-branches && odooDev.hasActiveServer",
+          "group": "navigation@70"
+        },
+        {
+          "command": "odooDev.openChromeLocalServer",
+          "when": "view == odoo-dev-branches && odooDev.hasActiveServer",
+          "group": "navigation@80"
         },
         {
           "command": "odooDev.startFreshServer",
-          "when": "view == odoo-dev-branches"
+          "when": "view == odoo-dev-branches",
+          "group": "1_start_fresh"
         },
         {
           "command": "odooDev.startServer",
-          "when": "view == odoo-dev-branches"
-        },
-        {
-          "command": "odooDev.debugServer",
-          "when": "view == odoo-dev-branches"
+          "when": "view == odoo-dev-branches",
+          "group": "2_start@10"
         },
         {
           "command": "odooDev.startServerWithInstall",
-          "when": "view == odoo-dev-branches"
-        },
-        {
-          "command": "odooDev.debugServerWithInstall",
-          "when": "view == odoo-dev-branches"
+          "when": "view == odoo-dev-branches",
+          "group": "2_start@20"
         },
         {
           "command": "odooDev.startServerWithUpdate",
-          "when": "view == odoo-dev-branches"
+          "when": "view == odoo-dev-branches",
+          "group": "2_start@30"
+        },
+        {
+          "command": "odooDev.debugServer",
+          "when": "view == odoo-dev-branches",
+          "group": "3_debug@10"
+        },
+        {
+          "command": "odooDev.debugServerWithInstall",
+          "when": "view == odoo-dev-branches",
+          "group": "3_debug@20"
         },
         {
           "command": "odooDev.debugServerWithUpdate",
-          "when": "view == odoo-dev-branches"
+          "when": "view == odoo-dev-branches",
+          "group": "3_debug@30"
         }
       ]
     }
