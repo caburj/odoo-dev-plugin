@@ -227,6 +227,20 @@ export function createContextualUtils(context: vscode.ExtensionContext) {
     return success();
   }
 
+  async function ensureNoRunningServer(shouldConfirm = true) {
+    const noActiveServerResult = await ensureNoActiveServer(shouldConfirm);
+    if (!isSuccess(noActiveServerResult)) {
+      return noActiveServerResult;
+    }
+
+    const noDebugSessionResult = await ensureNoDebugSession(shouldConfirm);
+    if (!isSuccess(noDebugSessionResult)) {
+      return noDebugSessionResult;
+    }
+
+    return success();
+  }
+
   const rootPath =
     vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0
       ? vscode.workspace.workspaceFolders[0].uri.fsPath
@@ -783,5 +797,6 @@ export function createContextualUtils(context: vscode.ExtensionContext) {
     ensureCleanRepos,
     ensureNoActiveServer,
     ensureNoDebugSession,
+    ensureNoRunningServer,
   };
 }

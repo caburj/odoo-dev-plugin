@@ -27,6 +27,10 @@ function createCommand<T>(
 export const createBranch = createCommand(
   "odooDev.createBranch",
   screamOnError(async (utils) => {
+    if (!isSuccess(await utils.ensureNoRunningServer())) {
+      return;
+    }
+
     const input = await vscode.window.showInputBox({
       placeHolder: "e.g. master-ref-barcode-parser-jcb",
       prompt: "Add new dev branch",
@@ -67,6 +71,10 @@ export const createBranch = createCommand(
 export const fetchBranch = createCommand(
   "odooDev.fetchBranch",
   screamOnError(async (utils) => {
+    if (!isSuccess(await utils.ensureNoRunningServer())) {
+      return;
+    }
+
     await ensureRemote("odoo", utils.getOdooRepo());
 
     const enterprise = utils.getRepo("enterprise");
@@ -120,6 +128,10 @@ export const fetchBranch = createCommand(
 export const fetchStableBranch = createCommand(
   "odooDev.fetchStableBranch",
   screamOnError(async (utils) => {
+    if (!isSuccess(await utils.ensureNoRunningServer())) {
+      return;
+    }
+
     const branch = await vscode.window.showInputBox({
       placeHolder: "e.g. saas-16.3",
       prompt: "What is the name of the stable branch to fetch?",
@@ -155,6 +167,10 @@ export const fetchStableBranch = createCommand(
 export const deleteBranch = createCommand(
   "odooDev.deleteBranch",
   screamOnError(async (utils, item) => {
+    if (!isSuccess(await utils.ensureNoRunningServer())) {
+      return;
+    }
+
     const devBranches = getBaseBranches()
       .map((base) => utils.db.getDevBranches(base).map((branch) => ({ ...branch, base })))
       .flat();
@@ -193,15 +209,9 @@ export const deleteBranch = createCommand(
 export const checkoutBranch = createCommand(
   "odooDev.checkoutBranch",
   screamOnError(async (utils, item) => {
-    if (!isSuccess(await utils.ensureNoActiveServer())) {
+    if (!isSuccess(await utils.ensureNoRunningServer())) {
       return;
     }
-
-    if (!isSuccess(await utils.ensureNoDebugSession())) {
-      return;
-    }
-
-    await vscode.commands.executeCommand("setContext", "odooDev.hasActiveServer", false);
 
     const devBranches = getBaseBranches()
       .map((base) => [
@@ -240,6 +250,10 @@ export const checkoutBranch = createCommand(
 export const resetActiveBranch = createCommand(
   "odooDev.resetActiveBranch",
   screamOnError(async (utils) => {
+    if (!isSuccess(await utils.ensureNoRunningServer())) {
+      return;
+    }
+
     const ensureResult = await utils.ensureCleanRepos("Odoo Dev: Reset Active Branch");
     if (!isSuccess(ensureResult)) {
       throw new Error(ensureResult);
@@ -255,11 +269,7 @@ export const resetActiveBranch = createCommand(
 export const startFreshServer = createCommand(
   "odooDev.startFreshServer",
   screamOnError(async (utils) => {
-    if (!isSuccess(await utils.ensureNoActiveServer())) {
-      return;
-    }
-
-    if (!isSuccess(await utils.ensureNoDebugSession())) {
+    if (!isSuccess(await utils.ensureNoRunningServer())) {
       return;
     }
 
@@ -283,11 +293,7 @@ export const startFreshServer = createCommand(
 export const startServer = createCommand(
   "odooDev.startServer",
   screamOnError(async (utils) => {
-    if (!isSuccess(await utils.ensureNoActiveServer())) {
-      return;
-    }
-
-    if (!isSuccess(await utils.ensureNoDebugSession())) {
+    if (!isSuccess(await utils.ensureNoRunningServer())) {
       return;
     }
 
@@ -301,11 +307,7 @@ export const startServer = createCommand(
 export const debugServer = createCommand(
   "odooDev.debugServer",
   screamOnError(async (utils) => {
-    if (!isSuccess(await utils.ensureNoActiveServer())) {
-      return;
-    }
-
-    if (!isSuccess(await utils.ensureNoDebugSession())) {
+    if (!isSuccess(await utils.ensureNoRunningServer())) {
       return;
     }
 
@@ -328,11 +330,7 @@ export const debugServer = createCommand(
 export const startServerWithInstall = createCommand(
   "odooDev.startServerWithInstall",
   screamOnError(async (utils) => {
-    if (!isSuccess(await utils.ensureNoActiveServer())) {
-      return;
-    }
-
-    if (!isSuccess(await utils.ensureNoDebugSession())) {
+    if (!isSuccess(await utils.ensureNoRunningServer())) {
       return;
     }
 
@@ -353,11 +351,7 @@ export const startServerWithInstall = createCommand(
 export const debugServerWithInstall = createCommand(
   "odooDev.debugServerWithInstall",
   screamOnError(async (utils) => {
-    if (!isSuccess(await utils.ensureNoActiveServer())) {
-      return;
-    }
-
-    if (!isSuccess(await utils.ensureNoDebugSession())) {
+    if (!isSuccess(await utils.ensureNoRunningServer())) {
       return;
     }
 
@@ -387,11 +381,7 @@ export const debugServerWithInstall = createCommand(
 export const startServerWithUpdate = createCommand(
   "odooDev.startServerWithUpdate",
   screamOnError(async (utils) => {
-    if (!isSuccess(await utils.ensureNoActiveServer())) {
-      return;
-    }
-
-    if (!isSuccess(await utils.ensureNoDebugSession())) {
+    if (!isSuccess(await utils.ensureNoRunningServer())) {
       return;
     }
 
@@ -412,11 +402,7 @@ export const startServerWithUpdate = createCommand(
 export const debugServerWithUpdate = createCommand(
   "odooDev.debugServerWithUpdate",
   screamOnError(async (utils) => {
-    if (!isSuccess(await utils.ensureNoActiveServer())) {
-      return;
-    }
-
-    if (!isSuccess(await utils.ensureNoDebugSession())) {
+    if (!isSuccess(await utils.ensureNoRunningServer())) {
       return;
     }
 
@@ -445,11 +431,14 @@ export const debugServerWithUpdate = createCommand(
 
 export const dropActiveDB = createCommand(
   "odooDev.dropActiveDB",
-  screamOnError(async ({ getOdooDevTerminal, getActiveDBName }) => {
-    const dbName = getActiveDBName();
+  screamOnError(async (utils) => {
+    if (!isSuccess(await utils.ensureNoRunningServer())) {
+      return;
+    }
+    const dbName = utils.getActiveDBName();
     if (dbName) {
-      getOdooDevTerminal().show();
-      getOdooDevTerminal().sendText(`dropdb ${dbName}`);
+      utils.getOdooDevTerminal().show();
+      utils.getOdooDevTerminal().sendText(`dropdb ${dbName}`);
     }
   })
 );
