@@ -94,7 +94,11 @@
       },
       {
         "command": "odooDev.debugServer",
-        "title": "Odoo Dev: Debug Server"
+        "title": "Odoo Dev: Debug Server",
+        "icon": {
+          "light": "resources/debug-server-light.svg",
+          "dark": "resources/debug-server-dark.svg"
+        }
       },
       {
         "command": "odooDev.startServerWithInstall",
@@ -329,6 +333,11 @@
         },
         {
           "command": "odooDev.startServer",
+          "when": "view == odoo-dev-branches && !odooDev.hasActiveServer",
+          "group": "navigation"
+        },
+        {
+          "command": "odooDev.debugServer",
           "when": "view == odoo-dev-branches && !odooDev.hasActiveServer",
           "group": "navigation"
         },
