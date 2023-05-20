@@ -195,10 +195,9 @@ export function createContextualUtils(context: vscode.ExtensionContext) {
     const hasActiveServer = await isOdooServerRunning(terminalPID);
     if (hasActiveServer) {
       if (shouldConfirm) {
-        const response = await vscode.window.showInformationMessage(
-          "There is an active server, it will be stopped to continue.",
-          "Okay"
-        );
+        const response = await vscode.window.showQuickPick(["Okay"], {
+          title: "There is an active server, it will be stopped to continue.",
+        });
         if (!response) {
           return error(
             "There is an active server, it should be stopped before starting a new one."
@@ -214,10 +213,9 @@ export function createContextualUtils(context: vscode.ExtensionContext) {
     const debugSession = vscode.debug.activeDebugSession;
     if (debugSession) {
       if (shouldConfirm) {
-        const response = await vscode.window.showInformationMessage(
-          "There is an active debug session, it will be stopped to continue.",
-          "Okay"
-        );
+        const response = await vscode.window.showQuickPick(["Okay"], {
+          title: "There is an active debug session, it will be stopped to continue.",
+        });
         if (!response) {
           return error(
             "There is an active debug session, it should be stopped before starting a new one."
