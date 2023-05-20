@@ -114,7 +114,7 @@ export function runShellCommand(
 export function callWithSpinner(options: { message: string; cb: () => Thenable<void> }) {
   return vscode.window.withProgress(
     {
-      location: vscode.ProgressLocation.Window,
+      location: vscode.ProgressLocation.Notification,
       cancellable: false,
     },
     async (progress) => {
