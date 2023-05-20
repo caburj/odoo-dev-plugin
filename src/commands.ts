@@ -448,6 +448,7 @@ export const dropActiveDB = createCommand(
   screamOnError(async ({ getOdooDevTerminal, getActiveDBName }) => {
     const dbName = getActiveDBName();
     if (dbName) {
+      getOdooDevTerminal().show();
       getOdooDevTerminal().sendText(`dropdb ${dbName}`);
     }
   })
