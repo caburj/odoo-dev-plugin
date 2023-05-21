@@ -379,6 +379,7 @@ export const debugServer = createCommand(
     };
     await vscode.debug.startDebugging(undefined, debugOdooPythonLaunchConfig);
     vscode.commands.executeCommand("setContext", "odooDev.hasActiveServer", true);
+    utils.stopServerStatus.show();
   })
 );
 
@@ -430,6 +431,7 @@ export const debugServerWithInstall = createCommand(
     };
     await vscode.debug.startDebugging(undefined, debugOdooPythonLaunchConfig);
     vscode.commands.executeCommand("setContext", "odooDev.hasActiveServer", true);
+    utils.stopServerStatus.show();
   })
 );
 
@@ -481,6 +483,7 @@ export const debugServerWithUpdate = createCommand(
     };
     await vscode.debug.startDebugging(undefined, debugOdooPythonLaunchConfig);
     vscode.commands.executeCommand("setContext", "odooDev.hasActiveServer", true);
+    utils.stopServerStatus.show();
   })
 );
 
@@ -609,6 +612,7 @@ export const stopActiveServer = createCommand(
     await utils.ensureNoActiveServer(false);
     await utils.ensureNoDebugSession(false);
     vscode.commands.executeCommand("setContext", "odooDev.hasActiveServer", false);
+    utils.stopServerStatus.hide();
   })
 );
 

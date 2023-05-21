@@ -40,7 +40,11 @@ async function getBranch(repo: Repository, name: string): Promise<Branch | undef
   }
 }
 
-export function createContextualUtils(context: vscode.ExtensionContext) {
+export function createContextualUtils(
+  context: vscode.ExtensionContext,
+  options: { stopServerStatus: vscode.StatusBarItem }
+) {
+  const { stopServerStatus } = options;
   const db = new OdooPluginDB(context);
 
   let odooDevTerminal: vscode.Terminal | undefined;
@@ -858,13 +862,16 @@ export function createContextualUtils(context: vscode.ExtensionContext) {
       const pid = await terminal.processId;
       if (!pid) {
         vscode.commands.executeCommand("setContext", "odooDev.hasActiveServer", false);
+        stopServerStatus.hide();
       } else {
         const isRunning = await isOdooServerRunning(pid);
         if (isRunning) {
           vscode.commands.executeCommand("setContext", "odooDev.hasActiveServer", true);
+          stopServerStatus.show();
           timeout = setTimeout(poll, 500);
         } else {
           vscode.commands.executeCommand("setContext", "odooDev.hasActiveServer", false);
+          stopServerStatus.hide();
           clearTimeout(timeout);
         }
       }
@@ -898,5 +905,6 @@ export function createContextualUtils(context: vscode.ExtensionContext) {
     ensureNoDebugSession,
     ensureNoRunningServer,
     getDirtyRepos,
+    stopServerStatus,
   };
 }

@@ -10,11 +10,18 @@ const ALIASES: Record<string, string[]> = {
   "odooDev.deleteBranch": ["odooDev.removeBranch"],
 };
 
+let stopServerStatus: vscode.StatusBarItem;
+
 export async function activate(context: vscode.ExtensionContext) {
-  const utils = createContextualUtils(context);
+  stopServerStatus = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left);
+  stopServerStatus.command = "odooDev.stopActiveServer";
+  stopServerStatus.text = "$(debug-stop) Stop Odoo Server";
+
+  const utils = createContextualUtils(context, { stopServerStatus });
 
   vscode.debug.onDidTerminateDebugSession(() => {
     vscode.commands.executeCommand("setContext", "odooDev.hasActiveServer", false);
+    stopServerStatus.hide();
   });
 
   try {
@@ -46,4 +53,6 @@ export async function activate(context: vscode.ExtensionContext) {
 }
 
 // This method is called when your extension is deactivated
-export function deactivate() {}
+export function deactivate() {
+  stopServerStatus.dispose();
+}
