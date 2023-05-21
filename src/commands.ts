@@ -45,9 +45,16 @@ export const createBranch = createCommand(
       return;
     }
 
-    const ensureResult = await utils.ensureCleanRepos("Odoo Dev: Create");
-    if (!isSuccess(ensureResult)) {
-      throw new Error(ensureResult);
+    const dirtyRepos = await utils.getDirtyRepos();
+    if (
+      dirtyRepos.length !== 0 &&
+      !(vscode.workspace.getConfiguration("odooDev").autoStash as boolean)
+    ) {
+      throw new Error(
+        `There are uncommitted changes in: ${dirtyRepos.join(
+          ", "
+        )}. Activate "Auto Stash" config to stash them automatically.`
+      );
     }
 
     const base = inferBaseBranch(input);
@@ -61,7 +68,7 @@ export const createBranch = createCommand(
       } else if (utils.db.devBranchExists({ base, name: input })) {
         throw new Error(`'${input}' already exists!`);
       }
-      await utils.createBranches(base, input);
+      await utils.createBranches(base, input, dirtyRepos);
       utils.db.setActiveBranch(input);
       utils.db.addDevBranch({ base, name: input });
     });
@@ -102,9 +109,16 @@ export const fetchBranch = createCommand(
       return;
     }
 
-    const ensureResult = await utils.ensureCleanRepos("Odoo Dev: Fetch");
-    if (!isSuccess(ensureResult)) {
-      throw new Error(ensureResult);
+    const dirtyRepos = await utils.getDirtyRepos();
+    if (
+      dirtyRepos.length !== 0 &&
+      !(vscode.workspace.getConfiguration("odooDev").autoStash as boolean)
+    ) {
+      throw new Error(
+        `There are uncommitted changes in: ${dirtyRepos.join(
+          ", "
+        )}. Activate "Auto Stash" config to stash them automatically.`
+      );
     }
 
     const base = inferBaseBranch(input);
@@ -118,7 +132,7 @@ export const fetchBranch = createCommand(
       } else if (utils.db.devBranchExists({ base, name: input })) {
         throw new Error(`'${input}' already exists!`);
       }
-      await utils.fetchBranches(base, input);
+      await utils.fetchBranches(base, input, dirtyRepos);
       utils.db.setActiveBranch(input);
       utils.db.addDevBranch({ base, name: input });
     });
@@ -146,9 +160,16 @@ export const fetchStableBranch = createCommand(
       return;
     }
 
-    const ensureResult = await utils.ensureCleanRepos("Odoo Dev: Fetch Stable");
-    if (!isSuccess(ensureResult)) {
-      throw new Error(ensureResult);
+    const dirtyRepos = await utils.getDirtyRepos();
+    if (
+      dirtyRepos.length !== 0 &&
+      !(vscode.workspace.getConfiguration("odooDev").autoStash as boolean)
+    ) {
+      throw new Error(
+        `There are uncommitted changes in: ${dirtyRepos.join(
+          ", "
+        )}. Activate "Auto Stash" config to stash them automatically.`
+      );
     }
 
     return utils.refreshTreeOnSuccess(async () => {
@@ -158,7 +179,7 @@ export const fetchStableBranch = createCommand(
       if (!(branch in baseBrances)) {
         await odooDevConfig.update("baseBranches", { ...baseBrances, [branch]: 100 }, true);
       }
-      await utils.fetchStableBranches(branch);
+      await utils.fetchStableBranches(branch, dirtyRepos);
       utils.db.setActiveBranch(branch);
     });
   })
@@ -188,6 +209,26 @@ export const deleteBranch = createCommand(
 
     if (selected === undefined) {
       return;
+    }
+
+    const dirtyRepos = await utils.getDirtyRepos();
+    if (dirtyRepos.length !== 0) {
+      const answer = await vscode.window.showQuickPick(["Yes", "No"], {
+        title: `Uncommitted changes in: ${dirtyRepos.join(
+          ", "
+        )}. The changes will be lost. Continue?`,
+      });
+      if (answer !== "Yes") {
+        return;
+      }
+      await Promise.all(
+        dirtyRepos.map(async (repoName) => {
+          const repo = utils.getRepo(repoName);
+          if (repo) {
+            return runShellCommand(`git reset --hard`, { cwd: repo.rootUri.fsPath });
+          }
+        })
+      );
     }
 
     return utils.refreshTreeOnSuccess(async () => {
@@ -235,13 +276,20 @@ export const checkoutBranch = createCommand(
       return;
     }
 
-    const ensureResult = await utils.ensureCleanRepos("Odoo Dev: Checkout");
-    if (!isSuccess(ensureResult)) {
-      throw new Error(ensureResult);
+    const dirtyRepos = await utils.getDirtyRepos();
+    if (
+      dirtyRepos.length !== 0 &&
+      !(vscode.workspace.getConfiguration("odooDev").autoStash as boolean)
+    ) {
+      throw new Error(
+        `There are uncommitted changes in: ${dirtyRepos.join(
+          ", "
+        )}. Activate "Auto Stash" config to stash them automatically.`
+      );
     }
 
     return utils.refreshTreeOnSuccess(async () => {
-      await utils.checkoutBranches(selected.name);
+      await utils.checkoutBranches(selected.name, dirtyRepos);
       utils.db.setActiveBranch(selected.name);
     });
   })
@@ -254,14 +302,21 @@ export const resetActiveBranch = createCommand(
       return;
     }
 
-    const ensureResult = await utils.ensureCleanRepos("Odoo Dev: Reset Active Branch");
-    if (!isSuccess(ensureResult)) {
-      throw new Error(ensureResult);
+    const dirtyRepos = await utils.getDirtyRepos();
+    if (
+      dirtyRepos.length !== 0 &&
+      !(vscode.workspace.getConfiguration("odooDev").autoStash as boolean)
+    ) {
+      throw new Error(
+        `There are uncommitted changes in: ${dirtyRepos.join(
+          ", "
+        )}. Activate "Auto Stash" config to stash them automatically.`
+      );
     }
 
     const activeBranch = utils.db.getActiveBranch();
     if (activeBranch) {
-      await utils.resetBranches(activeBranch);
+      await utils.resetBranches(activeBranch, dirtyRepos);
     }
   })
 );
