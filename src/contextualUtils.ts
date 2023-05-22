@@ -9,6 +9,7 @@ import {
   callWithSpinner,
   fileExists,
   getChildProcs,
+  getRemote,
   inferBaseBranch,
   isBaseBranch,
   isOdooServer,
@@ -334,7 +335,8 @@ export function createContextualUtils(
     isDirty: boolean
   ) => {
     let branchToCheckout = branch;
-    const fetchRes = await runAsync(() => repo.fetch("dev", branch));
+    const remoteName = getRemote(repoName);
+    const fetchRes = await runAsync(() => repo.fetch(remoteName, branch));
     if (!isSuccess(fetchRes)) {
       if (!base) {
         throw new Error("Unable to checkout the branch even its base.");
@@ -716,7 +718,7 @@ export function createContextualUtils(
     if (repo.state.HEAD?.name !== branch) {
       return success(); // We don't care about resetting a repo that has different active branch.
     } else {
-      const remote = isBaseBranch(branch) ? "origin" : "dev";
+      const remote = isBaseBranch(branch) ? "origin" : getRemote(repoName);
       try {
         if (isDirty) {
           await runShellCommand("git stash", { cwd: repo.rootUri.fsPath });

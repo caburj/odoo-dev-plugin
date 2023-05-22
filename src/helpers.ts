@@ -28,6 +28,15 @@ function getFoldersInDirectory(directoryPath: string) {
   });
 }
 
+/**
+ * Call when you are sure that the remote is set.
+ * @param name
+ * @returns
+ */
+export function getRemote(name: string) {
+  return vscode.workspace.getConfiguration("odooDev.remote")[name] as string;
+}
+
 export async function ensureRemote(name: "odoo" | "enterprise" | "upgrade", repo: Repository) {
   const remoteConfig = vscode.workspace.getConfiguration("odooDev.remote");
   const currentRemote = remoteConfig[name] as string;
