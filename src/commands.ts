@@ -667,7 +667,7 @@ export const stopActiveServer = createCommand(
 );
 
 export const openPullRequestLink = createCommand(
-  "odooDev.openPullRequestLink",
+  "odooDev.openPullRequestLinkOdoo",
   screamOnError(async (utils, item) => {
     const branchName = item ? item.name : utils.db.getActiveBranch();
 
@@ -676,12 +676,68 @@ export const openPullRequestLink = createCommand(
     }
 
     const response = await fetch(
-      `https://api.github.com/repos/odoo/odoo/pulls?head=odoo-dev:${branchName}`
+      `https://api.github.com/repos/odoo/odoo/pulls?head=odoo-dev:${branchName}&state=all`
     );
     const pullRequests = await response.json();
     const [pr] = pullRequests;
     if (!pr) {
-      throw new Error(`There is no pull request for branch ${branchName}.`);
+      throw new Error(`There is no pull request (odoo) from the branch '${branchName}'.`);
+    }
+    vscode.env.openExternal(vscode.Uri.parse(pr.html_url));
+  })
+);
+
+export const openPullRequestLinkEnterprise = createCommand(
+  "odooDev.openPullRequestLinkEnterprise",
+  screamOnError(async (utils, item) => {
+    const githubAccessToken = await utils.getGithubAccessToken();
+
+    const branchName = item ? item.name : utils.db.getActiveBranch();
+
+    if (!branchName || isBaseBranch(branchName)) {
+      throw new Error(`Please select a dev branch.`);
+    }
+
+    const response = await fetch(
+      `https://api.github.com/repos/odoo/enterprise/pulls?head=odoo-dev:${branchName}&state=all`,
+      {
+        headers: {
+          Authorization: `Bearer ${githubAccessToken}`,
+        },
+      }
+    );
+    const pullRequests = await response.json();
+    const [pr] = pullRequests;
+    if (!pr) {
+      throw new Error(`There is no pull request (enterprise) from the branch '${branchName}'.`);
+    }
+    vscode.env.openExternal(vscode.Uri.parse(pr.html_url));
+  })
+);
+
+export const openPullRequestLinkUpgrade = createCommand(
+  "odooDev.openPullRequestLinkUpgrade",
+  screamOnError(async (utils, item) => {
+    const githubAccessToken = await utils.getGithubAccessToken();
+
+    const branchName = item ? item.name : utils.db.getActiveBranch();
+
+    if (!branchName || isBaseBranch(branchName)) {
+      throw new Error(`Please select a dev branch.`);
+    }
+
+    const response = await fetch(
+      `https://api.github.com/repos/odoo/upgrade/pulls?head=odoo:${branchName}&state=all`,
+      {
+        headers: {
+          Authorization: `Bearer ${githubAccessToken}`,
+        },
+      }
+    );
+    const pullRequests = await response.json();
+    const [pr] = pullRequests;
+    if (!pr) {
+      throw new Error(`There is no pull request (upgrade) from the branch '${branchName}'.`);
     }
     vscode.env.openExternal(vscode.Uri.parse(pr.html_url));
   })

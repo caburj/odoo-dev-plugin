@@ -880,6 +880,22 @@ export function createContextualUtils(
     }, 2000);
   };
 
+  let githubSession: vscode.AuthenticationSession | undefined;
+
+  const getGithubAccessToken = async () => {
+    try {
+      if (!githubSession) {
+        githubSession = await vscode.authentication.getSession("github", ["repo"], {
+          createIfNone: true,
+        });
+      }
+    } catch (_e) {}
+    if (!githubSession) {
+      throw new Error("Fetching info from private repo requires github login.");
+    }
+    return githubSession.accessToken;
+  };
+
   return {
     db,
     treeDataProvider,
@@ -908,5 +924,6 @@ export function createContextualUtils(
     ensureNoRunningServer,
     getDirtyRepos,
     stopServerStatus,
+    getGithubAccessToken,
   };
 }

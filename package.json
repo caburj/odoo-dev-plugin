@@ -169,12 +169,16 @@
         }
       },
       {
-        "command": "odooDev.openPullRequestLink",
-        "title": "Odoo Dev: Open Pull Request Link",
-        "icon": {
-          "light": "resources/pull-request-light.svg",
-          "dark": "resources/pull-request-dark.svg"
-        }
+        "command": "odooDev.openPullRequestLinkOdoo",
+        "title": "Odoo Dev: Open Pull Request (odoo)"
+      },
+      {
+        "command": "odooDev.openPullRequestLinkEnterprise",
+        "title": "Odoo Dev: Open Pull Request (enterprise)"
+      },
+      {
+        "command": "odooDev.openPullRequestLinkUpgrade",
+        "title": "Odoo Dev: Open Pull Request (upgrade)"
       },
       {
         "command": "odooDev.openRunbotLink",
@@ -268,17 +272,21 @@
         }
       ]
     },
-    "submenus": [],
+    "submenus": [
+      {
+        "id": "odooDev.links",
+        "label": "Odoo Dev Links",
+        "icon": {
+          "dark": "resources/links-dark.svg",
+          "light": "resources/links-light.svg"
+        }
+      }
+    ],
     "menus": {
       "view/item/context": [
         {
-          "command": "odooDev.openPullRequestLink",
-          "group": "1_links@10",
-          "when": "viewItem == dev-branch || viewItem == active-dev-branch"
-        },
-        {
-          "command": "odooDev.openRunbotLink",
-          "group": "1_links@20",
+          "submenu": "odooDev.links",
+          "group": "inline@0",
           "when": "viewItem == dev-branch || viewItem == active-dev-branch"
         },
         {
@@ -377,6 +385,24 @@
           "command": "odooDev.debugServerWithUpdate",
           "when": "view == odoo-dev-branches",
           "group": "3_debug@30"
+        }
+      ],
+      "odooDev.links": [
+        {
+          "command": "odooDev.openRunbotLink",
+          "group": "1_links@0"
+        },
+        {
+          "command": "odooDev.openPullRequestLinkOdoo",
+          "group": "1_links@10"
+        },
+        {
+          "command": "odooDev.openPullRequestLinkEnterprise",
+          "group": "1_links@20"
+        },
+        {
+          "command": "odooDev.openPullRequestLinkUpgrade",
+          "group": "1_links@30"
         }
       ]
     }
