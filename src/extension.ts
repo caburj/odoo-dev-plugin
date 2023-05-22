@@ -4,6 +4,7 @@ import * as vscode from "vscode";
 import { createContextualUtils } from "./contextualUtils";
 import * as commands from "./commands";
 import { migrate } from "./odoo_plugin_db";
+import { DEBUG_PYTHON_NAME } from "./constants";
 
 const ALIASES: Record<string, string[]> = {
   "odooDev.checkoutBranch": ["odooDev.selectBranch"],
@@ -19,9 +20,11 @@ export async function activate(context: vscode.ExtensionContext) {
 
   const utils = createContextualUtils(context, { stopServerStatus });
 
-  vscode.debug.onDidTerminateDebugSession(() => {
-    vscode.commands.executeCommand("setContext", "odooDev.hasActiveServer", false);
-    stopServerStatus.hide();
+  vscode.debug.onDidTerminateDebugSession((session) => {
+    if (session.name === DEBUG_PYTHON_NAME) {
+      vscode.commands.executeCommand("setContext", "odooDev.hasActiveServer", false);
+      stopServerStatus.hide();
+    }
   });
 
   try {

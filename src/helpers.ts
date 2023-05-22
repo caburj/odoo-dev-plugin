@@ -19,7 +19,7 @@ export function screamOnError<Args extends any[]>(cb: (...args: Args) => Promise
   };
 }
 
-function getFoldersInDirectory(directoryPath: string) {
+export function getFoldersInDirectory(directoryPath: string) {
   const filesAndDirs = fs.readdirSync(directoryPath);
   return filesAndDirs.filter((name) => {
     const fullPath = path.join(directoryPath, name);

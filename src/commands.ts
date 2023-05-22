@@ -5,6 +5,7 @@ import {
   ensureRemote,
   fileExists,
   getBaseBranches,
+  getFoldersInDirectory,
   inferBaseBranch,
   isBaseBranch,
   multiSelectAddons,
@@ -14,6 +15,7 @@ import {
 import { type ContextualUtils } from "./contextualUtils";
 import { isSuccess } from "./Result";
 import { OdooDevBranch } from "./odoo_dev_branch";
+import { DEBUG_JS_NAME, DEBUG_PYTHON_NAME } from "./constants";
 
 function createCommand<T>(
   name: string,
@@ -366,15 +368,16 @@ export const debugServer = createCommand(
       return;
     }
 
+    const odooBin = `${vscode.workspace.getConfiguration("odooDev").sourceFolder}/odoo/odoo-bin`;
     const commandArgs = await utils.getStartServerArgs();
     const debugOdooPythonLaunchConfig: vscode.DebugConfiguration = {
-      name: "Debug Odoo Python",
+      name: DEBUG_PYTHON_NAME,
       type: "python",
       request: "launch",
       stopOnEntry: false,
       console: "integratedTerminal",
       python: "${command:python.interpreterPath}",
-      program: "${workspaceFolder:odoo}/odoo-bin",
+      program: odooBin,
       args: commandArgs,
     };
     await vscode.debug.startDebugging(undefined, debugOdooPythonLaunchConfig);
@@ -416,17 +419,18 @@ export const debugServerWithInstall = createCommand(
       return;
     }
 
+    const odooBin = `${vscode.workspace.getConfiguration("odooDev").sourceFolder}/odoo/odoo-bin`;
     const startServerArgs = await utils.getStartServerArgs();
     const args = [...startServerArgs, "-i", selectedAddons.join(",")];
 
     const debugOdooPythonLaunchConfig: vscode.DebugConfiguration = {
-      name: "Debug Odoo Python",
+      name: DEBUG_PYTHON_NAME,
       type: "python",
       request: "launch",
       stopOnEntry: false,
       console: "integratedTerminal",
       python: "${command:python.interpreterPath}",
-      program: "${workspaceFolder:odoo}/odoo-bin",
+      program: odooBin,
       args,
     };
     await vscode.debug.startDebugging(undefined, debugOdooPythonLaunchConfig);
@@ -468,22 +472,68 @@ export const debugServerWithUpdate = createCommand(
       return;
     }
 
+    const odooBin = `${vscode.workspace.getConfiguration("odooDev").sourceFolder}/odoo/odoo-bin`;
     const startServerArgs = await utils.getStartServerArgs();
     const args = [...startServerArgs, "-u", selectedAddons.join(",")];
 
     const debugOdooPythonLaunchConfig: vscode.DebugConfiguration = {
-      name: "Debug Odoo Python",
+      name: DEBUG_PYTHON_NAME,
       type: "python",
       request: "launch",
       stopOnEntry: false,
       console: "integratedTerminal",
       python: "${command:python.interpreterPath}",
-      program: "${workspaceFolder:odoo}/odoo-bin",
+      program: odooBin,
       args,
     };
     await vscode.debug.startDebugging(undefined, debugOdooPythonLaunchConfig);
     vscode.commands.executeCommand("setContext", "odooDev.hasActiveServer", true);
     utils.stopServerStatus.show();
+  })
+);
+
+export const debugJS = createCommand(
+  "odooDev.debugJS",
+  screamOnError(async (utils) => {
+    const odooAddonsPath = `${
+      vscode.workspace.getConfiguration("odooDev").sourceFolder
+    }/odoo/addons`;
+
+    const enterpriseAddonsPath = `${
+      vscode.workspace.getConfiguration("odooDev").sourceFolder
+    }/enterprise`;
+
+    const ip = await runShellCommand(
+      `ifconfig en0 | grep "inet " | grep -v 127.0.0.1 | awk '{print $2}'`
+    );
+
+    const httpPort = utils.getOdooConfigValue("http_port") || "8069";
+
+    const addons: [path: string, name: string][] = getFoldersInDirectory(odooAddonsPath).map(
+      (name) => [odooAddonsPath, name]
+    );
+
+    try {
+      addons.push(
+        ...getFoldersInDirectory(enterpriseAddonsPath).map(
+          (a) => [enterpriseAddonsPath, a] as [path: string, name: string]
+        )
+      );
+    } catch (_e) {}
+
+    const sourceMapPathOverrides = Object.fromEntries(
+      addons.map(([path, name]) => [`../../..//${name}/*`, `${path}/${name}/*`])
+    );
+
+    const debugOdooPythonLaunchConfig: vscode.DebugConfiguration = {
+      name: DEBUG_JS_NAME,
+      type: "chrome",
+      request: "launch",
+      url: `http://${ip}:${httpPort}?debug=assets`,
+      sourceMaps: true,
+      sourceMapPathOverrides,
+    };
+    await vscode.debug.startDebugging(undefined, debugOdooPythonLaunchConfig);
   })
 );
 

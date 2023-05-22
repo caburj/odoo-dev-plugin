@@ -129,6 +129,14 @@
         "title": "Odoo Dev: Debug Server With Update..."
       },
       {
+        "command": "odooDev.debugJS",
+        "title": "Odoo Dev: Debug JS",
+        "icon": {
+          "light": "resources/debug-js-light.svg",
+          "dark": "resources/debug-js-dark.svg"
+        }
+      },
+      {
         "command": "odooDev.dropActiveDB",
         "title": "Odoo Dev: Drop Active DB",
         "icon": {
@@ -142,11 +150,7 @@
       },
       {
         "command": "odooDev.openChromeLocalServer",
-        "title": "Odoo Dev: Open Chrome (Local Server)",
-        "icon": {
-          "light": "resources/chrome-browser-light.svg",
-          "dark": "resources/chrome-browser-dark.svg"
-        }
+        "title": "Odoo Dev: Open Chrome (Local Server)"
       },
       {
         "command": "odooDev.openOdooConf",
@@ -335,7 +339,7 @@
           "group": "navigation@70"
         },
         {
-          "command": "odooDev.openChromeLocalServer",
+          "command": "odooDev.debugJS",
           "when": "view == odoo-dev-branches && odooDev.hasActiveServer",
           "group": "navigation@80"
         },
