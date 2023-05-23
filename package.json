@@ -130,11 +130,7 @@
       },
       {
         "command": "odooDev.debugJS",
-        "title": "Odoo Dev: Debug JS",
-        "icon": {
-          "light": "resources/debug-js-light.svg",
-          "dark": "resources/debug-js-dark.svg"
-        }
+        "title": "Odoo Dev: Open Chrome (Debug)"
       },
       {
         "command": "odooDev.dropActiveDB",
@@ -150,7 +146,7 @@
       },
       {
         "command": "odooDev.openChromeLocalServer",
-        "title": "Odoo Dev: Open Chrome (Local Server)"
+        "title": "Odoo Dev: Open Chrome"
       },
       {
         "command": "odooDev.openOdooConf",
@@ -280,6 +276,14 @@
           "dark": "resources/links-dark.svg",
           "light": "resources/links-light.svg"
         }
+      },
+      {
+        "id": "odooDev.openChrome",
+        "label": "Odoo Dev: Open Chrome",
+        "icon": {
+          "light": "resources/chrome-light.svg",
+          "dark": "resources/chrome-dark.svg"
+        }
       }
     ],
     "menus": {
@@ -347,7 +351,7 @@
           "group": "navigation@70"
         },
         {
-          "command": "odooDev.debugJS",
+          "submenu": "odooDev.openChrome",
           "when": "view == odoo-dev-branches && odooDev.hasActiveServer",
           "group": "navigation@80"
         },
@@ -403,6 +407,16 @@
         {
           "command": "odooDev.openPullRequestLinkUpgrade",
           "group": "1_links@30"
+        }
+      ],
+      "odooDev.openChrome": [
+        {
+          "command": "odooDev.openChromeLocalServer",
+          "group": "1_chrome@0"
+        },
+        {
+          "command": "odooDev.debugJS",
+          "group": "1_chrome@10"
         }
       ]
     }
