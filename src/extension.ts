@@ -5,11 +5,14 @@ import { createContextualUtils } from "./contextualUtils";
 import * as commands from "./commands";
 import { migrate } from "./odoo_plugin_db";
 import { DEBUG_PYTHON_NAME } from "./constants";
+import { getAddons } from "./helpers";
 
 const ALIASES: Record<string, string[]> = {
   "odooDev.checkoutBranch": ["odooDev.selectBranch"],
   "odooDev.deleteBranch": ["odooDev.removeBranch"],
 };
+
+let addonsPathMap: Record<string, string> = {};
 
 let stopServerStatus: vscode.StatusBarItem;
 
@@ -18,7 +21,24 @@ export async function activate(context: vscode.ExtensionContext) {
   stopServerStatus.command = "odooDev.stopActiveServer";
   stopServerStatus.text = "$(debug-stop) Stop Odoo Server";
 
-  const utils = createContextualUtils(context, { stopServerStatus });
+  const odooAddonsPath = `${vscode.workspace.getConfiguration("odooDev").sourceFolder}/odoo/addons`;
+
+  for (const addon of await getAddons(odooAddonsPath)) {
+    addonsPathMap[addon] = `${odooAddonsPath}/${addon}`;
+  }
+
+  try {
+    const enterpriseAddonsPath = `${
+      vscode.workspace.getConfiguration("odooDev").sourceFolder
+    }/enterprise`;
+    for (const addon of await getAddons(enterpriseAddonsPath)) {
+      addonsPathMap[addon] = `${enterpriseAddonsPath}/${addon}`;
+    }
+  } catch (error) {}
+
+  addonsPathMap['base'] = `${vscode.workspace.getConfiguration("odooDev").sourceFolder}/odoo/odoo/addons/base`;
+
+  const utils = createContextualUtils(context, { stopServerStatus, addonsPathMap });
 
   vscode.debug.onDidTerminateDebugSession((session) => {
     if (session.name === DEBUG_PYTHON_NAME) {

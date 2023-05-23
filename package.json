@@ -179,6 +179,10 @@
       {
         "command": "odooDev.openRunbotLink",
         "title": "Odoo Dev: Runbot"
+      },
+      {
+        "command": "odooDev.isDependentOn",
+        "title": "Odoo Dev: Is Addon Dependent On?"
       }
     ],
     "configuration": {

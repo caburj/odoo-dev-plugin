@@ -43,9 +43,9 @@ async function getBranch(repo: Repository, name: string): Promise<Branch | undef
 
 export function createContextualUtils(
   context: vscode.ExtensionContext,
-  options: { stopServerStatus: vscode.StatusBarItem }
+  options: { stopServerStatus: vscode.StatusBarItem; addonsPathMap: Record<string, string> }
 ) {
-  const { stopServerStatus } = options;
+  const { stopServerStatus, addonsPathMap } = options;
   const db = new OdooPluginDB(context);
 
   let odooDevTerminal: vscode.Terminal | undefined;
@@ -904,6 +904,42 @@ export function createContextualUtils(
     return githubSession.accessToken;
   };
 
+  function removeComments(content: string): string {
+    return content.replace(/#[^\n]*\n/g, "");
+  }
+
+  const requirementsRegex = /['"]depends['"]\s*:\s*(\[[\s\S]*?\])/;
+
+  function isDependentOn(addon: string, dependency: string): boolean {
+    const addonPath = `${addonsPathMap[addon]}`;
+    const manifestPath = `${addonPath}/__manifest__.py`;
+
+    if (!fs.existsSync(manifestPath)) {
+      throw new Error(`Manifest file not found for '${addon}' addon at path ${addonPath}`);
+    }
+
+    const manifestContent = removeComments(fs.readFileSync(manifestPath, "utf8"));
+    const requirementsMatch = manifestContent.match(requirementsRegex);
+    const requirementsStr = requirementsMatch ? requirementsMatch[1] : "";
+
+    const requirements = eval(`${requirementsStr}`);
+    if (!requirements) {
+      return false;
+    }
+
+    if (requirements.includes(dependency)) {
+      return true;
+    }
+
+    for (const req of requirements) {
+      if (isDependentOn(req, dependency)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
   return {
     db,
     treeDataProvider,
@@ -934,5 +970,7 @@ export function createContextualUtils(
     getDirtyRepos,
     stopServerStatus,
     getGithubAccessToken,
+    isDependentOn,
+    addonsPathMap,
   };
 }

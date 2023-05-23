@@ -755,3 +755,33 @@ export const openRunbotLink = createCommand(
     vscode.env.openExternal(vscode.Uri.parse(url));
   })
 );
+
+export const isDependentOn = createCommand(
+  "odooDev.isDependentOn",
+  screamOnError(async (utils) => {
+    const addon = await vscode.window.showQuickPick(Object.keys(utils.addonsPathMap), {
+      title: "Select dependent addon",
+      placeHolder: "e.g. point_of_sale",
+    });
+
+    if (!addon) {
+      return;
+    }
+
+    const requirement = await vscode.window.showQuickPick(Object.keys(utils.addonsPathMap), {
+      title: "Select requirement",
+      placeHolder: "e.g. account",
+    });
+
+    if (!requirement) {
+      return;
+    }
+
+    const isDependent = utils.isDependentOn(addon, requirement);
+    if (isDependent) {
+      vscode.window.showInformationMessage(`${addon} is dependent on ${requirement}`);
+    } else {
+      vscode.window.showErrorMessage(`${addon} is not dependent on ${requirement}`);
+    }
+  })
+);
