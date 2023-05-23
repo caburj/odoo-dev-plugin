@@ -330,6 +330,11 @@ export const startFreshServer = createCommand(
       return;
     }
 
+    const selectedAddons = await multiSelectAddons();
+    if (!selectedAddons) {
+      return;
+    }
+
     const dbName = utils.getActiveDBName();
     if (dbName) {
       try {
@@ -343,7 +348,8 @@ export const startFreshServer = createCommand(
         }
       }
     }
-    return vscode.commands.executeCommand("odooDev.startServerWithInstall");
+
+    utils.startServerWithInstall(selectedAddons);
   })
 );
 
@@ -398,12 +404,7 @@ export const startServerWithInstall = createCommand(
       return;
     }
 
-    const startServerArgs = await utils.getStartServerArgs();
-    const args = [...startServerArgs, "-i", selectedAddons.join(",")];
-
-    const python = utils.getPythonPath();
-    const odooBin = `${vscode.workspace.getConfiguration("odooDev").sourceFolder}/odoo/odoo-bin`;
-    utils.startServer(`${python} ${odooBin} ${args.join(" ")}`);
+    utils.startServerWithInstall(selectedAddons);
   })
 );
 

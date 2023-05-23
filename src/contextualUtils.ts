@@ -880,6 +880,14 @@ export function createContextualUtils(
     }, 2000);
   };
 
+  const startServerWithInstall = async (selectedAddons: string[]) => {
+    const startServerArgs = await getStartServerArgs();
+    const args = [...startServerArgs, "-i", selectedAddons.join(",")];
+    const python = getPythonPath();
+    const odooBin = `${vscode.workspace.getConfiguration("odooDev").sourceFolder}/odoo/odoo-bin`;
+    startServer(`${python} ${odooBin} ${args.join(" ")}`);
+  };
+
   let githubSession: vscode.AuthenticationSession | undefined;
 
   const getGithubAccessToken = async () => {
@@ -904,6 +912,7 @@ export function createContextualUtils(
     getPythonPath,
     getStartServerArgs,
     startServer,
+    startServerWithInstall,
     getOdooConfigValue,
     getActiveDBName,
     getRepo,
