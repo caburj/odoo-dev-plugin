@@ -150,7 +150,7 @@
       },
       {
         "command": "odooDev.openOdooConf",
-        "title": "Odoo Dev: Open Config File",
+        "title": "Odoo Dev: Config File",
         "icon": {
           "light": "resources/config-file-light.svg",
           "dark": "resources/config-file-dark.svg"
@@ -158,7 +158,7 @@
       },
       {
         "command": "odooDev.openLinkedNote",
-        "title": "Odoo Dev: Open Linked Note",
+        "title": "Odoo Dev: Linked Note",
         "icon": {
           "light": "resources/linked-note-light.svg",
           "dark": "resources/linked-note-dark.svg"
@@ -166,19 +166,19 @@
       },
       {
         "command": "odooDev.openPullRequestLinkOdoo",
-        "title": "Odoo Dev: Open Pull Request (odoo)"
+        "title": "Odoo Dev: Pull Request (odoo)"
       },
       {
         "command": "odooDev.openPullRequestLinkEnterprise",
-        "title": "Odoo Dev: Open Pull Request (enterprise)"
+        "title": "Odoo Dev: Pull Request (enterprise)"
       },
       {
         "command": "odooDev.openPullRequestLinkUpgrade",
-        "title": "Odoo Dev: Open Pull Request (upgrade)"
+        "title": "Odoo Dev: Pull Request (upgrade)"
       },
       {
         "command": "odooDev.openRunbotLink",
-        "title": "Odoo Dev: Open Runbot Link"
+        "title": "Odoo Dev: Runbot"
       }
     ],
     "configuration": {
@@ -312,6 +312,46 @@
           "command": "odooDev.deleteBranch",
           "group": "inline@40",
           "when": "viewItem == dev-branch || viewItem == active-dev-branch"
+        },
+        {
+          "command": "odooDev.openRunbotLink",
+          "group": "1_links@0",
+          "when": "viewItem == dev-branch || viewItem == active-dev-branch"
+        },
+        {
+          "command": "odooDev.openPullRequestLinkOdoo",
+          "group": "2_github_links@10",
+          "when": "viewItem == dev-branch || viewItem == active-dev-branch"
+        },
+        {
+          "command": "odooDev.openPullRequestLinkEnterprise",
+          "group": "2_github_links@20",
+          "when": "viewItem == dev-branch || viewItem == active-dev-branch"
+        },
+        {
+          "command": "odooDev.openPullRequestLinkUpgrade",
+          "group": "2_github_links@30",
+          "when": "viewItem == dev-branch || viewItem == active-dev-branch"
+        },
+        {
+          "command": "odooDev.selectBranch",
+          "group": "z_others@10",
+          "when": "(viewItem == base-branch || viewItem == dev-branch) && (viewItem != active-base-branch && viewItem != active-dev-branch)"
+        },
+        {
+          "command": "odooDev.openLinkedNote",
+          "group": "z_others@20",
+          "when": "viewItem == base-branch || viewItem == dev-branch || viewItem == active-base-branch || viewItem == active-dev-branch"
+        },
+        {
+          "command": "odooDev.resetActiveBranch",
+          "group": "z_others@30",
+          "when": "viewItem == active-base-branch || viewItem == active-dev-branch"
+        },
+        {
+          "command": "odooDev.deleteBranch",
+          "group": "z_others@40",
+          "when": "viewItem == dev-branch || viewItem == active-dev-branch"
         }
       ],
       "view/title": [
@@ -398,15 +438,15 @@
         },
         {
           "command": "odooDev.openPullRequestLinkOdoo",
-          "group": "1_links@10"
+          "group": "2_github_links@10"
         },
         {
           "command": "odooDev.openPullRequestLinkEnterprise",
-          "group": "1_links@20"
+          "group": "2_github_links@20"
         },
         {
           "command": "odooDev.openPullRequestLinkUpgrade",
-          "group": "1_links@30"
+          "group": "2_github_links@30"
         }
       ],
       "odooDev.openChrome": [
