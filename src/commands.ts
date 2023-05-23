@@ -4,8 +4,8 @@ import {
   createTemplateNote,
   ensureRemote,
   fileExists,
+  getAddons,
   getBaseBranches,
-  getFoldersInDirectory,
   inferBaseBranch,
   isBaseBranch,
   multiSelectAddons,
@@ -509,15 +509,13 @@ export const debugJS = createCommand(
 
     const httpPort = utils.getOdooConfigValue("http_port") || "8069";
 
-    const addons: [path: string, name: string][] = getFoldersInDirectory(odooAddonsPath).map(
-      (name) => [odooAddonsPath, name]
-    );
+    const odooAddons = await getAddons(odooAddonsPath);
+    const addons: [path: string, name: string][] = odooAddons.map((name) => [odooAddonsPath, name]);
 
     try {
+      const enterpriseAddons = await getAddons(enterpriseAddonsPath);
       addons.push(
-        ...getFoldersInDirectory(enterpriseAddonsPath).map(
-          (a) => [enterpriseAddonsPath, a] as [path: string, name: string]
-        )
+        ...enterpriseAddons.map((a) => [enterpriseAddonsPath, a] as [path: string, name: string])
       );
     } catch (_e) {}
 

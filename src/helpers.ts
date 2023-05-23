@@ -93,16 +93,15 @@ export function isBaseBranch(branchName: string) {
 }
 
 export async function multiSelectAddons() {
-  const addons = getFoldersInDirectory(
-    `${vscode.workspace.getConfiguration("odooDev").sourceFolder}/odoo/addons`
-  );
-  let enterprise: string[] = [];
+  const odooPath = `${vscode.workspace.getConfiguration("odooDev").sourceFolder}/odoo/addons`;
+  const enterprisePath = `${vscode.workspace.getConfiguration("odooDev").sourceFolder}/enterprise`;
+
+  const odooAddons = await getAddons(odooPath);
+  let enterpriseAddons: string[] = [];
   try {
-    enterprise = getFoldersInDirectory(
-      `${vscode.workspace.getConfiguration("odooDev").sourceFolder}/enterprise`
-    );
+    enterpriseAddons = await getAddons(enterprisePath);
   } catch (error) {}
-  return vscode.window.showQuickPick([...addons, ...enterprise], { canPickMany: true });
+  return vscode.window.showQuickPick([...odooAddons, ...enterpriseAddons], { canPickMany: true });
 }
 
 export function runShellCommand(
@@ -241,4 +240,36 @@ export async function killOdooServer(pid: number): Promise<void> {
     };
     retry();
   });
+}
+
+export function isAddon(path: string): Promise<boolean> {
+  return new Promise((resolve, reject) => {
+    try {
+      fs.access(`${path}/__manifest__.py`, fs.constants.F_OK, (err) => {
+        if (err) {
+          resolve(false);
+        } else {
+          resolve(true);
+        }
+      });
+    } catch (err) {
+      reject(err);
+    }
+  });
+}
+
+/**
+ * Given `path`, return the list of addons in that directory.
+ * @param path
+ */
+export async function getAddons(path: string): Promise<string[]> {
+  const folders = getFoldersInDirectory(path);
+  const addons = [];
+  for (const folder of folders) {
+    const res = await isAddon(`${path}/${folder}`);
+    if (res) {
+      addons.push(folder);
+    }
+  }
+  return addons;
 }
