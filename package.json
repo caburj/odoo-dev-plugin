@@ -269,6 +269,10 @@
         {
           "id": "odoo-dev-branches",
           "name": "Branches"
+        },
+        {
+          "id": "odoo-addons-tree",
+          "name": "Dependency Tree"
         }
       ]
     },

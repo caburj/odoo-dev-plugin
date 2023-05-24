@@ -273,3 +273,7 @@ export async function getAddons(path: string): Promise<string[]> {
   }
   return addons;
 }
+
+export function removeComments(content: string): string {
+  return content.replace(/#[^\n]*\n/g, "");
+}

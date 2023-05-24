@@ -58,6 +58,7 @@ export async function activate(context: vscode.ExtensionContext) {
   }
 
   vscode.window.registerTreeDataProvider("odoo-dev-branches", utils.treeDataProvider);
+  vscode.window.registerTreeDataProvider("odoo-addons-tree", utils.odooAddonsTreeProvider);
 
   const disposables = Object.values(commands).map((command) => {
     const { name, method } = command(utils);

@@ -15,10 +15,13 @@ import {
   isOdooServer,
   isValidDirectory,
   killOdooServer,
+  removeComments,
   runShellCommand,
 } from "./helpers";
 import { Result, error, isSuccess, run, runAsync, success } from "./Result";
 import { assert } from "console";
+import { requirementsRegex } from "./constants";
+import { OdooAddonsTree } from "./odoo_addons";
 
 const gitExtension = vscode.extensions.getExtension<GitExtension>("vscode.git")!.exports;
 const git = gitExtension.getAPI(1);
@@ -814,6 +817,14 @@ export function createContextualUtils(
 
   const treeDataProvider = new OdooDevBranches(rootPath, db);
 
+  const odooPath = `${vscode.workspace.getConfiguration("odooDev").sourceFolder}/odoo`;
+  const enterprisePath = `${vscode.workspace.getConfiguration("odooDev").sourceFolder}/enterprise`;
+  const enterpriseExists = fs.existsSync(enterprisePath);
+  const odooAddonsTreeProvider = new OdooAddonsTree(
+    odooPath,
+    enterpriseExists ? enterprisePath : undefined
+  );
+
   const refreshTreeOnSuccess = async (cb: () => void | Promise<void>) => {
     await cb();
     treeDataProvider.refresh();
@@ -904,12 +915,6 @@ export function createContextualUtils(
     return githubSession.accessToken;
   };
 
-  function removeComments(content: string): string {
-    return content.replace(/#[^\n]*\n/g, "");
-  }
-
-  const requirementsRegex = /['"]depends['"]\s*:\s*(\[[\s\S]*?\])/;
-
   function isDependentOn(addon: string, dependency: string): boolean {
     const addonPath = `${addonsPathMap[addon]}`;
     const manifestPath = `${addonPath}/__manifest__.py`;
@@ -961,6 +966,7 @@ export function createContextualUtils(
   return {
     db,
     treeDataProvider,
+    odooAddonsTreeProvider,
     getConfigFilePath,
     getOdooDevTerminal,
     getPythonPath,
