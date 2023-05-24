@@ -504,11 +504,7 @@ export const debugJS = createCommand(
       vscode.workspace.getConfiguration("odooDev").sourceFolder
     }/enterprise`;
 
-    const ip = await runShellCommand(
-      `ifconfig en0 | grep "inet " | grep -v 127.0.0.1 | awk '{print $2}'`
-    );
-
-    const httpPort = utils.getOdooConfigValue("http_port") || "8069";
+    const url = await utils.getServerUrl({ debug: "assets" });
 
     const odooAddons = await getAddons(odooAddonsPath);
     const addons: [path: string, name: string][] = odooAddons.map((name) => [odooAddonsPath, name]);
@@ -528,7 +524,7 @@ export const debugJS = createCommand(
       name: DEBUG_JS_NAME,
       type: "chrome",
       request: "launch",
-      url: `http://${ip}:${httpPort}?debug=assets`,
+      url,
       sourceMaps: true,
       sourceMapPathOverrides,
     };
@@ -564,13 +560,9 @@ export const getTestTag = createCommand(
 
 export const openChromeLocalServer = createCommand(
   "odooDev.openChromeLocalServer",
-  screamOnError(async ({ getOdooConfigValue }) => {
+  screamOnError(async ({ getServerUrl }) => {
     // TODO: check if there is an active server
-    const ip = await runShellCommand(
-      `ifconfig en0 | grep "inet " | grep -v 127.0.0.1 | awk '{print $2}'`
-    );
-    const httpPort = getOdooConfigValue("http_port") || "8069";
-    const url = `http://${ip.trim()}:${httpPort}`;
+    const url = await getServerUrl();
     switch (process.platform) {
       case "darwin": {
         const chromePath = await runShellCommand(

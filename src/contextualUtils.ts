@@ -940,6 +940,24 @@ export function createContextualUtils(
     return false;
   }
 
+  function toQueryString(params: Record<string, string>): string {
+    const parts = [];
+    for (const [key, value] of Object.entries(params)) {
+      parts.push(`${encodeURIComponent(key)}=${encodeURIComponent(value)}`);
+    }
+    return `?${parts.join("&")}`;
+  }
+
+  const getServerUrl = async (queryParams?: Record<string, string>) => {
+    const ip = await runShellCommand(
+      `ifconfig en0 | grep "inet " | grep -v 127.0.0.1 | awk '{print $2}'`
+    );
+    const ipTrimmed = ip.trim();
+    const host = ipTrimmed === "" ? "localhost" : ipTrimmed;
+    const port = getOdooConfigValue("http_port") || "8069";
+    return `http://${host}:${port}` + `${queryParams ? toQueryString(queryParams) : ""}`;
+  };
+
   return {
     db,
     treeDataProvider,
@@ -972,5 +990,6 @@ export function createContextualUtils(
     getGithubAccessToken,
     isDependentOn,
     addonsPathMap,
+    getServerUrl,
   };
 }
