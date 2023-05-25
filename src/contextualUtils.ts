@@ -20,7 +20,7 @@ import {
 } from "./helpers";
 import { Result, error, isSuccess, run, runAsync, success } from "./Result";
 import { assert } from "console";
-import { requirementsRegex } from "./constants";
+import { ODOO_TERMINAL_NAME, requirementsRegex } from "./constants";
 import { OdooAddonsTree } from "./odoo_addons";
 
 const gitExtension = vscode.extensions.getExtension<GitExtension>("vscode.git")!.exports;
@@ -55,15 +55,22 @@ export function createContextualUtils(
 
   const getOdooDevTerminal = () => {
     if (!odooDevTerminal) {
-      odooDevTerminal = vscode.window.createTerminal({
-        name: "Odoo Dev Terminal",
-        cwd: `${vscode.workspace.getConfiguration("odooDev").sourceFolder}/odoo`,
-      });
-      vscode.window.onDidCloseTerminal((t) => {
-        if (t === odooDevTerminal) {
-          odooDevTerminal = undefined;
-        }
-      });
+      const existingTerminals = vscode.window.terminals.filter(
+        (t) => t.name === ODOO_TERMINAL_NAME
+      );
+      if (existingTerminals.length > 0) {
+        odooDevTerminal = existingTerminals[0];
+      } else {
+        odooDevTerminal = vscode.window.createTerminal({
+          name: ODOO_TERMINAL_NAME,
+          cwd: `${vscode.workspace.getConfiguration("odooDev").sourceFolder}/odoo`,
+        });
+        vscode.window.onDidCloseTerminal((t) => {
+          if (t === odooDevTerminal) {
+            odooDevTerminal = undefined;
+          }
+        });
+      }
       odooDevTerminal.show();
     }
     return odooDevTerminal;
