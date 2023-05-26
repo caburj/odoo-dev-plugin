@@ -20,8 +20,9 @@ import {
 } from "./helpers";
 import { Result, error, isSuccess, run, runAsync, success } from "./Result";
 import { assert } from "console";
-import { ODOO_TERMINAL_NAME, requirementsRegex } from "./constants";
+import { DEBUG_JS_NAME, ODOO_TERMINAL_NAME, requirementsRegex } from "./constants";
 import { OdooAddonsTree } from "./odoo_addons";
+import { debugSessions } from "./state";
 
 const gitExtension = vscode.extensions.getExtension<GitExtension>("vscode.git")!.exports;
 const git = gitExtension.getAPI(1);
@@ -225,8 +226,11 @@ export function createContextualUtils(
   }
 
   async function ensureNoDebugSession(shouldConfirm = true) {
-    const debugSession = vscode.debug.activeDebugSession;
-    if (debugSession) {
+    for (const debugSession of debugSessions) {
+      if (debugSession.name.includes(DEBUG_JS_NAME) && debugSession.type === "pwa-chrome") {
+        // Ignore debug session if it is for debugging chrome, so return early.
+        continue;
+      }
       if (shouldConfirm) {
         const response = await vscode.window.showQuickPick(["Okay"], {
           title: "There is an active debug session, it will be stopped to continue.",

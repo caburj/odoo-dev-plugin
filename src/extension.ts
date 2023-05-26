@@ -6,6 +6,7 @@ import * as commands from "./commands";
 import { migrate } from "./odoo_plugin_db";
 import { DEBUG_PYTHON_NAME } from "./constants";
 import { getAddons } from "./helpers";
+import { debugSessions } from "./state";
 
 const ALIASES: Record<string, string[]> = {
   "odooDev.checkoutBranch": ["odooDev.selectBranch"],
@@ -45,6 +46,11 @@ export async function activate(context: vscode.ExtensionContext) {
       vscode.commands.executeCommand("setContext", "odooDev.hasActiveServer", false);
       stopServerStatus.hide();
     }
+    debugSessions.splice(debugSessions.indexOf(session), 1);
+  });
+
+  vscode.debug.onDidStartDebugSession((session) => {
+    debugSessions.push(session);
   });
 
   try {
