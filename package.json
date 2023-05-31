@@ -183,6 +183,10 @@
       {
         "command": "odooDev.isDependentOn",
         "title": "Odoo Dev: Is Addon Dependent On?"
+      },
+      {
+        "command": "odooDev.copyBranchName",
+        "title": "Odoo Dev: Copy Branch Name"
       }
     ],
     "configuration": {
@@ -349,6 +353,11 @@
         {
           "command": "odooDev.deleteBranch",
           "group": "z_others@40",
+          "when": "viewItem == dev-branch || viewItem == active-dev-branch"
+        },
+        {
+          "command": "odooDev.copyBranchName",
+          "group": "z_others@50",
           "when": "viewItem == dev-branch || viewItem == active-dev-branch"
         }
       ],

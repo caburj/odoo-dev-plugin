@@ -839,6 +839,7 @@ export function createContextualUtils(
   const refreshTreeOnSuccess = async (cb: () => void | Promise<void>) => {
     await cb();
     treeDataProvider.refresh();
+    odooAddonsTreeProvider.refresh();
   };
 
   const getStartServerArgs = async () => {

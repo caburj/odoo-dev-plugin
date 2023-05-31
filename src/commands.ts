@@ -780,3 +780,14 @@ export const isDependentOn = createCommand(
     }
   })
 );
+
+export const copyBranchName = createCommand(
+  "odooDev.copyBranchName",
+  screamOnError(async (utils, item) => {
+    const branchName = item ? item.name : getActiveBranch();
+    if (!branchName) {
+      throw new Error(`Please select a dev branch.`);
+    }
+    await vscode.env.clipboard.writeText(branchName);
+  })
+);
