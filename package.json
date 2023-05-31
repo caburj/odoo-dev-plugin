@@ -193,6 +193,7 @@
       "title": "Odoo Dev",
       "properties": {
         "odooDev.sourceFolder": {
+          "title": "Source Folder",
           "type": "string",
           "description": "Folder where odoo/odoo repository is cloned. This folder is also expected to have odoo/enterprise and odoo/upgrade repositories."
         },
