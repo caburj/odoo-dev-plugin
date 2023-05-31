@@ -3,10 +3,9 @@
 import * as vscode from "vscode";
 import { createContextualUtils } from "./contextualUtils";
 import * as commands from "./commands";
-import { migrate } from "./odoo_plugin_db";
 import { DEBUG_PYTHON_NAME } from "./constants";
 import { getAddons } from "./helpers";
-import { debugSessions } from "./state";
+import { getDebugSessions, initActiveBranch, initBaseBranches, initDevBranches } from "./state";
 
 const ALIASES: Record<string, string[]> = {
   "odooDev.checkoutBranch": ["odooDev.selectBranch"],
@@ -37,9 +36,12 @@ export async function activate(context: vscode.ExtensionContext) {
     }
   } catch (error) {}
 
-  addonsPathMap['base'] = `${vscode.workspace.getConfiguration("odooDev").sourceFolder}/odoo/odoo/addons/base`;
+  addonsPathMap["base"] = `${
+    vscode.workspace.getConfiguration("odooDev").sourceFolder
+  }/odoo/odoo/addons/base`;
 
   const utils = createContextualUtils(context, { stopServerStatus, addonsPathMap });
+  const debugSessions = getDebugSessions();
 
   vscode.debug.onDidTerminateDebugSession((session) => {
     if (session.name === DEBUG_PYTHON_NAME) {
@@ -53,15 +55,9 @@ export async function activate(context: vscode.ExtensionContext) {
     debugSessions.push(session);
   });
 
-  try {
-    migrate(utils.db);
-  } catch (error) {
-    vscode.window.showErrorMessage(
-      `Migration of saved data to the recent version failed. You might notice some missing data. Cause of failure is: ${
-        (error as Error).message
-      }`
-    );
-  }
+  await initBaseBranches(utils);
+  await initDevBranches(utils);
+  await initActiveBranch(utils);
 
   vscode.window.registerTreeDataProvider("odoo-dev-branches", utils.treeDataProvider);
   vscode.window.registerTreeDataProvider("odoo-addons-tree", utils.odooAddonsTreeProvider);

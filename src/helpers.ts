@@ -5,10 +5,6 @@ import * as child_process from "child_process";
 import * as psTree from "ps-tree";
 import { Repository } from "./git";
 
-export class ShellCommandError {
-  constructor(public sourceError: Error, public stderr: string) {}
-}
-
 export function screamOnError<Args extends any[]>(cb: (...args: Args) => Promise<void>) {
   return async (...args: Args) => {
     try {
@@ -109,9 +105,9 @@ export function runShellCommand(
   options: child_process.ExecOptions = {}
 ): Promise<string> {
   return new Promise<string>((resolve, reject) => {
-    child_process.exec(command, options, (error, stdout, stderr) => {
-      if (error) {
-        reject(new ShellCommandError(error, stderr));
+    child_process.exec(command, options, (err, stdout, stderr) => {
+      if (err) {
+        reject(new Error(stderr));
       } else {
         resolve(stdout.toString());
       }
@@ -131,13 +127,6 @@ export function callWithSpinner(options: { message: string; cb: () => Thenable<v
     }
   );
 }
-
-export const getBaseBranches = () => {
-  const odooConfig = vscode.workspace.getConfiguration("odooDev");
-  const baseBranches = Object.entries(odooConfig.baseBranches as Record<string, number>);
-  baseBranches.sort((a, b) => a[1] - b[1]);
-  return baseBranches.map((b) => b[0]);
-};
 
 export function isValidDirectory(path: string): boolean {
   try {

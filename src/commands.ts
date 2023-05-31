@@ -5,7 +5,6 @@ import {
   ensureRemote,
   fileExists,
   getAddons,
-  getBaseBranches,
   inferBaseBranch,
   isBaseBranch,
   multiSelectAddons,
@@ -16,6 +15,16 @@ import { type ContextualUtils } from "./contextualUtils";
 import { isSuccess } from "./Result";
 import { OdooDevBranch } from "./odoo_dev_branch";
 import { DEBUG_JS_NAME, DEBUG_PYTHON_NAME } from "./constants";
+import {
+  addBaseBranch,
+  addDevBranch,
+  devBranchExists,
+  getActiveBranch,
+  getBaseBranches,
+  getDevBranches,
+  removeDevBranch,
+  setActiveBranch,
+} from "./state";
 
 function createCommand<T>(
   name: string,
@@ -62,17 +71,15 @@ export const createBranch = createCommand(
     const base = inferBaseBranch(input);
 
     return utils.refreshTreeOnSuccess(async () => {
-      const odooDevConfig = vscode.workspace.getConfiguration("odooDev");
-      const baseBrances = odooDevConfig.baseBranches as Record<string, number>;
-
-      if (!(base in baseBrances)) {
-        await odooDevConfig.update("baseBranches", { ...baseBrances, [base]: 100 }, true);
-      } else if (utils.db.devBranchExists({ base, name: input })) {
+      const baseBranches = getBaseBranches();
+      if (!(baseBranches.includes(base))) {
+        throw new Error(`Fetch the stable branch '${base}' before creating a dev branch out of it.`);
+      } else if (devBranchExists({ base, name: input })) {
         throw new Error(`'${input}' already exists!`);
       }
       await utils.createBranches(base, input, dirtyRepos);
-      utils.db.setActiveBranch(input);
-      utils.db.addDevBranch({ base, name: input });
+      setActiveBranch(input);
+      addDevBranch(base, input);
     });
   })
 );
@@ -126,17 +133,15 @@ export const fetchBranch = createCommand(
     const base = inferBaseBranch(input);
 
     return utils.refreshTreeOnSuccess(async () => {
-      const odooDevConfig = vscode.workspace.getConfiguration("odooDev");
-      const baseBrances = odooDevConfig.baseBranches as Record<string, number>;
-
-      if (!(base in baseBrances)) {
-        await odooDevConfig.update("baseBranches", { ...baseBrances, [base]: 100 }, true);
-      } else if (utils.db.devBranchExists({ base, name: input })) {
+      const baseBranches = getBaseBranches();
+      if (!(baseBranches.includes(base))) {
+        addBaseBranch(base);
+      } else if (devBranchExists({ base, name: input })) {
         throw new Error(`'${input}' already exists!`);
       }
       await utils.fetchBranches(base, input, dirtyRepos);
-      utils.db.setActiveBranch(input);
-      utils.db.addDevBranch({ base, name: input });
+      setActiveBranch(input);
+      addDevBranch(base, input);
     });
   })
 );
@@ -175,14 +180,12 @@ export const fetchStableBranch = createCommand(
     }
 
     return utils.refreshTreeOnSuccess(async () => {
-      const odooDevConfig = vscode.workspace.getConfiguration("odooDev");
-      const baseBrances = odooDevConfig.baseBranches as Record<string, number>;
-
-      if (!(branch in baseBrances)) {
-        await odooDevConfig.update("baseBranches", { ...baseBrances, [branch]: 100 }, true);
+      const baseBranches = getBaseBranches();
+      if (!(baseBranches.includes(branch))) {
+        addBaseBranch(branch);
       }
       await utils.fetchStableBranches(branch, dirtyRepos);
-      utils.db.setActiveBranch(branch);
+      setActiveBranch(branch);
     });
   })
 );
@@ -195,7 +198,7 @@ export const deleteBranch = createCommand(
     }
 
     const devBranches = getBaseBranches()
-      .map((base) => utils.db.getDevBranches(base).map((branch) => ({ ...branch, base })))
+      .map((base) => getDevBranches(base).map((branch) => ({ ...branch, base })))
       .flat();
 
     const selected = item
@@ -239,12 +242,12 @@ export const deleteBranch = createCommand(
         // Not really possible at the moment. But better be sure.
         throw new Error(`Deleting base branch '${base}' is not allowed.`);
       }
-      const activeBranch = utils.db.getActiveBranch();
+      const activeBranch = getActiveBranch();
       await utils.deleteBranches(base, branch, activeBranch);
       if (activeBranch === branch) {
-        utils.db.setActiveBranch(base);
+        setActiveBranch(base);
       }
-      utils.db.removeDevBranch(selected);
+      removeDevBranch(base, branch);
     });
   })
 );
@@ -259,7 +262,7 @@ export const checkoutBranch = createCommand(
     const devBranches = getBaseBranches()
       .map((base) => [
         { base, name: base },
-        ...utils.db.getDevBranches(base).map((branch) => ({ ...branch, base })),
+        ...getDevBranches(base).map((branch) => ({ ...branch, base })),
       ])
       .flat();
 
@@ -292,7 +295,7 @@ export const checkoutBranch = createCommand(
 
     return utils.refreshTreeOnSuccess(async () => {
       await utils.checkoutBranches(selected.name, dirtyRepos);
-      utils.db.setActiveBranch(selected.name);
+      setActiveBranch(selected.name);
     });
   })
 );
@@ -316,7 +319,7 @@ export const resetActiveBranch = createCommand(
       );
     }
 
-    const activeBranch = utils.db.getActiveBranch();
+    const activeBranch = getActiveBranch();
     if (activeBranch) {
       await utils.resetBranches(activeBranch, dirtyRepos);
     }
@@ -611,8 +614,8 @@ export const openOdooConf = createCommand(
 
 export const openLinkedNote = createCommand(
   "odooDev.openLinkedNote",
-  screamOnError(async ({ getNotesFolder, db }, item) => {
-    const branch = item ? item.name : db.getActiveBranch();
+  screamOnError(async ({ getNotesFolder }, item) => {
+    const branch = item ? item.name : getActiveBranch();
     if (!branch) {
       throw new Error(`There is no selected branch.`);
     }
@@ -660,7 +663,7 @@ export const stopActiveServer = createCommand(
 export const openPullRequestLink = createCommand(
   "odooDev.openPullRequestLinkOdoo",
   screamOnError(async (utils, item) => {
-    const branchName = item ? item.name : utils.db.getActiveBranch();
+    const branchName = item ? item.name : getActiveBranch();
 
     if (!branchName || isBaseBranch(branchName)) {
       throw new Error(`Please select a dev branch.`);
@@ -683,7 +686,7 @@ export const openPullRequestLinkEnterprise = createCommand(
   screamOnError(async (utils, item) => {
     const githubAccessToken = await utils.getGithubAccessToken();
 
-    const branchName = item ? item.name : utils.db.getActiveBranch();
+    const branchName = item ? item.name : getActiveBranch();
 
     if (!branchName || isBaseBranch(branchName)) {
       throw new Error(`Please select a dev branch.`);
@@ -711,7 +714,7 @@ export const openPullRequestLinkUpgrade = createCommand(
   screamOnError(async (utils, item) => {
     const githubAccessToken = await utils.getGithubAccessToken();
 
-    const branchName = item ? item.name : utils.db.getActiveBranch();
+    const branchName = item ? item.name : getActiveBranch();
 
     if (!branchName || isBaseBranch(branchName)) {
       throw new Error(`Please select a dev branch.`);
@@ -737,7 +740,7 @@ export const openPullRequestLinkUpgrade = createCommand(
 export const openRunbotLink = createCommand(
   "odooDev.openRunbotLink",
   screamOnError(async (utils, item) => {
-    const branchName = item ? item.name : utils.db.getActiveBranch();
+    const branchName = item ? item.name : getActiveBranch();
 
     if (!branchName || isBaseBranch(branchName)) {
       throw new Error(`Please select a dev branch.`);

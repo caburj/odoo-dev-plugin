@@ -15,7 +15,6 @@
 ## Extension Settings
 
 - `odooDev.sourceFolder`
-- `odooDev.baseBranches`
 - `odooDev.remote.odoo`
 - `odooDev.remote.enterprise`
 - `odooDev.remote.upgrade`

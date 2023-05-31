@@ -192,16 +192,6 @@
           "type": "string",
           "description": "Folder where odoo/odoo repository is cloned. This folder is also expected to have odoo/enterprise and odoo/upgrade repositories."
         },
-        "odooDev.baseBranches": {
-          "type": "object",
-          "additionalProperties": {
-            "type": "number"
-          },
-          "default": {
-            "master": 0
-          },
-          "description": "List of base branches. Value serves as the sequence number for ordering the items in the Tree View."
-        },
         "odooDev.remote.odoo": {
           "type": "string",
           "default": "",

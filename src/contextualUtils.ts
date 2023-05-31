@@ -4,7 +4,6 @@ import * as fs from "fs";
 import * as ini from "ini";
 import { Branch, GitExtension, Repository } from "./git";
 import { OdooDevBranches } from "./odoo_dev_branch";
-import { OdooPluginDB } from "./odoo_plugin_db";
 import {
   callWithSpinner,
   fileExists,
@@ -22,7 +21,7 @@ import { Result, error, isSuccess, run, runAsync, success } from "./Result";
 import { assert } from "console";
 import { DEBUG_JS_NAME, ODOO_TERMINAL_NAME, requirementsRegex } from "./constants";
 import { OdooAddonsTree } from "./odoo_addons";
-import { debugSessions } from "./state";
+import { getActiveBranch, getDebugSessions } from "./state";
 
 const gitExtension = vscode.extensions.getExtension<GitExtension>("vscode.git")!.exports;
 const git = gitExtension.getAPI(1);
@@ -50,7 +49,6 @@ export function createContextualUtils(
   options: { stopServerStatus: vscode.StatusBarItem; addonsPathMap: Record<string, string> }
 ) {
   const { stopServerStatus, addonsPathMap } = options;
-  const db = new OdooPluginDB(context);
 
   let odooDevTerminal: vscode.Terminal | undefined;
 
@@ -162,7 +160,7 @@ export function createContextualUtils(
     const configFilePath = getConfigFilePath();
     const args = ["-c", configFilePath];
     if (vscode.workspace.getConfiguration("odooDev").branchNameAsDB as boolean) {
-      const branch = db.getActiveBranch();
+      const branch = getActiveBranch();
       if (branch) {
         args.push("-d", branch);
       }
@@ -190,7 +188,7 @@ export function createContextualUtils(
   function getActiveDBName() {
     let dbName: string | undefined;
     if (vscode.workspace.getConfiguration("odooDev").branchNameAsDB as boolean) {
-      dbName = db.getActiveBranch();
+      dbName = getActiveBranch();
     } else {
       dbName = getOdooConfigValue("db_name");
     }
@@ -226,7 +224,7 @@ export function createContextualUtils(
   }
 
   async function ensureNoDebugSession(shouldConfirm = true) {
-    for (const debugSession of debugSessions) {
+    for (const debugSession of getDebugSessions()) {
       if (debugSession.name.includes(DEBUG_JS_NAME) && debugSession.type === "pwa-chrome") {
         // Ignore debug session if it is for debugging chrome, so return early.
         continue;
@@ -308,7 +306,7 @@ export function createContextualUtils(
         dirtyRepos.map(async (name) => {
           const repo = getRepo(name)!;
           try {
-            const activeBranch = db.getActiveBranch() || "master";
+            const activeBranch = getActiveBranch() || "master";
             const stashId = getAutoStashId(activeBranch);
             await runShellCommand(`git stash -u -m "${stashId}"`, {
               cwd: repo.rootUri.fsPath,
@@ -437,7 +435,9 @@ export function createContextualUtils(
       }
     }
 
-    const checkoutRes = await runAsync(() => repo.checkout(name));
+    const checkoutRes = await runAsync(() =>
+      runShellCommand(`git checkout --track origin/${name}`, { cwd: repo.rootUri.fsPath })
+    );
     if (!isSuccess(checkoutRes)) {
       return error(`Failed to checkout '${name}' in '${repoName}' because of "${checkoutRes}".`);
     }
@@ -826,7 +826,7 @@ export function createContextualUtils(
     return editor.document.uri.path;
   };
 
-  const treeDataProvider = new OdooDevBranches(rootPath, db);
+  const treeDataProvider = new OdooDevBranches(rootPath);
 
   const odooPath = `${vscode.workspace.getConfiguration("odooDev").sourceFolder}/odoo`;
   const enterprisePath = `${vscode.workspace.getConfiguration("odooDev").sourceFolder}/enterprise`;
@@ -975,7 +975,6 @@ export function createContextualUtils(
   };
 
   return {
-    db,
     treeDataProvider,
     odooAddonsTreeProvider,
     getConfigFilePath,

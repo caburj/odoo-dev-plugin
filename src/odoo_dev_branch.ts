@@ -1,6 +1,5 @@
 import * as vscode from "vscode";
-import { OdooPluginDB } from "./odoo_plugin_db";
-import { getBaseBranches } from "./helpers";
+import { getActiveBranch, getBaseBranches, getDevBranches } from "./state";
 
 export class OdooDevBranches implements vscode.TreeDataProvider<OdooDevBranch> {
   private _onDidChangeTreeData: vscode.EventEmitter<OdooDevBranch | undefined | void> =
@@ -8,7 +7,7 @@ export class OdooDevBranches implements vscode.TreeDataProvider<OdooDevBranch> {
   readonly onDidChangeTreeData: vscode.Event<OdooDevBranch | undefined | void> =
     this._onDidChangeTreeData.event;
 
-  constructor(private workspaceRoot: string | undefined, private db: OdooPluginDB) {}
+  constructor(private workspaceRoot: string | undefined) {}
 
   refresh(): void {
     this._onDidChangeTreeData.fire();
@@ -19,7 +18,7 @@ export class OdooDevBranches implements vscode.TreeDataProvider<OdooDevBranch> {
   }
 
   private computeLabel(name: string): string {
-    const activeBranch = this.db.getActiveBranch();
+    const activeBranch = getActiveBranch();
     if (activeBranch === name) {
       return `[${name}]`;
     } else {
@@ -29,10 +28,21 @@ export class OdooDevBranches implements vscode.TreeDataProvider<OdooDevBranch> {
 
   async getChildren(element?: OdooDevBranch): Promise<OdooDevBranch[]> {
     if (!element) {
-      const baseBranches = getBaseBranches();
+      const baseBranches = [...getBaseBranches()];
+      baseBranches.sort((a, b) => {
+        if (a === "master") {
+          return -1;
+        } else if (b === "master") {
+          return 1;
+        } else {
+          a = a.replace("saas-", "");
+          b = b.replace("saas-", "");
+          return b.localeCompare(a);
+        }
+      });
       return baseBranches.map((name) => {
-        const devBranches = this.db.getDevBranches(name);
-        const isActive = name === this.db.getActiveBranch();
+        const devBranches = getDevBranches(name);
+        const isActive = name === getActiveBranch();
         return new OdooDevBranch(
           name,
           this.computeLabel(name),
@@ -45,8 +55,10 @@ export class OdooDevBranches implements vscode.TreeDataProvider<OdooDevBranch> {
       });
     } else {
       const branchName = element.name;
-      return this.db.getDevBranches(branchName).map(({ name }) => {
-        const isActive = name === this.db.getActiveBranch();
+      const devBranches = [...getDevBranches(branchName)];
+      devBranches.sort();
+      return devBranches.map(({ name }) => {
+        const isActive = name === getActiveBranch();
         return new OdooDevBranch(
           name,
           this.computeLabel(name),
