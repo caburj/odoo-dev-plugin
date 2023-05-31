@@ -2,7 +2,6 @@ import * as vscode from "vscode";
 import fetch from "node-fetch";
 import {
   createTemplateNote,
-  ensureRemote,
   fileExists,
   getAddons,
   inferBaseBranch,
@@ -91,18 +90,6 @@ export const fetchBranch = createCommand(
   screamOnError(async (utils) => {
     if (!isSuccess(await utils.ensureNoRunningServer())) {
       return;
-    }
-
-    await ensureRemote("odoo", utils.getOdooRepo());
-
-    const enterprise = utils.getRepo("enterprise");
-    if (enterprise) {
-      await ensureRemote("enterprise", enterprise);
-    }
-
-    const upgrade = utils.getRepo("upgrade");
-    if (upgrade) {
-      await ensureRemote("upgrade", upgrade);
     }
 
     const input = await vscode.window.showInputBox({

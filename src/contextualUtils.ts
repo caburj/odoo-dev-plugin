@@ -9,7 +9,6 @@ import {
   callWithSpinner,
   fileExists,
   getChildProcs,
-  getRemote,
   inferBaseBranch,
   isBaseBranch,
   isOdooServer,
@@ -345,10 +344,9 @@ export function createContextualUtils(
     repo: Repository,
     base: string,
     branch: string,
-    isDirty: boolean,
-    remote?: string
+    isDirty: boolean
   ) => {
-    remote = remote || getRemote(repoName);
+    const remote = (await findRemote(repo, branch)) || "origin";
     let branchToCheckout = branch;
     const fetchRes = await runAsync(() => repo.fetch(remote, branch));
     if (!isSuccess(fetchRes)) {
@@ -384,30 +382,18 @@ export function createContextualUtils(
     return success();
   };
 
-  const fetchBranches = async (
-    base: string,
-    branch: string,
-    dirtyRepos: string[],
-    remote?: string
-  ) => {
+  const fetchBranches = async (base: string, branch: string, dirtyRepos: string[]) => {
     const odoo = getOdooRepo();
     const enterprise = getRepo("enterprise");
     const upgrade = getRepo("upgrade");
 
     const fetchProms = [
-      fetchBranch("odoo", odoo, base, branch, dirtyRepos.includes("odoo"), remote),
+      fetchBranch("odoo", odoo, base, branch, dirtyRepos.includes("odoo")),
       enterprise
-        ? fetchBranch(
-            "enterprise",
-            enterprise,
-            base,
-            branch,
-            dirtyRepos.includes("enterprise"),
-            remote
-          )
+        ? fetchBranch("enterprise", enterprise, base, branch, dirtyRepos.includes("enterprise"))
         : Promise.resolve(success()),
       upgrade && base === "master"
-        ? fetchBranch("upgrade", upgrade, base, branch, dirtyRepos.includes("upgrade"), remote)
+        ? fetchBranch("upgrade", upgrade, base, branch, dirtyRepos.includes("upgrade"))
         : Promise.resolve(success()),
     ];
 
@@ -443,18 +429,14 @@ export function createContextualUtils(
           enterprise
             ? findRemote(enterprise, branch)
             : Promise.resolve(undefined as string | undefined),
-          upgrade
-            ? findRemote(upgrade, branch)
-            : Promise.resolve(undefined as string | undefined),
+          upgrade ? findRemote(upgrade, branch) : Promise.resolve(undefined as string | undefined),
         ]);
       },
     });
 
     const isFromRemote = remoteChecks.some((r) => r);
     if (isFromRemote) {
-      // Assume all repos are available remotely in the same remote.
-      const remote = remoteChecks.find((r) => r)!;
-      return fetchBranches(base, branch, dirtyRepos, remote);
+      return fetchBranches(base, branch, dirtyRepos);
     } else {
       return createBranches(base, branch, dirtyRepos);
     }
@@ -779,7 +761,12 @@ export function createContextualUtils(
     if (repo.state.HEAD?.name !== branch) {
       return success(); // We don't care about resetting a repo that has different active branch.
     } else {
-      const remote = isBaseBranch(branch) ? "origin" : getRemote(repoName);
+      const remote = repo.state.HEAD?.upstream?.remote;
+
+      if (!remote) {
+        return error(`Failed to reset the active branch of '${repoName}' repo. No remote found.`);
+      }
+
       try {
         if (isDirty) {
           await runShellCommand("git stash", { cwd: repo.rootUri.fsPath });
@@ -791,7 +778,7 @@ export function createContextualUtils(
         }
       } catch (e) {
         return error(
-          `Failed to reset the active branch from ${repoName}. Error: ${(e as Error).message}`
+          `Failed to reset the active branch of '${repoName}' repo. Error: ${(e as Error).message}`
         );
       }
       return success();

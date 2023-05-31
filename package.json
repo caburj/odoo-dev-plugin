@@ -196,21 +196,6 @@
           "type": "string",
           "description": "Folder where odoo/odoo repository is cloned. This folder is also expected to have odoo/enterprise and odoo/upgrade repositories."
         },
-        "odooDev.remote.odoo": {
-          "type": "string",
-          "default": "",
-          "description": "Remote to use to fetch branches in odoo repository."
-        },
-        "odooDev.remote.enterprise": {
-          "type": "string",
-          "default": "",
-          "description": "Remote to use to fetch branches in enterprise repository."
-        },
-        "odooDev.remote.upgrade": {
-          "type": "string",
-          "default": "",
-          "description": "Remote to use to fetch branches in upgrade repository."
-        },
         "odooDev.branchNameAsDB": {
           "title": "Branch Name as DB",
           "type": "boolean",
