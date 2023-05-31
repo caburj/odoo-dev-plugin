@@ -22,15 +22,15 @@
     "commands": [
       {
         "command": "odooDev.fetchBranch",
-        "title": "Odoo Dev: Fetch",
-        "icon": {
-          "light": "resources/fetch-branch-light.svg",
-          "dark": "resources/fetch-branch-dark.svg"
-        }
+        "title": "Odoo Dev: Fetch"
       },
       {
         "command": "odooDev.createBranch",
-        "title": "Odoo Dev: Create",
+        "title": "Odoo Dev: Create"
+      },
+      {
+        "command": "odooDev.fetchOrCreate",
+        "title": "Odoo Dev: Fetch/Create",
         "icon": {
           "light": "resources/plus-light.svg",
           "dark": "resources/plus-dark.svg"
@@ -336,6 +336,11 @@
           "when": "viewItem == dev-branch || viewItem == active-dev-branch"
         },
         {
+          "command": "odooDev.copyBranchName",
+          "group": "z_others@0",
+          "when": "viewItem == dev-branch || viewItem == active-dev-branch"
+        },
+        {
           "command": "odooDev.selectBranch",
           "group": "z_others@10",
           "when": "(viewItem == base-branch || viewItem == dev-branch) && (viewItem != active-base-branch && viewItem != active-dev-branch)"
@@ -354,21 +359,11 @@
           "command": "odooDev.deleteBranch",
           "group": "z_others@40",
           "when": "viewItem == dev-branch || viewItem == active-dev-branch"
-        },
-        {
-          "command": "odooDev.copyBranchName",
-          "group": "z_others@50",
-          "when": "viewItem == dev-branch || viewItem == active-dev-branch"
         }
       ],
       "view/title": [
         {
-          "command": "odooDev.createBranch",
-          "when": "view == odoo-dev-branches",
-          "group": "navigation@10"
-        },
-        {
-          "command": "odooDev.fetchBranch",
+          "command": "odooDev.fetchOrCreate",
           "when": "view == odoo-dev-branches",
           "group": "navigation@20"
         },

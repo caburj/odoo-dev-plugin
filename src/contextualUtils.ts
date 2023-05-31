@@ -5,6 +5,7 @@ import * as ini from "ini";
 import { Branch, GitExtension, Repository } from "./git";
 import { OdooDevBranches } from "./odoo_dev_branch";
 import {
+  findRemote,
   callWithSpinner,
   fileExists,
   getChildProcs,
@@ -344,11 +345,12 @@ export function createContextualUtils(
     repo: Repository,
     base: string,
     branch: string,
-    isDirty: boolean
+    isDirty: boolean,
+    remote?: string
   ) => {
+    remote = remote || getRemote(repoName);
     let branchToCheckout = branch;
-    const remoteName = getRemote(repoName);
-    const fetchRes = await runAsync(() => repo.fetch(remoteName, branch));
+    const fetchRes = await runAsync(() => repo.fetch(remote, branch));
     if (!isSuccess(fetchRes)) {
       if (!base) {
         throw new Error("Unable to checkout the branch even its base.");
@@ -382,18 +384,30 @@ export function createContextualUtils(
     return success();
   };
 
-  const fetchBranches = async (base: string, branch: string, dirtyRepos: string[]) => {
+  const fetchBranches = async (
+    base: string,
+    branch: string,
+    dirtyRepos: string[],
+    remote?: string
+  ) => {
     const odoo = getOdooRepo();
     const enterprise = getRepo("enterprise");
     const upgrade = getRepo("upgrade");
 
     const fetchProms = [
-      fetchBranch("odoo", odoo, base, branch, dirtyRepos.includes("odoo")),
+      fetchBranch("odoo", odoo, base, branch, dirtyRepos.includes("odoo"), remote),
       enterprise
-        ? fetchBranch("enterprise", enterprise, base, branch, dirtyRepos.includes("enterprise"))
+        ? fetchBranch(
+            "enterprise",
+            enterprise,
+            base,
+            branch,
+            dirtyRepos.includes("enterprise"),
+            remote
+          )
         : Promise.resolve(success()),
       upgrade && base === "master"
-        ? fetchBranch("upgrade", upgrade, base, branch, dirtyRepos.includes("upgrade"))
+        ? fetchBranch("upgrade", upgrade, base, branch, dirtyRepos.includes("upgrade"), remote)
         : Promise.resolve(success()),
     ];
 
@@ -410,6 +424,39 @@ export function createContextualUtils(
       throw new Error("Failed to fetch the branch from any of the repositories.");
     } else if (errors.length > 0) {
       vscode.window.showErrorMessage(errors.join("; "));
+    }
+  };
+
+  const fetchOrCreateBranches = async (base: string, branch: string, dirtyRepos: string[]) => {
+    const odoo = getOdooRepo();
+    const enterprise = getRepo("enterprise");
+    const upgrade = getRepo("upgrade");
+
+    // Check if at least one from the repos, it is available remotely.
+    // If so, we call fetchBranches, otherwise we call createBranches.
+    let remoteChecks: (string | undefined)[] = [];
+    await callWithSpinner({
+      message: `Checking remotes for '${branch}'...`,
+      cb: async () => {
+        remoteChecks = await Promise.all([
+          findRemote(odoo, branch),
+          enterprise
+            ? findRemote(enterprise, branch)
+            : Promise.resolve(undefined as string | undefined),
+          upgrade
+            ? findRemote(upgrade, branch)
+            : Promise.resolve(undefined as string | undefined),
+        ]);
+      },
+    });
+
+    const isFromRemote = remoteChecks.some((r) => r);
+    if (isFromRemote) {
+      // Assume all repos are available remotely in the same remote.
+      const remote = remoteChecks.find((r) => r)!;
+      return fetchBranches(base, branch, dirtyRepos, remote);
+    } else {
+      return createBranches(base, branch, dirtyRepos);
     }
   };
 
@@ -991,6 +1038,7 @@ export function createContextualUtils(
     fetchBranches,
     fetchStableBranches,
     createBranches,
+    fetchOrCreateBranches,
     checkoutBranches,
     deleteBranches,
     resetBranches,

@@ -72,8 +72,10 @@ export const createBranch = createCommand(
 
     return utils.refreshTreeOnSuccess(async () => {
       const baseBranches = getBaseBranches();
-      if (!(baseBranches.includes(base))) {
-        throw new Error(`Fetch the stable branch '${base}' before creating a dev branch out of it.`);
+      if (!baseBranches.includes(base)) {
+        throw new Error(
+          `Fetch the stable branch '${base}' before creating a dev branch out of it.`
+        );
       } else if (devBranchExists({ base, name: input })) {
         throw new Error(`'${input}' already exists!`);
       }
@@ -134,12 +136,57 @@ export const fetchBranch = createCommand(
 
     return utils.refreshTreeOnSuccess(async () => {
       const baseBranches = getBaseBranches();
-      if (!(baseBranches.includes(base))) {
+      if (!baseBranches.includes(base)) {
         addBaseBranch(base);
       } else if (devBranchExists({ base, name: input })) {
         throw new Error(`'${input}' already exists!`);
       }
       await utils.fetchBranches(base, input, dirtyRepos);
+      setActiveBranch(input);
+      addDevBranch(base, input);
+    });
+  })
+);
+
+export const fetchOrCreate = createCommand(
+  "odooDev.fetchOrCreate",
+  screamOnError(async (utils) => {
+    if (!isSuccess(await utils.ensureNoRunningServer())) {
+      return;
+    }
+    const input = await vscode.window.showInputBox({
+      placeHolder: "e.g. 16.0-foo-bar",
+      prompt: "Specify the name of the branch to fetch/create.",
+    });
+
+    if (input === undefined) {
+      return;
+    }
+
+    if (input === "") {
+      vscode.window.showErrorMessage("Empty input is invalid.");
+      return;
+    }
+
+    const dirtyRepos = await utils.getDirtyRepos();
+    if (
+      dirtyRepos.length !== 0 &&
+      !(vscode.workspace.getConfiguration("odooDev").autoStash as boolean)
+    ) {
+      throw new Error(
+        `There are uncommitted changes in: ${dirtyRepos.join(
+          ", "
+        )}. Activate "Auto Stash" config to stash them automatically.`
+      );
+    }
+
+    const base = inferBaseBranch(input);
+
+    return utils.refreshTreeOnSuccess(async () => {
+      if (devBranchExists({ base, name: input })) {
+        throw new Error(`'${input}' already exists!`);
+      }
+      await utils.fetchOrCreateBranches(base, input, dirtyRepos);
       setActiveBranch(input);
       addDevBranch(base, input);
     });
@@ -181,7 +228,7 @@ export const fetchStableBranch = createCommand(
 
     return utils.refreshTreeOnSuccess(async () => {
       const baseBranches = getBaseBranches();
-      if (!(baseBranches.includes(branch))) {
+      if (!baseBranches.includes(branch)) {
         addBaseBranch(branch);
       }
       await utils.fetchStableBranches(branch, dirtyRepos);

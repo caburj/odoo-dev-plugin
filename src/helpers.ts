@@ -4,6 +4,7 @@ import * as path from "path";
 import * as child_process from "child_process";
 import * as psTree from "ps-tree";
 import { Repository } from "./git";
+import { isSuccess, runAsync } from "./Result";
 
 export function screamOnError<Args extends any[]>(cb: (...args: Args) => Promise<void>) {
   return async (...args: Args) => {
@@ -265,4 +266,29 @@ export async function getAddons(path: string): Promise<string[]> {
 
 export function removeComments(content: string): string {
   return content.replace(/#[^\n]*\n/g, "");
+}
+
+async function isAvailableFromRemote(
+  repo: Repository,
+  remote: string,
+  branchName: string
+): Promise<boolean> {
+  const result = await runAsync(() =>
+    runShellCommand(`git ls-remote --exit-code --heads ${remote} ${branchName}`, {
+      cwd: repo.rootUri.fsPath,
+    })
+  );
+  return isSuccess(result);
+}
+
+export async function findRemote(
+  repo: Repository,
+  branchName: string
+): Promise<string | undefined> {
+  for (const remote of repo.state.remotes) {
+    if (await isAvailableFromRemote(repo, remote.name, branchName)) {
+      return remote.name;
+    }
+  }
+  return undefined;
 }
