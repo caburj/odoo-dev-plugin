@@ -2,7 +2,8 @@ import * as vscode from "vscode";
 import * as os from "os";
 import * as fs from "fs";
 import * as ini from "ini";
-import { Branch, GitExtension, Repository } from "./git";
+import { Branch, GitExtension, Repository } from "./dependencies/git";
+import { IExtensionApi } from "./dependencies/python/apiTypes";
 import { OdooDevBranches } from "./odoo_dev_branch";
 import {
   findRemote,
@@ -25,6 +26,7 @@ import { getActiveBranch, getDebugSessions } from "./state";
 
 const gitExtension = vscode.extensions.getExtension<GitExtension>("vscode.git")!.exports;
 const git = gitExtension.getAPI(1);
+const pythonExt = vscode.extensions.getExtension<IExtensionApi>("ms-python.python");
 
 export type ContextualUtils = ReturnType<typeof createContextualUtils>;
 
@@ -112,16 +114,15 @@ export function createContextualUtils(
     return configFilePath!;
   };
 
-  const getPythonPath = () => {
-    const pythonPath = vscode.workspace.getConfiguration("python").defaultInterpreterPath as
-      | string
-      | undefined;
-
-    if (!pythonPath) {
+  const getPythonPath = async () => {
+    if (!pythonExt) {
       return "python";
+    } else if (!pythonExt.isActive) {
+      await pythonExt.activate();
     }
-
-    return fileExists(pythonPath) ? pythonPath : "python";
+    const api = pythonExt.exports;
+    const activeInterpreter = api.environments.getActiveEnvironmentPath();
+    return activeInterpreter.path;
   };
 
   const getNotesFolder = () => {
@@ -940,7 +941,7 @@ export function createContextualUtils(
   const startServerWithInstall = async (selectedAddons: string[]) => {
     const startServerArgs = await getStartServerArgs();
     const args = [...startServerArgs, "-i", selectedAddons.join(",")];
-    const python = getPythonPath();
+    const python = await getPythonPath();
     const odooBin = `${vscode.workspace.getConfiguration("odooDev").sourceFolder}/odoo/odoo-bin`;
     startServer(`${python} ${odooBin} ${args.join(" ")}`);
   };

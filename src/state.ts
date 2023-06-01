@@ -5,7 +5,7 @@ import * as vscode from "vscode";
 import { BASE_BRANCH_REGEX, DEV_BRANCH_REGEX, LINE_BREAK_REGEX } from "./constants";
 import { ContextualUtils } from "./contextualUtils";
 import { runShellCommand } from "./helpers";
-import { Repository } from "./git";
+import { Repository } from "./dependencies/git";
 
 const debugSessions: vscode.DebugSession[] = [];
 const baseBranches: string[] = [];

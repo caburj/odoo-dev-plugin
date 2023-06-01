@@ -398,7 +398,7 @@ export const startServer = createCommand(
     }
 
     const commandArgs = await utils.getStartServerArgs();
-    const python = utils.getPythonPath();
+    const python = await utils.getPythonPath();
     const odooBin = `${vscode.workspace.getConfiguration("odooDev").sourceFolder}/odoo/odoo-bin`;
     utils.startServer(`${python} ${odooBin} ${commandArgs.join(" ")}`);
   })
@@ -419,7 +419,8 @@ export const debugServer = createCommand(
       request: "launch",
       stopOnEntry: false,
       console: "integratedTerminal",
-      python: "${command:python.interpreterPath}",
+      cwd: `${vscode.workspace.getConfiguration("odooDev").sourceFolder}/odoo`,
+      python: await utils.getPythonPath(),
       program: odooBin,
       args: commandArgs,
     };
@@ -467,7 +468,8 @@ export const debugServerWithInstall = createCommand(
       request: "launch",
       stopOnEntry: false,
       console: "integratedTerminal",
-      python: "${command:python.interpreterPath}",
+      cwd: `${vscode.workspace.getConfiguration("odooDev").sourceFolder}/odoo`,
+      python: await utils.getPythonPath(),
       program: odooBin,
       args,
     };
@@ -492,7 +494,7 @@ export const startServerWithUpdate = createCommand(
     const startServerArgs = await utils.getStartServerArgs();
     const args = [...startServerArgs, "-u", selectedAddons.join(",")];
 
-    const python = utils.getPythonPath();
+    const python = await utils.getPythonPath();
     const odooBin = `${vscode.workspace.getConfiguration("odooDev").sourceFolder}/odoo/odoo-bin`;
     utils.startServer(`${python} ${odooBin} ${args.join(" ")}`);
   })
@@ -520,7 +522,8 @@ export const debugServerWithUpdate = createCommand(
       request: "launch",
       stopOnEntry: false,
       console: "integratedTerminal",
-      python: "${command:python.interpreterPath}",
+      cwd: `${vscode.workspace.getConfiguration("odooDev").sourceFolder}/odoo`,
+      python: await utils.getPythonPath(),
       program: odooBin,
       args,
     };

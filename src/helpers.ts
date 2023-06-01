@@ -3,7 +3,7 @@ import * as fs from "fs";
 import * as path from "path";
 import * as child_process from "child_process";
 import * as psTree from "ps-tree";
-import { Repository } from "./git";
+import { Repository } from "./dependencies/git";
 import { isSuccess, runAsync } from "./Result";
 
 export function screamOnError<Args extends any[]>(cb: (...args: Args) => Promise<void>) {
