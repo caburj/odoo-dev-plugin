@@ -95,3 +95,8 @@ This plugin can help.
 ### 0.1.0
 
 Initial release.
+
+### 0.1.1
+
+- FIX: use user's python selection
+- FIX: always show the branches
