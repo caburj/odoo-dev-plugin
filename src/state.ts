@@ -17,7 +17,7 @@ export function getDebugSessions() {
 }
 
 export async function initBaseBranches(utils: ContextualUtils) {
-  const result = await runShellCommand("git branch", { cwd: utils.getOdooRepo().rootUri.fsPath });
+  const result = await runShellCommand("git branch", { cwd: utils.getRepoPath("odoo") });
   const extractedBranches = extractBranchList(result);
   const branches = extractedBranches.filter((name) => BASE_BRANCH_REGEX.test(name));
   for (const branch of branches) {
@@ -26,9 +26,9 @@ export async function initBaseBranches(utils: ContextualUtils) {
 }
 
 export async function initDevBranches(utils: ContextualUtils): Promise<void> {
-  const odooRepo = utils.getOdooRepo();
-  const enterpriseRepo = utils.getRepo("enterprise");
-  const upgradeRepo = utils.getRepo("upgrade");
+  const odooRepo = utils.getRepoPath("odoo");
+  const enterpriseRepo = utils.getRepoPath("enterprise");
+  const upgradeRepo = utils.getRepoPath("upgrade");
 
   const branchSet = new Set<string>();
 
@@ -61,17 +61,17 @@ export async function initDevBranches(utils: ContextualUtils): Promise<void> {
 }
 
 export async function initActiveBranch(utils: ContextualUtils) {
-  const odooRepo = utils.getOdooRepo();
-  const enterpriseRepo = utils.getRepo("enterprise");
-  const upgradeRepo = utils.getRepo("upgrade");
+  const odooRepo = utils.getRepoPath("odoo");
+  const enterpriseRepo = utils.getRepoPath("enterprise");
+  const upgradeRepo = utils.getRepoPath("upgrade");
   const odooActive = await runShellCommand("git branch --show-current", {
-    cwd: odooRepo.rootUri.fsPath,
+    cwd: odooRepo,
   });
   const entepriseActive = enterpriseRepo
-    ? await runShellCommand("git branch --show-current", { cwd: enterpriseRepo.rootUri.fsPath })
+    ? await runShellCommand("git branch --show-current", { cwd: enterpriseRepo })
     : "";
   const upgradeActive = upgradeRepo
-    ? await runShellCommand("git branch --show-current", { cwd: upgradeRepo.rootUri.fsPath })
+    ? await runShellCommand("git branch --show-current", { cwd: upgradeRepo })
     : "";
 
   const activeBranches = [odooActive, entepriseActive, upgradeActive].map((b) => b.trim());
@@ -180,8 +180,8 @@ function extractBranchList(output: string): string[] {
     .map((line) => line.replace("*", "").trim());
 }
 
-async function getBranches(repo: Repository): Promise<string[]> {
-  const odooOutput = await runShellCommand("git branch", { cwd: repo.rootUri.fsPath });
+async function getBranches(repoPath: string): Promise<string[]> {
+  const odooOutput = await runShellCommand("git branch", { cwd: repoPath });
   return extractBranchList(odooOutput);
 }
 

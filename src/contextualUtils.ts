@@ -1010,6 +1010,11 @@ export function createContextualUtils(
     return `http://${host}:${port}` + `${queryParams ? toQueryString(queryParams) : ""}`;
   };
 
+  const getRepoPath = (repo: string) => {
+    const sourceFolder = vscode.workspace.getConfiguration("odooDev").sourceFolder;
+    return `${sourceFolder}/${repo}`;
+  };
+
   return {
     treeDataProvider,
     odooAddonsTreeProvider,
@@ -1044,5 +1049,6 @@ export function createContextualUtils(
     isDependentOn,
     addonsPathMap,
     getServerUrl,
+    getRepoPath,
   };
 }
