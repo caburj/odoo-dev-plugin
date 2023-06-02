@@ -30,6 +30,8 @@ This plugin can help.
 
 - Install [pydevd-odoo](https://github.com/odoo-ide/pydevd-odoo) for better
   display of the recordset objects during debugging.
+- Install the Python extension (`ms-python.python`). The selected python
+  interpreter using this extension will be used to run the odoo server.
 
 ## Contributions
 
