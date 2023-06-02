@@ -2,27 +2,26 @@ import * as vscode from "vscode";
 import * as os from "os";
 import * as fs from "fs";
 import * as ini from "ini";
+import * as Result from "./Result";
 import { Branch, GitExtension, Repository } from "./dependencies/git";
 import { IExtensionApi } from "./dependencies/python/apiTypes";
 import { OdooDevBranches } from "./odoo_dev_branch";
 import {
   findRemote,
-  callWithSpinner,
-  fileExists,
   getChildProcs,
   inferBaseBranch,
-  isBaseBranch,
   isOdooServer,
   isValidDirectory,
   killOdooServer,
   removeComments,
+  tryRunShellCommand,
   runShellCommand,
 } from "./helpers";
-import { Result, error, isSuccess, run, runAsync, success } from "./Result";
 import { assert } from "console";
 import { DEBUG_JS_NAME, ODOO_TERMINAL_NAME, requirementsRegex } from "./constants";
 import { OdooAddonsTree } from "./odoo_addons";
 import { getActiveBranch, getDebugSessions } from "./state";
+import { withProgress } from "./decorators";
 
 const gitExtension = vscode.extensions.getExtension<GitExtension>("vscode.git")!.exports;
 const git = gitExtension.getAPI(1);
@@ -79,7 +78,7 @@ export function createContextualUtils(
 
   const getConfigFilePath = () => {
     let configFilePath: string | undefined;
-    let res = run(() => {
+    let res = Result.call(() => {
       const odooConfigPath = vscode.workspace.getConfiguration("odooDev").odooConfigPath;
       if (odooConfigPath) {
         const stat = fs.statSync(odooConfigPath as string);
@@ -93,8 +92,8 @@ export function createContextualUtils(
       }
     });
 
-    if (!isSuccess(res)) {
-      res = run(() => {
+    if (!Result.check(res)) {
+      res = Result.call(() => {
         const homeOdooRc = `${os.homedir()}/.odoorc`;
         const homeOdooConfStat = fs.statSync(homeOdooRc);
         if (homeOdooConfStat.isFile()) {
@@ -105,7 +104,7 @@ export function createContextualUtils(
       });
     }
 
-    if (!isSuccess(res)) {
+    if (!Result.check(res)) {
       throw new Error(
         `Unable to find an odoo config file. Generate a config file using '--save' option when executing 'odoo-bin' or if you already have a config file, specify it in the settings "Odoo Dev Config Path".`
       );
@@ -205,7 +204,7 @@ export function createContextualUtils(
   async function ensureNoActiveServer(shouldConfirm = true) {
     const terminalPID = await getOdooDevTerminal().processId;
     if (!terminalPID) {
-      return success();
+      return Result.success();
     }
     const hasActiveServer = await isOdooServerRunning(terminalPID);
     if (hasActiveServer) {
@@ -214,14 +213,14 @@ export function createContextualUtils(
           title: "There is an active server, it will be stopped to continue.",
         });
         if (!response) {
-          return error(
+          return Result.fail(
             "There is an active server, it should be stopped before starting a new one."
           );
         }
       }
       await killOdooServer(terminalPID);
     }
-    return success();
+    return Result.success();
   }
 
   async function ensureNoDebugSession(shouldConfirm = true) {
@@ -235,28 +234,28 @@ export function createContextualUtils(
           title: "There is an active debug session, it will be stopped to continue.",
         });
         if (!response) {
-          return error(
+          return Result.fail(
             "There is an active debug session, it should be stopped before starting a new one."
           );
         }
       }
       await vscode.debug.stopDebugging(debugSession);
     }
-    return success();
+    return Result.success();
   }
 
   async function ensureNoRunningServer(shouldConfirm = true) {
     const noActiveServerResult = await ensureNoActiveServer(shouldConfirm);
-    if (!isSuccess(noActiveServerResult)) {
+    if (!Result.check(noActiveServerResult)) {
       return noActiveServerResult;
     }
 
     const noDebugSessionResult = await ensureNoDebugSession(shouldConfirm);
-    if (!isSuccess(noDebugSessionResult)) {
+    if (!Result.check(noDebugSessionResult)) {
       return noDebugSessionResult;
     }
 
-    return success();
+    return Result.success();
   }
 
   const rootPath =
@@ -299,7 +298,7 @@ export function createContextualUtils(
 
     const dirtyRepos = results.filter((r) => !r.result).map((r) => r.tag);
     if (dirtyRepos.length === 0) {
-      return success();
+      return Result.success();
     }
 
     if (vscode.workspace.getConfiguration("odooDev").autoStash as boolean) {
@@ -316,14 +315,14 @@ export function createContextualUtils(
         })
       );
     } else {
-      return error(
+      return Result.fail(
         `Unable to execute '${currentCommand}' because of the following dirty repositories: ${dirtyRepos.join(
           ", "
         )}. Activate "Auto Stash" config to stash them automatically.`
       );
     }
 
-    return success();
+    return Result.success();
   };
 
   const getDirtyRepos = async () => {
@@ -349,8 +348,8 @@ export function createContextualUtils(
   ) => {
     const remote = (await findRemote(repo, branch)) || "origin";
     let branchToCheckout = branch;
-    const fetchRes = await runAsync(() => repo.fetch(remote, branch));
-    if (!isSuccess(fetchRes)) {
+    const fetchRes = await Result.call(() => repo.fetch(remote, branch));
+    if (!Result.check(fetchRes)) {
       if (!base) {
         throw new Error("Unable to checkout the branch even its base.");
       }
@@ -358,29 +357,29 @@ export function createContextualUtils(
     }
 
     if (isDirty && (vscode.workspace.getConfiguration("odooDev").autoStash as boolean)) {
-      const stashRes = await runAsync(() =>
-        runShellCommand(`git stash -u`, { cwd: repo.rootUri.fsPath })
-      );
-      if (!isSuccess(stashRes)) {
-        return error(
-          `Failed to stash changes in '${repo.rootUri.fsPath}' because of "${stashRes}".`
+      const stashRes = await tryRunShellCommand(`git stash -u`, {
+        cwd: repo.rootUri.fsPath,
+      });
+      if (!Result.check(stashRes)) {
+        return Result.fail(
+          `Failed to stash changes in '${repo.rootUri.fsPath}' because of "${stashRes.message}".`
         );
       }
     }
 
-    const checkoutRes = await runAsync(() => repo.checkout(branchToCheckout));
-    if (!isSuccess(checkoutRes)) {
+    const checkoutRes = await Result.call(() => repo.checkout(branchToCheckout));
+    if (!Result.check(checkoutRes)) {
       if (branchToCheckout !== branch) {
-        return error(
-          `Failed to fetch '${branch}' (and checkout '${branchToCheckout}' as an alternative) in '${repoName}' because of "${checkoutRes}".`
+        return Result.fail(
+          `Failed to fetch '${branch}' (and checkout '${branchToCheckout}' as an alternative) in '${repoName}' because of "${checkoutRes.message}".`
         );
       } else {
-        return error(
-          `Failed to checkout '${branch}' in '${repoName}' because of "${checkoutRes}".`
+        return Result.fail(
+          `Failed to checkout '${branch}' in '${repoName}' because of "${checkoutRes.message}".`
         );
       }
     }
-    return success();
+    return Result.success();
   };
 
   const fetchBranches = async (base: string, branch: string, dirtyRepos: string[]) => {
@@ -392,25 +391,22 @@ export function createContextualUtils(
       fetchBranch("odoo", odoo, base, branch, dirtyRepos.includes("odoo")),
       enterprise
         ? fetchBranch("enterprise", enterprise, base, branch, dirtyRepos.includes("enterprise"))
-        : Promise.resolve(success()),
+        : Promise.resolve(Result.success()),
       upgrade && base === "master"
         ? fetchBranch("upgrade", upgrade, base, branch, dirtyRepos.includes("upgrade"))
-        : Promise.resolve(success()),
+        : Promise.resolve(Result.success()),
     ];
 
-    let fetchResults: Result[] = [];
-    await callWithSpinner({
+    const fetchWithSpinner = withProgress({
       message: `Fetching '${branch}'...`,
-      cb: async () => {
-        fetchResults = await Promise.all(fetchProms);
-      },
+      cb: () => Promise.all(fetchProms),
     });
-    const errors = fetchResults.filter((res) => !isSuccess(res));
-    const successes = fetchResults.filter((res) => isSuccess(res));
+    const fetchResults = await fetchWithSpinner();
+    const [successes, errors] = Result.partition(fetchResults);
     if (successes.length === 0) {
       throw new Error("Failed to fetch the branch from any of the repositories.");
     } else if (errors.length > 0) {
-      vscode.window.showErrorMessage(errors.join("; "));
+      vscode.window.showErrorMessage(errors.map((e) => e.message).join("; "));
     }
   };
 
@@ -421,19 +417,18 @@ export function createContextualUtils(
 
     // Check if at least one from the repos, it is available remotely.
     // If so, we call fetchBranches, otherwise we call createBranches.
-    let remoteChecks: (string | undefined)[] = [];
-    await callWithSpinner({
+    const findRemotes = withProgress({
       message: `Checking remotes for '${branch}'...`,
-      cb: async () => {
-        remoteChecks = await Promise.all([
+      cb: () =>
+        Promise.all([
           findRemote(odoo, branch),
           enterprise
             ? findRemote(enterprise, branch)
             : Promise.resolve(undefined as string | undefined),
           upgrade ? findRemote(upgrade, branch) : Promise.resolve(undefined as string | undefined),
-        ]);
-      },
+        ]),
     });
+    const remoteChecks = await findRemotes();
 
     const isFromRemote = remoteChecks.some((r) => r);
     if (isFromRemote) {
@@ -449,29 +444,31 @@ export function createContextualUtils(
     name: string,
     isDirty: boolean
   ) => {
-    const fetchRes = await runAsync(() => repo.fetch("origin", name));
-    if (!isSuccess(fetchRes)) {
-      return error(`Failed to fetch '${name}' in '${repoName}' because of "${fetchRes}".`);
+    const fetchRes = await Result.call(() => repo.fetch("origin", name));
+    if (!Result.check(fetchRes)) {
+      return Result.fail(
+        `Failed to fetch '${name}' in '${repoName}' because of "${fetchRes.message}".`
+      );
     }
 
     if (isDirty && (vscode.workspace.getConfiguration("odooDev").autoStash as boolean)) {
-      const stashRes = await runAsync(() =>
-        runShellCommand(`git stash -u`, { cwd: repo.rootUri.fsPath })
-      );
-      if (!isSuccess(stashRes)) {
-        return error(
-          `Failed to stash changes in '${repo.rootUri.fsPath}' because of "${stashRes}".`
+      const stashRes = await tryRunShellCommand(`git stash -u`, { cwd: repo.rootUri.fsPath });
+      if (!Result.check(stashRes)) {
+        return Result.fail(
+          `Failed to stash changes in '${repo.rootUri.fsPath}' because of "${stashRes.message}".`
         );
       }
     }
 
-    const checkoutRes = await runAsync(() =>
-      runShellCommand(`git checkout --track origin/${name}`, { cwd: repo.rootUri.fsPath })
-    );
-    if (!isSuccess(checkoutRes)) {
-      return error(`Failed to checkout '${name}' in '${repoName}' because of "${checkoutRes}".`);
+    const checkoutRes = await tryRunShellCommand(`git checkout --track origin/${name}`, {
+      cwd: repo.rootUri.fsPath,
+    });
+    if (!Result.check(checkoutRes)) {
+      return Result.fail(
+        `Failed to checkout '${name}' in '${repoName}' because of "${checkoutRes.message}".`
+      );
     }
-    return success();
+    return Result.success();
   };
 
   const fetchStableBranches = async (name: string, dirtyRepos: string[]) => {
@@ -482,45 +479,40 @@ export function createContextualUtils(
       fetchStableBranch("odoo", odoo, name, dirtyRepos.includes("odoo")),
       enterprise
         ? fetchStableBranch("enterprise", enterprise, name, dirtyRepos.includes("enterprise"))
-        : Promise.resolve(success()),
+        : Promise.resolve(Result.success()),
     ];
 
-    let fetchResults: Result[] = [];
-    await callWithSpinner({
+    const fetchWithSpinner = withProgress({
       message: `Fetching '${name}'...`,
-      cb: async () => {
-        fetchResults = await Promise.all(fetchProms);
-      },
+      cb: () => Promise.all(fetchProms),
     });
+    const fetchResults = await fetchWithSpinner();
 
-    const errors = fetchResults.filter((res) => !isSuccess(res));
-    const successes = fetchResults.filter((res) => isSuccess(res));
+    const [successes, errors] = Result.partition(fetchResults);
     if (successes.length === 0) {
       throw new Error("Failed to fetch the branch from any of the repositories.");
     } else if (errors.length > 0) {
-      vscode.window.showErrorMessage(errors.join(" "));
+      vscode.window.showErrorMessage(errors.map((e) => e.message).join(" "));
     }
   };
 
   const simpleCheckout = async (repo: Repository, branch: string, isDirty: boolean) => {
     if (isDirty && (vscode.workspace.getConfiguration("odooDev").autoStash as boolean)) {
-      const stashRes = await runAsync(() =>
-        runShellCommand(`git stash -u`, { cwd: repo.rootUri.fsPath })
-      );
-      if (!isSuccess(stashRes)) {
-        return error(
-          `Failed to stash changes in '${repo.rootUri.fsPath}' because of "${stashRes}".`
+      const stashRes = await tryRunShellCommand(`git stash -u`, { cwd: repo.rootUri.fsPath });
+      if (!Result.check(stashRes)) {
+        return Result.fail(
+          `Failed to stash changes in '${repo.rootUri.fsPath}' because of "${stashRes.message}".`
         );
       }
     }
     let branchToUnstash: string | undefined;
-    const checkoutBranchRes = await runAsync(() => repo.checkout(branch));
-    if (!isSuccess(checkoutBranchRes)) {
+    const checkoutBranchRes = await Result.call(() => repo.checkout(branch));
+    if (!Result.check(checkoutBranchRes)) {
       const base = inferBaseBranch(branch);
       if (base) {
-        const checkoutBaseRes = await runAsync(() => repo.checkout(base));
-        if (!isSuccess(checkoutBaseRes)) {
-          return error(`${checkoutBranchRes} & ${checkoutBaseRes}`);
+        const checkoutBaseRes = await Result.call(() => repo.checkout(base));
+        if (!Result.check(checkoutBaseRes)) {
+          return Result.fail(`${checkoutBranchRes.message} & ${checkoutBaseRes.message}`);
         } else {
           branchToUnstash = base;
         }
@@ -531,7 +523,7 @@ export function createContextualUtils(
     if ((vscode.workspace.getConfiguration("odooDev").autoStash as boolean) && branchToUnstash) {
       await unstash(repo, branchToUnstash);
     }
-    return success();
+    return Result.success();
   };
 
   const checkoutEnterprise = async (branch: string, isDirty: boolean) => {
@@ -539,7 +531,7 @@ export function createContextualUtils(
     if (enterprise) {
       return simpleCheckout(enterprise, branch, isDirty);
     }
-    return success();
+    return Result.success();
   };
 
   const checkoutUpgrade = async (branch: string, isDirty: boolean) => {
@@ -547,21 +539,19 @@ export function createContextualUtils(
     const repo = getRepo("upgrade");
     if (repo) {
       if (isDirty && (vscode.workspace.getConfiguration("odooDev").autoStash as boolean)) {
-        const stashRes = await runAsync(() =>
-          runShellCommand(`git stash -u`, { cwd: repo.rootUri.fsPath })
-        );
-        if (!isSuccess(stashRes)) {
-          return error(
-            `Failed to stash changes in '${repo.rootUri.fsPath}' because of "${stashRes}".`
+        const stashRes = await tryRunShellCommand(`git stash -u`, { cwd: repo.rootUri.fsPath });
+        if (!Result.check(stashRes)) {
+          return Result.fail(
+            `Failed to stash changes in '${repo.rootUri.fsPath}' because of "${stashRes.message}".`
           );
         }
       }
       let branchToUnstash: string | undefined;
-      const checkoutBranchRes = await runAsync(() => repo.checkout(upgradeBranch));
-      if (!isSuccess(checkoutBranchRes) && upgradeBranch !== "master") {
-        const checkoutMasterRes = await runAsync(() => repo.checkout("master"));
-        if (!isSuccess(checkoutMasterRes)) {
-          return error(`${checkoutBranchRes} & ${checkoutMasterRes}`);
+      const checkoutBranchRes = await Result.call(() => repo.checkout(upgradeBranch));
+      if (!Result.check(checkoutBranchRes) && upgradeBranch !== "master") {
+        const checkoutMasterRes = await Result.call(() => repo.checkout("master"));
+        if (!Result.check(checkoutMasterRes)) {
+          return Result.fail(`${checkoutBranchRes.message} & ${checkoutMasterRes.message}`);
         } else {
           branchToUnstash = "master";
         }
@@ -572,7 +562,7 @@ export function createContextualUtils(
         await unstash(repo, branchToUnstash);
       }
     }
-    return success();
+    return Result.success();
   };
 
   const checkoutBranches = async (branch: string, dirtyRepos: string[]) => {
@@ -581,37 +571,34 @@ export function createContextualUtils(
       checkoutEnterprise(branch, dirtyRepos.includes("enterprise")),
       checkoutUpgrade(branch, dirtyRepos.includes("upgrade")),
     ];
-    let checkoutResults: Result[] = [];
-    await callWithSpinner({
+    const checkWithSpinner = withProgress({
       message: `Checking out '${branch}'...`,
-      cb: async () => {
-        checkoutResults = await Promise.all(checkoutProms);
-      },
+      cb: () => Promise.all(checkoutProms),
     });
-    const errors = checkoutResults.filter((res) => !isSuccess(res));
-    const successes = checkoutResults.filter((res) => isSuccess(res));
+    const checkoutResults = await checkWithSpinner();
+    const [successes, errors] = Result.partition(checkoutResults);
     if (successes.length === 0) {
       throw new Error("Failed to checkout the branch from any of the repositories.");
     } else if (errors.length > 0) {
-      vscode.window.showErrorMessage(errors.join("; "));
+      vscode.window.showErrorMessage(errors.map((e) => e.message).join("; "));
     }
   };
 
   const createBranch = async (repo: Repository, base: string, branch: string, isDirty: boolean) => {
     if (isDirty && (vscode.workspace.getConfiguration("odooDev").autoStash as boolean)) {
-      const stashRes = await runAsync(() =>
-        runShellCommand(`git stash -u`, { cwd: repo.rootUri.fsPath })
-      );
-      if (!isSuccess(stashRes)) {
-        return error(
-          `Failed to stash changes in '${repo.rootUri.fsPath}' because of "${stashRes}".`
+      const stashRes = await tryRunShellCommand(`git stash -u`, { cwd: repo.rootUri.fsPath });
+      if (!Result.check(stashRes)) {
+        return Result.fail(
+          `Failed to stash changes in '${repo.rootUri.fsPath}' because of "${stashRes.message}".`
         );
       }
     }
     // Checkout base first as basis for creating the new branch.
-    const checkoutBase = await runAsync(() => repo.checkout(base));
-    if (!isSuccess(checkoutBase)) {
-      return error(`Failed at checking out the base branch '${base}' because of "${checkoutBase}"`);
+    const checkoutBase = await Result.call(() => repo.checkout(base));
+    if (!Result.check(checkoutBase)) {
+      return Result.fail(
+        `Failed at checking out the base branch '${base}' because of "${checkoutBase.message}"`
+      );
     }
     if (vscode.workspace.getConfiguration("odooDev").pullBaseOnCreate as boolean) {
       try {
@@ -620,13 +607,13 @@ export function createContextualUtils(
         // Creation of branch should continue even if the pull failed so we ignore the error.
       }
     }
-    const createAndCheckoutBranch = await runAsync(() => repo.createBranch(branch, true));
-    if (!isSuccess(createAndCheckoutBranch)) {
-      return error(
-        `Failed at creating the branch '${branch}' because of "${createAndCheckoutBranch}"`
+    const createAndCheckoutBranch = await Result.call(() => repo.createBranch(branch, true));
+    if (!Result.check(createAndCheckoutBranch)) {
+      return Result.fail(
+        `Failed at creating the branch '${branch}' because of "${createAndCheckoutBranch.message}"`
       );
     }
-    return success();
+    return Result.success();
   };
 
   const createUpgradeBranch = async (
@@ -639,16 +626,14 @@ export function createContextualUtils(
       return createBranch(repo, base, branch, isDirty);
     } else {
       if (isDirty && (vscode.workspace.getConfiguration("odooDev").autoStash as boolean)) {
-        const stashRes = await runAsync(() =>
-          runShellCommand(`git stash -u`, { cwd: repo.rootUri.fsPath })
-        );
-        if (!isSuccess(stashRes)) {
-          return error(
-            `Failed to stash changes in '${repo.rootUri.fsPath}' because of "${stashRes}".`
+        const stashRes = await tryRunShellCommand(`git stash -u`, { cwd: repo.rootUri.fsPath });
+        if (!Result.check(stashRes)) {
+          return Result.fail(
+            `Failed to stash changes in '${repo.rootUri.fsPath}' because of "${stashRes.message}".`
           );
         }
       }
-      return runAsync(() => repo.checkout("master"));
+      return Result.call(() => repo.checkout("master"));
     }
   };
 
@@ -669,27 +654,24 @@ export function createContextualUtils(
       // branch in enterprise
       enterprise
         ? createBranch(enterprise, base, branch, dirtyRepos.includes("enterprise"))
-        : Promise.resolve(success()),
+        : Promise.resolve(Result.success()),
 
       // branch in upgrade
       upgrade
         ? createUpgradeBranch(upgrade, base, branch, dirtyRepos.includes("upgrade"))
-        : Promise.resolve(success()),
+        : Promise.resolve(Result.success()),
     ];
 
-    let createResults: Result[] = [];
-    await callWithSpinner({
+    const createWithSpinner = withProgress({
       message: `Creating '${branch}'...`,
-      cb: async () => {
-        createResults = await Promise.all(createBranchProms);
-      },
+      cb: () => Promise.all(createBranchProms),
     });
-    const errors = createResults.filter((res) => !isSuccess(res));
-    const successes = createResults.filter((res) => isSuccess(res));
+    const createResults = await createWithSpinner();
+    const [successes, errors] = Result.partition(createResults);
     if (successes.length === 0) {
       throw new Error("Failed to create the branch from any of the repositories.");
     } else if (errors.length > 0) {
-      vscode.window.showErrorMessage(errors.join("; "));
+      vscode.window.showErrorMessage(errors.map((e) => e.message).join("; "));
     }
   };
 
@@ -703,8 +685,8 @@ export function createContextualUtils(
     if (activeBranch === branch) {
       // If the branch to delete is the active branch, we need to checkout to the base branch first.
       const checkoutBaseRes = await simpleCheckout(repo, base, false);
-      if (!isSuccess(checkoutBaseRes)) {
-        return error(
+      if (!Result.check(checkoutBaseRes)) {
+        return Result.fail(
           `Failed to delete '${branch}' because it is the active branch and unable to checkout to the '${base}' base branch.`
         );
       }
@@ -714,13 +696,13 @@ export function createContextualUtils(
     }
     const repoBranch = await getBranch(repo, branch);
     if (!repoBranch) {
-      return success();
+      return Result.success();
     }
-    const deleteBranchRes = await runAsync(() => repo.deleteBranch(branch, true));
-    if (!isSuccess(deleteBranchRes)) {
-      return error(`Failed to delete '${branch}' because of "${deleteBranchRes}"`);
+    const deleteBranchRes = await Result.call(() => repo.deleteBranch(branch, true));
+    if (!Result.check(deleteBranchRes)) {
+      return Result.fail(`Failed to delete '${branch}' because of "${deleteBranchRes.message}"`);
     }
-    return success();
+    return Result.success();
   };
 
   const deleteBranches = async (base: string, branch: string, activeBranch: string | undefined) => {
@@ -731,25 +713,22 @@ export function createContextualUtils(
       deleteBranch(getOdooRepo(), base, branch, activeBranch),
       enterprise
         ? deleteBranch(enterprise, base, branch, activeBranch)
-        : Promise.resolve(success()),
+        : Promise.resolve(Result.success()),
       upgrade && base === "master"
         ? deleteBranch(upgrade, base, branch, activeBranch)
-        : Promise.resolve(success()),
+        : Promise.resolve(Result.success()),
     ];
 
-    let deleteResults: Result[] = [];
-    await callWithSpinner({
+    const deleteWithSpinner = withProgress({
       message: `Deleting '${branch}'...`,
-      cb: async () => {
-        deleteResults = await Promise.all(deleteProms);
-      },
+      cb: () => Promise.all(deleteProms),
     });
-    const errors = deleteResults.filter((res) => !isSuccess(res));
-    const successes = deleteResults.filter((res) => isSuccess(res));
+    const deleteResults = await deleteWithSpinner();
+    const [successes, errors] = Result.partition(deleteResults);
     if (successes.length === 0) {
       throw new Error("Failed to delete the branch from any of the repositories.");
     } else if (errors.length > 0) {
-      vscode.window.showErrorMessage(errors.join("; "));
+      vscode.window.showErrorMessage(errors.map(e => e.message).join("; "));
     }
   };
 
@@ -760,12 +739,14 @@ export function createContextualUtils(
     isDirty: boolean
   ) => {
     if (repo.state.HEAD?.name !== branch) {
-      return success(); // We don't care about resetting a repo that has different active branch.
+      return Result.success(); // We don't care about resetting a repo that has different active branch.
     } else {
       const remote = repo.state.HEAD?.upstream?.remote;
 
       if (!remote) {
-        return error(`Failed to reset the active branch of '${repoName}' repo. No remote found.`);
+        return Result.fail(
+          `Failed to reset the active branch of '${repoName}' repo. No remote found.`
+        );
       }
 
       try {
@@ -778,11 +759,11 @@ export function createContextualUtils(
           await runShellCommand("git stash pop", { cwd: repo.rootUri.fsPath });
         }
       } catch (e) {
-        return error(
+        return Result.fail(
           `Failed to reset the active branch of '${repoName}' repo. Error: ${(e as Error).message}`
         );
       }
-      return success();
+      return Result.success();
     }
   };
 
@@ -795,25 +776,22 @@ export function createContextualUtils(
       resetBranch("odoo", odoo, branch, dirtyRepos.includes("odoo")),
       enterprise
         ? resetBranch("enterprise", enterprise, branch, dirtyRepos.includes("enterprise"))
-        : Promise.resolve(success()),
+        : Promise.resolve(Result.success()),
       upgrade && (inferBaseBranch(branch) === "master" || branch === "master")
         ? resetBranch("upgrade", upgrade, branch, dirtyRepos.includes("upgrade"))
-        : Promise.resolve(success()),
+        : Promise.resolve(Result.success()),
     ];
 
-    let results: Result[] = [];
-    await callWithSpinner({
+    const resetWithSpinner = withProgress({
       message: `Resetting '${branch}'...`,
-      cb: async () => {
-        results = await Promise.all(promises);
-      },
+      cb: () => Promise.all(promises),
     });
-    const errors = results.filter((res) => !isSuccess(res));
-    const successes = results.filter((res) => isSuccess(res));
+    const results = await resetWithSpinner();
+    const [successes, errors] = Result.partition(results);
     if (successes.length === 0) {
       throw new Error("Failed to reset the branch from any of the repositories.");
     } else if (errors.length > 0) {
-      vscode.window.showErrorMessage(errors.join("; "));
+      vscode.window.showErrorMessage(errors.map(e => e.message).join("; "));
     }
   };
 
@@ -871,10 +849,13 @@ export function createContextualUtils(
     enterpriseExists ? enterprisePath : undefined
   );
 
-  const refreshTreeOnSuccess = async (cb: () => void | Promise<void>) => {
-    await cb();
-    treeDataProvider.refresh();
-    odooAddonsTreeProvider.refresh();
+  const refreshTrees = <A extends any[], R extends any>(cb: (...args: A) => Promise<R>) => {
+    return async (...args: A): Promise<R> => {
+      const result = await cb(...args);
+      treeDataProvider.refresh();
+      odooAddonsTreeProvider.refresh();
+      return result;
+    };
   };
 
   const getStartServerArgs = async () => {
@@ -1028,17 +1009,17 @@ export function createContextualUtils(
     getActiveDBName,
     getRepo,
     getOdooRepo,
-    fetchBranches,
-    fetchStableBranches,
-    createBranches,
-    fetchOrCreateBranches,
-    checkoutBranches,
-    deleteBranches,
+    fetchBranches: refreshTrees(fetchBranches),
+    fetchStableBranches: refreshTrees(fetchStableBranches),
+    createBranches: refreshTrees(createBranches),
+    fetchOrCreateBranches: refreshTrees(fetchOrCreateBranches),
+    checkoutBranches: refreshTrees(checkoutBranches),
+    deleteBranches: refreshTrees(deleteBranches),
     resetBranches,
     getTestTag,
     getTestFilePath,
     getNotesFolder,
-    refreshTreeOnSuccess,
+    refreshTrees,
     ensureCleanRepos,
     ensureNoActiveServer,
     ensureNoDebugSession,

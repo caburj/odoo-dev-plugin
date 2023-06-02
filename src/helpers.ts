@@ -3,18 +3,8 @@ import * as fs from "fs";
 import * as path from "path";
 import * as child_process from "child_process";
 import * as psTree from "ps-tree";
+import * as Result from "./Result";
 import { Repository } from "./dependencies/git";
-import { isSuccess, runAsync } from "./Result";
-
-export function screamOnError<Args extends any[]>(cb: (...args: Args) => Promise<void>) {
-  return async (...args: Args) => {
-    try {
-      await cb(...args);
-    } catch (error) {
-      await vscode.window.showErrorMessage((error as Error).message);
-    }
-  };
-}
 
 export function getFoldersInDirectory(directoryPath: string) {
   const filesAndDirs = fs.readdirSync(directoryPath);
@@ -65,18 +55,7 @@ export function runShellCommand(
   });
 }
 
-export function callWithSpinner(options: { message: string; cb: () => Thenable<void> }) {
-  return vscode.window.withProgress(
-    {
-      location: vscode.ProgressLocation.Notification,
-      cancellable: false,
-    },
-    async (progress) => {
-      progress.report({ message: options.message });
-      await options.cb();
-    }
-  );
-}
+export const tryRunShellCommand = Result.resultify(runShellCommand);
 
 export function isValidDirectory(path: string): boolean {
   try {
@@ -222,12 +201,13 @@ async function isAvailableFromRemote(
   remote: string,
   branchName: string
 ): Promise<boolean> {
-  const result = await runAsync(() =>
-    runShellCommand(`git ls-remote --exit-code --heads ${remote} ${branchName}`, {
+  const result = await tryRunShellCommand(
+    `git ls-remote --exit-code --heads ${remote} ${branchName}`,
+    {
       cwd: repo.rootUri.fsPath,
-    })
+    }
   );
-  return isSuccess(result);
+  return Result.check(result);
 }
 
 export async function findRemote(

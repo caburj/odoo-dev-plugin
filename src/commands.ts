@@ -1,4 +1,5 @@
 import * as vscode from "vscode";
+import * as Result from "./Result";
 import fetch from "node-fetch";
 import {
   createTemplateNote,
@@ -8,12 +9,11 @@ import {
   isBaseBranch,
   multiSelectAddons,
   runShellCommand,
-  screamOnError,
 } from "./helpers";
 import { type ContextualUtils } from "./contextualUtils";
-import { isSuccess } from "./Result";
 import { OdooDevBranch } from "./odoo_dev_branch";
 import { DEBUG_JS_NAME, DEBUG_PYTHON_NAME } from "./constants";
+import { screamOnError } from "./decorators";
 import {
   addBaseBranch,
   addDevBranch,
@@ -25,10 +25,7 @@ import {
   setActiveBranch,
 } from "./state";
 
-function createCommand<T>(
-  name: string,
-  cb: (utils: ContextualUtils, item?: OdooDevBranch) => Promise<T>
-) {
+function createCommand<T>(name: string, cb: (utils: ContextualUtils, item?: OdooDevBranch) => T) {
   return (utils: ContextualUtils) => {
     return { name, method: (item?: OdooDevBranch) => cb(utils, item) };
   };
@@ -37,7 +34,7 @@ function createCommand<T>(
 export const createBranch = createCommand(
   "odooDev.createBranch",
   screamOnError(async (utils) => {
-    if (!isSuccess(await utils.ensureNoRunningServer())) {
+    if (!Result.check(await utils.ensureNoRunningServer())) {
       return;
     }
 
@@ -69,26 +66,22 @@ export const createBranch = createCommand(
 
     const base = inferBaseBranch(input);
 
-    return utils.refreshTreeOnSuccess(async () => {
-      const baseBranches = getBaseBranches();
-      if (!baseBranches.includes(base)) {
-        throw new Error(
-          `Fetch the stable branch '${base}' before creating a dev branch out of it.`
-        );
-      } else if (devBranchExists({ base, name: input })) {
-        throw new Error(`'${input}' already exists!`);
-      }
-      await utils.createBranches(base, input, dirtyRepos);
-      setActiveBranch(input);
-      addDevBranch(base, input);
-    });
+    const baseBranches = getBaseBranches();
+    if (!baseBranches.includes(base)) {
+      throw new Error(`Fetch the stable branch '${base}' before creating a dev branch out of it.`);
+    } else if (devBranchExists({ base, name: input })) {
+      throw new Error(`'${input}' already exists!`);
+    }
+    await utils.createBranches(base, input, dirtyRepos);
+    setActiveBranch(input);
+    addDevBranch(base, input);
   })
 );
 
 export const fetchBranch = createCommand(
   "odooDev.fetchBranch",
   screamOnError(async (utils) => {
-    if (!isSuccess(await utils.ensureNoRunningServer())) {
+    if (!Result.check(await utils.ensureNoRunningServer())) {
       return;
     }
 
@@ -120,25 +113,22 @@ export const fetchBranch = createCommand(
     }
 
     const base = inferBaseBranch(input);
-
-    return utils.refreshTreeOnSuccess(async () => {
-      const baseBranches = getBaseBranches();
-      if (!baseBranches.includes(base)) {
-        addBaseBranch(base);
-      } else if (devBranchExists({ base, name: input })) {
-        throw new Error(`'${input}' already exists!`);
-      }
-      await utils.fetchBranches(base, input, dirtyRepos);
-      setActiveBranch(input);
-      addDevBranch(base, input);
-    });
+    const baseBranches = getBaseBranches();
+    if (!baseBranches.includes(base)) {
+      addBaseBranch(base);
+    } else if (devBranchExists({ base, name: input })) {
+      throw new Error(`'${input}' already exists!`);
+    }
+    await utils.fetchBranches(base, input, dirtyRepos);
+    setActiveBranch(input);
+    addDevBranch(base, input);
   })
 );
 
 export const fetchOrCreate = createCommand(
   "odooDev.fetchOrCreate",
   screamOnError(async (utils) => {
-    if (!isSuccess(await utils.ensureNoRunningServer())) {
+    if (!Result.check(await utils.ensureNoRunningServer())) {
       return;
     }
     const input = await vscode.window.showInputBox({
@@ -169,21 +159,19 @@ export const fetchOrCreate = createCommand(
 
     const base = inferBaseBranch(input);
 
-    return utils.refreshTreeOnSuccess(async () => {
-      if (devBranchExists({ base, name: input })) {
-        throw new Error(`'${input}' already exists!`);
-      }
-      await utils.fetchOrCreateBranches(base, input, dirtyRepos);
-      setActiveBranch(input);
-      addDevBranch(base, input);
-    });
+    if (devBranchExists({ base, name: input })) {
+      throw new Error(`'${input}' already exists!`);
+    }
+    await utils.fetchOrCreateBranches(base, input, dirtyRepos);
+    setActiveBranch(input);
+    addDevBranch(base, input);
   })
 );
 
 export const fetchStableBranch = createCommand(
   "odooDev.fetchStableBranch",
   screamOnError(async (utils) => {
-    if (!isSuccess(await utils.ensureNoRunningServer())) {
+    if (!Result.check(await utils.ensureNoRunningServer())) {
       return;
     }
 
@@ -213,21 +201,19 @@ export const fetchStableBranch = createCommand(
       );
     }
 
-    return utils.refreshTreeOnSuccess(async () => {
-      const baseBranches = getBaseBranches();
-      if (!baseBranches.includes(branch)) {
-        addBaseBranch(branch);
-      }
-      await utils.fetchStableBranches(branch, dirtyRepos);
-      setActiveBranch(branch);
-    });
+    const baseBranches = getBaseBranches();
+    if (!baseBranches.includes(branch)) {
+      addBaseBranch(branch);
+    }
+    await utils.fetchStableBranches(branch, dirtyRepos);
+    setActiveBranch(branch);
   })
 );
 
 export const deleteBranch = createCommand(
   "odooDev.deleteBranch",
   screamOnError(async (utils, item) => {
-    if (!isSuccess(await utils.ensureNoRunningServer())) {
+    if (!Result.check(await utils.ensureNoRunningServer())) {
       return;
     }
 
@@ -270,26 +256,24 @@ export const deleteBranch = createCommand(
       );
     }
 
-    return utils.refreshTreeOnSuccess(async () => {
-      const { base, name: branch } = selected;
-      if (base === branch) {
-        // Not really possible at the moment. But better be sure.
-        throw new Error(`Deleting base branch '${base}' is not allowed.`);
-      }
-      const activeBranch = getActiveBranch();
-      await utils.deleteBranches(base, branch, activeBranch);
-      if (activeBranch === branch) {
-        setActiveBranch(base);
-      }
-      removeDevBranch(base, branch);
-    });
+    const { base, name: branch } = selected;
+    if (base === branch) {
+      // Not really possible at the moment. But better be sure.
+      throw new Error(`Deleting base branch '${base}' is not allowed.`);
+    }
+    const activeBranch = getActiveBranch();
+    await utils.deleteBranches(base, branch, activeBranch);
+    if (activeBranch === branch) {
+      setActiveBranch(base);
+    }
+    removeDevBranch(base, branch);
   })
 );
 
 export const checkoutBranch = createCommand(
   "odooDev.checkoutBranch",
   screamOnError(async (utils, item) => {
-    if (!isSuccess(await utils.ensureNoRunningServer())) {
+    if (!Result.check(await utils.ensureNoRunningServer())) {
       return;
     }
 
@@ -327,17 +311,15 @@ export const checkoutBranch = createCommand(
       );
     }
 
-    return utils.refreshTreeOnSuccess(async () => {
-      await utils.checkoutBranches(selected.name, dirtyRepos);
-      setActiveBranch(selected.name);
-    });
+    await utils.checkoutBranches(selected.name, dirtyRepos);
+    setActiveBranch(selected.name);
   })
 );
 
 export const resetActiveBranch = createCommand(
   "odooDev.resetActiveBranch",
   screamOnError(async (utils) => {
-    if (!isSuccess(await utils.ensureNoRunningServer())) {
+    if (!Result.check(await utils.ensureNoRunningServer())) {
       return;
     }
 
@@ -363,7 +345,7 @@ export const resetActiveBranch = createCommand(
 export const startFreshServer = createCommand(
   "odooDev.startFreshServer",
   screamOnError(async (utils) => {
-    if (!isSuccess(await utils.ensureNoRunningServer())) {
+    if (!Result.check(await utils.ensureNoRunningServer())) {
       return;
     }
 
@@ -393,7 +375,7 @@ export const startFreshServer = createCommand(
 export const startServer = createCommand(
   "odooDev.startServer",
   screamOnError(async (utils) => {
-    if (!isSuccess(await utils.ensureNoRunningServer())) {
+    if (!Result.check(await utils.ensureNoRunningServer())) {
       return;
     }
 
@@ -407,7 +389,7 @@ export const startServer = createCommand(
 export const debugServer = createCommand(
   "odooDev.debugServer",
   screamOnError(async (utils) => {
-    if (!isSuccess(await utils.ensureNoRunningServer())) {
+    if (!Result.check(await utils.ensureNoRunningServer())) {
       return;
     }
 
@@ -433,7 +415,7 @@ export const debugServer = createCommand(
 export const startServerWithInstall = createCommand(
   "odooDev.startServerWithInstall",
   screamOnError(async (utils) => {
-    if (!isSuccess(await utils.ensureNoRunningServer())) {
+    if (!Result.check(await utils.ensureNoRunningServer())) {
       return;
     }
 
@@ -449,7 +431,7 @@ export const startServerWithInstall = createCommand(
 export const debugServerWithInstall = createCommand(
   "odooDev.debugServerWithInstall",
   screamOnError(async (utils) => {
-    if (!isSuccess(await utils.ensureNoRunningServer())) {
+    if (!Result.check(await utils.ensureNoRunningServer())) {
       return;
     }
 
@@ -482,7 +464,7 @@ export const debugServerWithInstall = createCommand(
 export const startServerWithUpdate = createCommand(
   "odooDev.startServerWithUpdate",
   screamOnError(async (utils) => {
-    if (!isSuccess(await utils.ensureNoRunningServer())) {
+    if (!Result.check(await utils.ensureNoRunningServer())) {
       return;
     }
 
@@ -503,7 +485,7 @@ export const startServerWithUpdate = createCommand(
 export const debugServerWithUpdate = createCommand(
   "odooDev.debugServerWithUpdate",
   screamOnError(async (utils) => {
-    if (!isSuccess(await utils.ensureNoRunningServer())) {
+    if (!Result.check(await utils.ensureNoRunningServer())) {
       return;
     }
 
@@ -575,7 +557,7 @@ export const debugJS = createCommand(
 export const dropActiveDB = createCommand(
   "odooDev.dropActiveDB",
   screamOnError(async (utils) => {
-    if (!isSuccess(await utils.ensureNoRunningServer())) {
+    if (!Result.check(await utils.ensureNoRunningServer())) {
       return;
     }
     const dbName = utils.getActiveDBName();
