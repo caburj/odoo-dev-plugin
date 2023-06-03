@@ -7,6 +7,7 @@ import {
   getAddons,
   inferBaseBranch,
   isBaseBranch,
+  isValidDirectory,
   multiSelectAddons,
   runShellCommand,
 } from "./helpers";
@@ -633,14 +634,14 @@ export const openOdooConf = createCommand(
 
 export const openLinkedNote = createCommand(
   "odooDev.openLinkedNote",
-  screamOnError(async ({ getNotesFolder }, item) => {
+  screamOnError(async (utils, item) => {
     const branch = item ? item.name : getActiveBranch();
     if (!branch) {
       throw new Error(`There is no selected branch.`);
     }
 
-    let notesFolder = getNotesFolder();
-    if (!notesFolder) {
+    let notesFolder = (vscode.workspace.getConfiguration("odooDev").notesFolder || "") as string;
+    if (!isValidDirectory(notesFolder)) {
       const willSelectFolder = await vscode.window.showQuickPick(["Yes", "No"], {
         title: "Odoo Dev Notes Folder isn't properly set, do you want to set it?",
       });

@@ -11,7 +11,6 @@ import {
   getChildProcs,
   inferBaseBranch,
   isOdooServer,
-  isValidDirectory,
   killOdooServer,
   removeComments,
   tryRunShellCommand,
@@ -122,18 +121,6 @@ export function createContextualUtils(
     const api = pythonExt.exports;
     const activeInterpreter = api.environments.getActiveEnvironmentPath();
     return activeInterpreter.path;
-  };
-
-  const getNotesFolder = () => {
-    const notesFolder = vscode.workspace.getConfiguration("odooDev").notesFolder as string;
-    if (notesFolder === "") {
-      return undefined;
-    }
-    return isValidDirectory(notesFolder) ? notesFolder : undefined;
-  };
-
-  const getAutoStashId = (branchName: string) => {
-    return `odooDev-${branchName}`;
   };
 
   const unstash = async (repo: Repository, branch: string) => {
@@ -283,46 +270,6 @@ export function createContextualUtils(
       cwd: repo.rootUri.fsPath,
     });
     return status.trim().length === 0;
-  };
-
-  const ensureCleanRepos = async (currentCommand: string) => {
-    const odoo = getOdooRepo();
-    const enterprise = getRepo("enterprise");
-    const upgrade = getRepo("upgrade");
-
-    const results = await Promise.all([
-      taggedCall("odoo", () => isRepoClean(odoo)),
-      taggedCall("enterprise", async () => (enterprise ? isRepoClean(enterprise) : true)),
-      taggedCall("upgrade", async () => (upgrade ? isRepoClean(upgrade) : true)),
-    ]);
-
-    const dirtyRepos = results.filter((r) => !r.result).map((r) => r.tag);
-    if (dirtyRepos.length === 0) {
-      return Result.success();
-    }
-
-    if (vscode.workspace.getConfiguration("odooDev").autoStash as boolean) {
-      await Promise.all(
-        dirtyRepos.map(async (name) => {
-          const repo = getRepo(name)!;
-          try {
-            const activeBranch = getActiveBranch() || "master";
-            const stashId = getAutoStashId(activeBranch);
-            await runShellCommand(`git stash -u -m "${stashId}"`, {
-              cwd: repo.rootUri.fsPath,
-            });
-          } catch (_e) {}
-        })
-      );
-    } else {
-      return Result.fail(
-        `Unable to execute '${currentCommand}' because of the following dirty repositories: ${dirtyRepos.join(
-          ", "
-        )}. Activate "Auto Stash" config to stash them automatically.`
-      );
-    }
-
-    return Result.success();
   };
 
   const getDirtyRepos = async () => {
@@ -831,14 +778,6 @@ export function createContextualUtils(
     }`;
   };
 
-  const getTestFilePath = (editor: vscode.TextEditor) => {
-    const isTestFile = /.*\/addons\/(.*)\/tests\/test_.*\.py/.test(editor.document.uri.path);
-    if (!isTestFile) {
-      throw new Error("Current file is not a test file.");
-    }
-    return editor.document.uri.path;
-  };
-
   const treeDataProvider = new OdooDevBranches(rootPath);
 
   const odooPath = `${vscode.workspace.getConfiguration("odooDev").sourceFolder}/odoo`;
@@ -1005,10 +944,8 @@ export function createContextualUtils(
     getStartServerArgs,
     startServer,
     startServerWithInstall,
-    getOdooConfigValue,
     getActiveDBName,
     getRepo,
-    getOdooRepo,
     fetchBranches: refreshTrees(fetchBranches),
     fetchStableBranches: refreshTrees(fetchStableBranches),
     createBranches: refreshTrees(createBranches),
@@ -1017,10 +954,6 @@ export function createContextualUtils(
     deleteBranches: refreshTrees(deleteBranches),
     resetBranches,
     getTestTag,
-    getTestFilePath,
-    getNotesFolder,
-    refreshTrees,
-    ensureCleanRepos,
     ensureNoActiveServer,
     ensureNoDebugSession,
     ensureNoRunningServer,
