@@ -201,7 +201,7 @@ export function createContextualUtils(
         });
         if (!response) {
           return Result.fail(
-            "There is an active server, it should be stopped before starting a new one."
+            new Error("There is an active server, it should be stopped before starting a new one.")
           );
         }
       }
@@ -222,7 +222,9 @@ export function createContextualUtils(
         });
         if (!response) {
           return Result.fail(
-            "There is an active debug session, it should be stopped before starting a new one."
+            new Error(
+              "There is an active debug session, it should be stopped before starting a new one."
+            )
           );
         }
       }
@@ -309,7 +311,9 @@ export function createContextualUtils(
       });
       if (!Result.check(stashRes)) {
         return Result.fail(
-          `Failed to stash changes in '${repo.rootUri.fsPath}' because of "${stashRes.message}".`
+          new Error(
+            `Failed to stash changes in '${repo.rootUri.fsPath}' because of "${stashRes.error.message}".`
+          )
         );
       }
     }
@@ -318,11 +322,15 @@ export function createContextualUtils(
     if (!Result.check(checkoutRes)) {
       if (branchToCheckout !== branch) {
         return Result.fail(
-          `Failed to fetch '${branch}' (and checkout '${branchToCheckout}' as an alternative) in '${repoName}' because of "${checkoutRes.message}".`
+          new Error(
+            `Failed to fetch '${branch}' (and checkout '${branchToCheckout}' as an alternative) in '${repoName}' because of "${checkoutRes.error.message}".`
+          )
         );
       } else {
         return Result.fail(
-          `Failed to checkout '${branch}' in '${repoName}' because of "${checkoutRes.message}".`
+          new Error(
+            `Failed to checkout '${branch}' in '${repoName}' because of "${checkoutRes.error.message}".`
+          )
         );
       }
     }
@@ -353,7 +361,7 @@ export function createContextualUtils(
     if (successes.length === 0) {
       throw new Error("Failed to fetch the branch from any of the repositories.");
     } else if (errors.length > 0) {
-      vscode.window.showErrorMessage(errors.map((e) => e.message).join("; "));
+      vscode.window.showErrorMessage(errors.map((f) => f.error.message).join("; "));
     }
   };
 
@@ -394,7 +402,9 @@ export function createContextualUtils(
     const fetchRes = await Result.call(() => repo.fetch("origin", name));
     if (!Result.check(fetchRes)) {
       return Result.fail(
-        `Failed to fetch '${name}' in '${repoName}' because of "${fetchRes.message}".`
+        new Error(
+          `Failed to fetch '${name}' in '${repoName}' because of "${fetchRes.error.message}".`
+        )
       );
     }
 
@@ -402,7 +412,9 @@ export function createContextualUtils(
       const stashRes = await tryRunShellCommand(`git stash -u`, { cwd: repo.rootUri.fsPath });
       if (!Result.check(stashRes)) {
         return Result.fail(
-          `Failed to stash changes in '${repo.rootUri.fsPath}' because of "${stashRes.message}".`
+          new Error(
+            `Failed to stash changes in '${repo.rootUri.fsPath}' because of "${stashRes.error.message}".`
+          )
         );
       }
     }
@@ -412,7 +424,9 @@ export function createContextualUtils(
     });
     if (!Result.check(checkoutRes)) {
       return Result.fail(
-        `Failed to checkout '${name}' in '${repoName}' because of "${checkoutRes.message}".`
+        new Error(
+          `Failed to checkout '${name}' in '${repoName}' because of "${checkoutRes.error.message}".`
+        )
       );
     }
     return Result.success();
@@ -439,7 +453,7 @@ export function createContextualUtils(
     if (successes.length === 0) {
       throw new Error("Failed to fetch the branch from any of the repositories.");
     } else if (errors.length > 0) {
-      vscode.window.showErrorMessage(errors.map((e) => e.message).join(" "));
+      vscode.window.showErrorMessage(errors.map((f) => f.error.message).join(" "));
     }
   };
 
@@ -448,7 +462,9 @@ export function createContextualUtils(
       const stashRes = await tryRunShellCommand(`git stash -u`, { cwd: repo.rootUri.fsPath });
       if (!Result.check(stashRes)) {
         return Result.fail(
-          `Failed to stash changes in '${repo.rootUri.fsPath}' because of "${stashRes.message}".`
+          new Error(
+            `Failed to stash changes in '${repo.rootUri.fsPath}' because of "${stashRes.error.message}".`
+          )
         );
       }
     }
@@ -459,7 +475,9 @@ export function createContextualUtils(
       if (base) {
         const checkoutBaseRes = await Result.call(() => repo.checkout(base));
         if (!Result.check(checkoutBaseRes)) {
-          return Result.fail(`${checkoutBranchRes.message} & ${checkoutBaseRes.message}`);
+          return Result.fail(
+            new Error(`${checkoutBranchRes.error.message} & ${checkoutBaseRes.error.message}`)
+          );
         } else {
           branchToUnstash = base;
         }
@@ -489,7 +507,9 @@ export function createContextualUtils(
         const stashRes = await tryRunShellCommand(`git stash -u`, { cwd: repo.rootUri.fsPath });
         if (!Result.check(stashRes)) {
           return Result.fail(
-            `Failed to stash changes in '${repo.rootUri.fsPath}' because of "${stashRes.message}".`
+            new Error(
+              `Failed to stash changes in '${repo.rootUri.fsPath}' because of "${stashRes.error.message}".`
+            )
           );
         }
       }
@@ -498,7 +518,9 @@ export function createContextualUtils(
       if (!Result.check(checkoutBranchRes) && upgradeBranch !== "master") {
         const checkoutMasterRes = await Result.call(() => repo.checkout("master"));
         if (!Result.check(checkoutMasterRes)) {
-          return Result.fail(`${checkoutBranchRes.message} & ${checkoutMasterRes.message}`);
+          return Result.fail(
+            new Error(`${checkoutBranchRes.error.message} & ${checkoutMasterRes.error.message}`)
+          );
         } else {
           branchToUnstash = "master";
         }
@@ -527,7 +549,7 @@ export function createContextualUtils(
     if (successes.length === 0) {
       throw new Error("Failed to checkout the branch from any of the repositories.");
     } else if (errors.length > 0) {
-      vscode.window.showErrorMessage(errors.map((e) => e.message).join("; "));
+      vscode.window.showErrorMessage(errors.map((f) => f.error.message).join("; "));
     }
   };
 
@@ -536,7 +558,9 @@ export function createContextualUtils(
       const stashRes = await tryRunShellCommand(`git stash -u`, { cwd: repo.rootUri.fsPath });
       if (!Result.check(stashRes)) {
         return Result.fail(
-          `Failed to stash changes in '${repo.rootUri.fsPath}' because of "${stashRes.message}".`
+          new Error(
+            `Failed to stash changes in '${repo.rootUri.fsPath}' because of "${stashRes.error.message}".`
+          )
         );
       }
     }
@@ -544,7 +568,9 @@ export function createContextualUtils(
     const checkoutBase = await Result.call(() => repo.checkout(base));
     if (!Result.check(checkoutBase)) {
       return Result.fail(
-        `Failed at checking out the base branch '${base}' because of "${checkoutBase.message}"`
+        new Error(
+          `Failed at checking out the base branch '${base}' because of "${checkoutBase.error.message}"`
+        )
       );
     }
     if (vscode.workspace.getConfiguration("odooDev").pullBaseOnCreate as boolean) {
@@ -557,7 +583,9 @@ export function createContextualUtils(
     const createAndCheckoutBranch = await Result.call(() => repo.createBranch(branch, true));
     if (!Result.check(createAndCheckoutBranch)) {
       return Result.fail(
-        `Failed at creating the branch '${branch}' because of "${createAndCheckoutBranch.message}"`
+        new Error(
+          `Failed at creating the branch '${branch}' because of "${createAndCheckoutBranch.error.message}"`
+        )
       );
     }
     return Result.success();
@@ -576,7 +604,9 @@ export function createContextualUtils(
         const stashRes = await tryRunShellCommand(`git stash -u`, { cwd: repo.rootUri.fsPath });
         if (!Result.check(stashRes)) {
           return Result.fail(
-            `Failed to stash changes in '${repo.rootUri.fsPath}' because of "${stashRes.message}".`
+            new Error(
+              `Failed to stash changes in '${repo.rootUri.fsPath}' because of "${stashRes.error.message}".`
+            )
           );
         }
       }
@@ -618,7 +648,7 @@ export function createContextualUtils(
     if (successes.length === 0) {
       throw new Error("Failed to create the branch from any of the repositories.");
     } else if (errors.length > 0) {
-      vscode.window.showErrorMessage(errors.map((e) => e.message).join("; "));
+      vscode.window.showErrorMessage(errors.map((f) => f.error.message).join("; "));
     }
   };
 
@@ -634,7 +664,9 @@ export function createContextualUtils(
       const checkoutBaseRes = await simpleCheckout(repo, base, false);
       if (!Result.check(checkoutBaseRes)) {
         return Result.fail(
-          `Failed to delete '${branch}' because it is the active branch and unable to checkout to the '${base}' base branch.`
+          new Error(
+            `Failed to delete '${branch}' because it is the active branch and unable to checkout to the '${base}' base branch.`
+          )
         );
       }
       if (vscode.workspace.getConfiguration("odooDev").autoStash as boolean) {
@@ -647,7 +679,9 @@ export function createContextualUtils(
     }
     const deleteBranchRes = await Result.call(() => repo.deleteBranch(branch, true));
     if (!Result.check(deleteBranchRes)) {
-      return Result.fail(`Failed to delete '${branch}' because of "${deleteBranchRes.message}"`);
+      return Result.fail(
+        new Error(`Failed to delete '${branch}' because of "${deleteBranchRes.error.message}"`)
+      );
     }
     return Result.success();
   };
@@ -675,7 +709,7 @@ export function createContextualUtils(
     if (successes.length === 0) {
       throw new Error("Failed to delete the branch from any of the repositories.");
     } else if (errors.length > 0) {
-      vscode.window.showErrorMessage(errors.map(e => e.message).join("; "));
+      vscode.window.showErrorMessage(errors.map((f) => f.error.message).join("; "));
     }
   };
 
@@ -692,7 +726,7 @@ export function createContextualUtils(
 
       if (!remote) {
         return Result.fail(
-          `Failed to reset the active branch of '${repoName}' repo. No remote found.`
+          new Error(`Failed to reset the active branch of '${repoName}' repo. No remote found.`)
         );
       }
 
@@ -707,7 +741,11 @@ export function createContextualUtils(
         }
       } catch (e) {
         return Result.fail(
-          `Failed to reset the active branch of '${repoName}' repo. Error: ${(e as Error).message}`
+          new Error(
+            `Failed to reset the active branch of '${repoName}' repo. Error: ${
+              (e as Error).message
+            }`
+          )
         );
       }
       return Result.success();
@@ -738,7 +776,7 @@ export function createContextualUtils(
     if (successes.length === 0) {
       throw new Error("Failed to reset the branch from any of the repositories.");
     } else if (errors.length > 0) {
-      vscode.window.showErrorMessage(errors.map(e => e.message).join("; "));
+      vscode.window.showErrorMessage(errors.map((f) => f.error.message).join("; "));
     }
   };
 
