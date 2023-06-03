@@ -8,7 +8,6 @@ import {
   inferBaseBranch,
   isBaseBranch,
   isValidDirectory,
-  multiSelectAddons,
   runShellCommand,
 } from "./helpers";
 import { type ContextualUtils } from "./contextualUtils";
@@ -350,7 +349,7 @@ export const startFreshServer = createCommand(
       return;
     }
 
-    const selectedAddons = await multiSelectAddons();
+    const selectedAddons = await utils.multiSelectAddons();
     if (!selectedAddons) {
       return;
     }
@@ -382,7 +381,7 @@ export const startServer = createCommand(
 
     const commandArgs = await utils.getStartServerArgs();
     const python = await utils.getPythonPath();
-    const odooBin = `${vscode.workspace.getConfiguration("odooDev").sourceFolder}/odoo/odoo-bin`;
+    const odooBin = `${utils.getRepoPath("odoo")}/odoo-bin`;
     utils.startServer(`${python} ${odooBin} ${commandArgs.join(" ")}`);
   })
 );
@@ -394,7 +393,7 @@ export const debugServer = createCommand(
       return;
     }
 
-    const odooBin = `${vscode.workspace.getConfiguration("odooDev").sourceFolder}/odoo/odoo-bin`;
+    const odooBin = `${utils.getRepoPath("odoo")}/odoo-bin`;
     const commandArgs = await utils.getStartServerArgs();
     const debugOdooPythonLaunchConfig: vscode.DebugConfiguration = {
       name: DEBUG_PYTHON_NAME,
@@ -402,7 +401,7 @@ export const debugServer = createCommand(
       request: "launch",
       stopOnEntry: false,
       console: "integratedTerminal",
-      cwd: `${vscode.workspace.getConfiguration("odooDev").sourceFolder}/odoo`,
+      cwd: `${utils.getRepoPath("odoo")}`,
       python: await utils.getPythonPath(),
       program: odooBin,
       args: commandArgs,
@@ -420,7 +419,7 @@ export const startServerWithInstall = createCommand(
       return;
     }
 
-    const selectedAddons = await multiSelectAddons();
+    const selectedAddons = await utils.multiSelectAddons();
     if (!selectedAddons) {
       return;
     }
@@ -436,12 +435,12 @@ export const debugServerWithInstall = createCommand(
       return;
     }
 
-    const selectedAddons = await multiSelectAddons();
+    const selectedAddons = await utils.multiSelectAddons();
     if (!selectedAddons) {
       return;
     }
 
-    const odooBin = `${vscode.workspace.getConfiguration("odooDev").sourceFolder}/odoo/odoo-bin`;
+    const odooBin = `${utils.getRepoPath("odoo")}/odoo-bin`;
     const startServerArgs = await utils.getStartServerArgs();
     const args = [...startServerArgs, "-i", selectedAddons.join(",")];
 
@@ -451,7 +450,7 @@ export const debugServerWithInstall = createCommand(
       request: "launch",
       stopOnEntry: false,
       console: "integratedTerminal",
-      cwd: `${vscode.workspace.getConfiguration("odooDev").sourceFolder}/odoo`,
+      cwd: `${utils.getRepoPath("odoo")}`,
       python: await utils.getPythonPath(),
       program: odooBin,
       args,
@@ -469,7 +468,7 @@ export const startServerWithUpdate = createCommand(
       return;
     }
 
-    const selectedAddons = await multiSelectAddons();
+    const selectedAddons = await utils.multiSelectAddons();
     if (!selectedAddons) {
       return;
     }
@@ -478,7 +477,7 @@ export const startServerWithUpdate = createCommand(
     const args = [...startServerArgs, "-u", selectedAddons.join(",")];
 
     const python = await utils.getPythonPath();
-    const odooBin = `${vscode.workspace.getConfiguration("odooDev").sourceFolder}/odoo/odoo-bin`;
+    const odooBin = `${utils.getRepoPath("odoo")}/odoo-bin`;
     utils.startServer(`${python} ${odooBin} ${args.join(" ")}`);
   })
 );
@@ -490,12 +489,12 @@ export const debugServerWithUpdate = createCommand(
       return;
     }
 
-    const selectedAddons = await multiSelectAddons();
+    const selectedAddons = await utils.multiSelectAddons();
     if (!selectedAddons) {
       return;
     }
 
-    const odooBin = `${vscode.workspace.getConfiguration("odooDev").sourceFolder}/odoo/odoo-bin`;
+    const odooBin = `${utils.getRepoPath("odoo")}/odoo-bin`;
     const startServerArgs = await utils.getStartServerArgs();
     const args = [...startServerArgs, "-u", selectedAddons.join(",")];
 
@@ -505,7 +504,7 @@ export const debugServerWithUpdate = createCommand(
       request: "launch",
       stopOnEntry: false,
       console: "integratedTerminal",
-      cwd: `${vscode.workspace.getConfiguration("odooDev").sourceFolder}/odoo`,
+      cwd: `${utils.getRepoPath("odoo")}`,
       python: await utils.getPythonPath(),
       program: odooBin,
       args,
@@ -519,13 +518,8 @@ export const debugServerWithUpdate = createCommand(
 export const debugJS = createCommand(
   "odooDev.debugJS",
   screamOnError(async (utils) => {
-    const odooAddonsPath = `${
-      vscode.workspace.getConfiguration("odooDev").sourceFolder
-    }/odoo/addons`;
-
-    const enterpriseAddonsPath = `${
-      vscode.workspace.getConfiguration("odooDev").sourceFolder
-    }/enterprise`;
+    const odooAddonsPath = `${utils.getRepoPath("odoo")}/addons`;
+    const enterpriseAddonsPath = utils.getRepoPath("enterprise");
 
     const url = await utils.getServerUrl({ debug: "assets" });
 
@@ -533,10 +527,12 @@ export const debugJS = createCommand(
     const addons: [path: string, name: string][] = odooAddons.map((name) => [odooAddonsPath, name]);
 
     try {
-      const enterpriseAddons = await getAddons(enterpriseAddonsPath);
-      addons.push(
-        ...enterpriseAddons.map((a) => [enterpriseAddonsPath, a] as [path: string, name: string])
-      );
+      if (enterpriseAddonsPath) {
+        const enterpriseAddons = await getAddons(enterpriseAddonsPath);
+        addons.push(
+          ...enterpriseAddons.map((a) => [enterpriseAddonsPath, a] as [path: string, name: string])
+        );
+      }
     } catch (_e) {}
 
     const sourceMapPathOverrides = Object.fromEntries(

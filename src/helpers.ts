@@ -28,18 +28,6 @@ export function isBaseBranch(branchName: string) {
   return inferBaseBranch(branchName) === "";
 }
 
-export async function multiSelectAddons() {
-  const odooPath = `${vscode.workspace.getConfiguration("odooDev").sourceFolder}/odoo/addons`;
-  const enterprisePath = `${vscode.workspace.getConfiguration("odooDev").sourceFolder}/enterprise`;
-
-  const odooAddons = await getAddons(odooPath);
-  let enterpriseAddons: string[] = [];
-  try {
-    enterpriseAddons = await getAddons(enterprisePath);
-  } catch (error) {}
-  return vscode.window.showQuickPick([...odooAddons, ...enterpriseAddons], { canPickMany: true });
-}
-
 export function runShellCommand(
   command: string,
   options: child_process.ExecOptions = {}

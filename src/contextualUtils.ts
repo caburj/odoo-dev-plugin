@@ -3,8 +3,7 @@ import * as os from "os";
 import * as fs from "fs";
 import * as ini from "ini";
 import * as Result from "./Result";
-import { Branch, GitExtension, Repository } from "./dependencies/git";
-import { IExtensionApi } from "./dependencies/python/apiTypes";
+import { Branch, Repository } from "./dependencies/git";
 import { OdooDevBranches } from "./odoo_dev_branch";
 import {
   findRemote,
@@ -15,16 +14,14 @@ import {
   removeComments,
   tryRunShellCommand,
   runShellCommand,
+  getAddons,
 } from "./helpers";
 import { assert } from "console";
 import { DEBUG_JS_NAME, ODOO_TERMINAL_NAME, requirementsRegex } from "./constants";
 import { OdooAddonsTree } from "./odoo_addons";
 import { getActiveBranch, getDebugSessions } from "./state";
 import { withProgress } from "./decorators";
-
-const gitExtension = vscode.extensions.getExtension<GitExtension>("vscode.git")!.exports;
-const git = gitExtension.getAPI(1);
-const pythonExt = vscode.extensions.getExtension<IExtensionApi>("ms-python.python");
+import { IExtensionApi } from "./dependencies/python/apiTypes";
 
 export type ContextualUtils = ReturnType<typeof createContextualUtils>;
 
@@ -46,9 +43,15 @@ async function getBranch(repo: Repository, name: string): Promise<Branch | undef
 
 export function createContextualUtils(
   context: vscode.ExtensionContext,
-  options: { stopServerStatus: vscode.StatusBarItem; addonsPathMap: Record<string, string> }
+  options: {
+    stopServerStatus: vscode.StatusBarItem;
+    addonsPathMap: Record<string, string>;
+    getPythonPath: () => Promise<string>;
+    getRepo: (repoName: string) => Repository | undefined;
+    getRepoPath: (name: string) => string | undefined;
+  }
 ) {
-  const { stopServerStatus, addonsPathMap } = options;
+  const { stopServerStatus, addonsPathMap, getRepo, getPythonPath, getRepoPath } = options;
 
   let odooDevTerminal: vscode.Terminal | undefined;
 
@@ -62,7 +65,7 @@ export function createContextualUtils(
       } else {
         odooDevTerminal = vscode.window.createTerminal({
           name: ODOO_TERMINAL_NAME,
-          cwd: `${vscode.workspace.getConfiguration("odooDev").sourceFolder}/odoo`,
+          cwd: getRepoPath("odoo"),
         });
         vscode.window.onDidCloseTerminal((t) => {
           if (t === odooDevTerminal) {
@@ -110,17 +113,6 @@ export function createContextualUtils(
     }
 
     return configFilePath!;
-  };
-
-  const getPythonPath = async () => {
-    if (!pythonExt) {
-      return "python";
-    } else if (!pythonExt.isActive) {
-      await pythonExt.activate();
-    }
-    const api = pythonExt.exports;
-    const activeInterpreter = api.environments.getActiveEnvironmentPath();
-    return activeInterpreter.path;
   };
 
   const unstash = async (repo: Repository, branch: string) => {
@@ -251,13 +243,6 @@ export function createContextualUtils(
     vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0
       ? vscode.workspace.workspaceFolders[0].uri.fsPath
       : undefined;
-
-  const getRepo = (name: string) => {
-    const sourceFolder = vscode.workspace.getConfiguration("odooDev").sourceFolder as string;
-    const uri = vscode.Uri.joinPath(vscode.Uri.file(sourceFolder), name);
-    const repo = git.getRepository(uri);
-    return repo;
-  };
 
   const getOdooRepo = () => {
     const repo = getRepo("odoo");
@@ -817,23 +802,28 @@ export function createContextualUtils(
   };
 
   const treeDataProvider = new OdooDevBranches(rootPath);
+  const odooAddonsTreeProvider = new OdooAddonsTree(getRepoPath);
 
-  const odooPath = `${vscode.workspace.getConfiguration("odooDev").sourceFolder}/odoo`;
-  const enterprisePath = `${vscode.workspace.getConfiguration("odooDev").sourceFolder}/enterprise`;
-  const enterpriseExists = fs.existsSync(enterprisePath);
-  const odooAddonsTreeProvider = new OdooAddonsTree(
-    odooPath,
-    enterpriseExists ? enterprisePath : undefined
-  );
-
-  const refreshTrees = <A extends any[], R extends any>(cb: (...args: A) => Promise<R>) => {
-    return async (...args: A): Promise<R> => {
-      const result = await cb(...args);
-      treeDataProvider.refresh();
-      odooAddonsTreeProvider.refresh();
-      return result;
+  function refreshTrees<A extends any[], R extends any>(
+    cb: (...args: A) => Promise<R>
+  ): (...args: A) => Promise<R>;
+  function refreshTrees<A extends any[], R extends any>(cb: (...args: A) => R): (...args: A) => R;
+  function refreshTrees<A extends any[], R extends any>(cb: (...args: A) => Promise<R> | R) {
+    return (...args: A) => {
+      const result = cb(...args);
+      if (result instanceof Promise) {
+        return result.then((val) => {
+          treeDataProvider.refresh();
+          odooAddonsTreeProvider.refresh();
+          return val;
+        });
+      } else {
+        treeDataProvider.refresh();
+        odooAddonsTreeProvider.refresh();
+        return result;
+      }
     };
-  };
+  }
 
   const getStartServerArgs = async () => {
     const testFileRegex = /.*\/(addons|enterprise)\/(.*)\/tests\/test_.*\.py/;
@@ -900,7 +890,7 @@ export function createContextualUtils(
     const startServerArgs = await getStartServerArgs();
     const args = [...startServerArgs, "-i", selectedAddons.join(",")];
     const python = await getPythonPath();
-    const odooBin = `${vscode.workspace.getConfiguration("odooDev").sourceFolder}/odoo/odoo-bin`;
+    const odooBin = `${getRepoPath("odoo")}/odoo-bin`;
     startServer(`${python} ${odooBin} ${args.join(" ")}`);
   };
 
@@ -968,10 +958,19 @@ export function createContextualUtils(
     return `http://${host}:${port}` + `${queryParams ? toQueryString(queryParams) : ""}`;
   };
 
-  const getRepoPath = (repo: string) => {
-    const sourceFolder = vscode.workspace.getConfiguration("odooDev").sourceFolder;
-    return `${sourceFolder}/${repo}`;
-  };
+  async function multiSelectAddons() {
+    const odooPath = `${getRepoPath("odoo")}/addons`;
+    const enterprisePath = getRepoPath("enterprise");
+
+    const odooAddons = await getAddons(odooPath);
+    let enterpriseAddons: string[] = [];
+    try {
+      if (enterprisePath) {
+        enterpriseAddons = await getAddons(enterprisePath);
+      }
+    } catch (error) {}
+    return vscode.window.showQuickPick([...odooAddons, ...enterpriseAddons], { canPickMany: true });
+  }
 
   return {
     treeDataProvider,
@@ -1002,5 +1001,7 @@ export function createContextualUtils(
     addonsPathMap,
     getServerUrl,
     getRepoPath,
+    multiSelectAddons,
+    refreshTrees,
   };
 }

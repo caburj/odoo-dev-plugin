@@ -37,7 +37,6 @@ This plugin can help.
 
 ### Settings
 
-- Source Folder (`odooDev.sourceFolder`)
 - Branch Name as DB (`odooDev.branchNameAsDB`)
 - Pull Base Branch on Create (`odooDev.pullBaseOnCreate`)
 - Config Path (`odooDev.odooConfigPath`)

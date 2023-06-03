@@ -17,7 +17,15 @@ export class OdooAddonsTree implements vscode.TreeDataProvider<OdooAddon> {
   readonly onDidChangeTreeData: vscode.Event<OdooAddon | undefined | void> =
     this._onDidChangeTreeData.event;
 
-  constructor(private odooPath: string, private enterprisePath?: string) {}
+  constructor(private getRepoPath: (name: string) => string | undefined) {}
+
+  get odooPath(): string | undefined {
+    return this.getRepoPath("odoo");
+  }
+
+  get enterprisePath(): string | undefined {
+    return this.getRepoPath("enterprise");
+  }
 
   refresh(): void {
     this._onDidChangeTreeData.fire();
@@ -29,6 +37,9 @@ export class OdooAddonsTree implements vscode.TreeDataProvider<OdooAddon> {
 
   async getChildren(element?: OdooAddon): Promise<OdooAddon[]> {
     if (!element) {
+      if (!this.odooPath) {
+        return [];
+      }
       const odooRoot = new OdooAddon("odoo", this.odooPath, "addon-root");
       if (!this.enterprisePath) {
         return [odooRoot];

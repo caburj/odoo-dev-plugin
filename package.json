@@ -17,7 +17,8 @@
   "main": "./out/extension.js",
   "icon": "./resources/not-really-odoo-icon.png",
   "extensionDependencies": [
-    "vscode.git"
+    "vscode.git",
+    "ms-python.python"
   ],
   "contributes": {
     "commands": [
@@ -193,11 +194,6 @@
     "configuration": {
       "title": "Odoo Dev",
       "properties": {
-        "odooDev.sourceFolder": {
-          "title": "Source Folder",
-          "type": "string",
-          "description": "Folder where odoo/odoo repository is cloned. This folder is also expected to have odoo/enterprise and odoo/upgrade repositories."
-        },
         "odooDev.branchNameAsDB": {
           "title": "Branch Name as DB",
           "type": "boolean",
@@ -448,7 +444,14 @@
           "group": "1_chrome@10"
         }
       ]
-    }
+    },
+    "viewsWelcome": [
+      {
+        "view": "odoo-dev-branches",
+        "when": "odooDev.state === 'failed'",
+        "contents": "Open a folder or a workspace that contains the odoo, enterprise and upgrade repositories.\n[Open Folder](command:workbench.action.files.openFolder)\n[Open Workspace](command:workbench.action.openWorkspace)"
+      }
+    ]
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",

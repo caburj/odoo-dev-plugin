@@ -31,7 +31,7 @@ export async function initDevBranches(utils: ContextualUtils): Promise<void> {
 
   const branchSet = new Set<string>();
 
-  for (const branch of [...(await getBranches(odooRepo))]) {
+  for (const branch of [...(!odooRepo ? [] : await getBranches(odooRepo))]) {
     if (DEV_BRANCH_REGEX.test(branch)) {
       branchSet.add(branch);
     }
