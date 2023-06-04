@@ -116,3 +116,7 @@ Initial release.
 
 - imp: remove sourceFolder config and infer from loaded repositories
 - imp: use vscode icons instead of custom
+
+### 0.1.3
+
+- fix: update readme
