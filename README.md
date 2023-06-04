@@ -18,11 +18,11 @@ This plugin can help.
 
 ## Getting started
 
-- Open settings and search for "odoo dev".
-  - Look for the `Source Folder` setting and specify the directory where `odoo`,
-    `enterprise` and/or `upgrade` repositories are cloned.
-  - Also look for `Odoo Config Path` setting to specify the path of the config
-    file to use when starting the odoo server.
+- Open the folder (or workspace) that contains the `odoo`, `enterprise` and/or
+  `upgrade` repositories.
+- Open the settings and search for "odoo dev".
+  - Look for `Config Path` setting to specify the path of the config file that
+    will be used for starting the odoo server.
 - Open command palette and type "odoo dev" to see the list of available
   commands.
 
@@ -90,6 +90,16 @@ This plugin can help.
 - Doesn't support workflows that utilize worktrees.
 - It can only recognize `odoo`, `enterprise` and `upgrade`.
   - Would be nice to support repositories for custom addons.
+
+## Questions you might ask (FAQ)
+
+- Why is the `Odoo Dev: Start Server` command not using the correct python
+  interpreter?
+  - Run the command `Python: Select Interpreter` to specify the python
+    interpeter that will be used in your current workspace.
+- Why did you waste your time on this?
+  - I don't know. Perhaps I just want to learn more about VS Code extension
+    creation.
 
 ## Release Notes
 
