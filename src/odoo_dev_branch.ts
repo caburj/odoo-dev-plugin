@@ -17,15 +17,6 @@ export class OdooDevBranches implements vscode.TreeDataProvider<OdooDevBranch> {
     return element;
   }
 
-  private computeLabel(name: string): string {
-    const activeBranch = getActiveBranch();
-    if (activeBranch === name) {
-      return `[${name}]`;
-    } else {
-      return name;
-    }
-  }
-
   async getChildren(element?: OdooDevBranch): Promise<OdooDevBranch[]> {
     if (!element) {
       const baseBranches = [...getBaseBranches()];
@@ -45,12 +36,12 @@ export class OdooDevBranches implements vscode.TreeDataProvider<OdooDevBranch> {
         const isActive = name === getActiveBranch();
         return new OdooDevBranch(
           name,
-          this.computeLabel(name),
           name,
           isActive ? "active-base-branch" : "base-branch",
           devBranches.length > 0
             ? vscode.TreeItemCollapsibleState.Expanded
-            : vscode.TreeItemCollapsibleState.None
+            : vscode.TreeItemCollapsibleState.None,
+          isActive
         );
       });
     } else {
@@ -61,10 +52,10 @@ export class OdooDevBranches implements vscode.TreeDataProvider<OdooDevBranch> {
         const isActive = name === getActiveBranch();
         return new OdooDevBranch(
           name,
-          this.computeLabel(name),
           element.base,
           isActive ? "active-dev-branch" : "dev-branch",
-          vscode.TreeItemCollapsibleState.None
+          vscode.TreeItemCollapsibleState.None,
+          isActive
         );
       });
     }
@@ -74,16 +65,27 @@ export class OdooDevBranches implements vscode.TreeDataProvider<OdooDevBranch> {
 export class OdooDevBranch extends vscode.TreeItem {
   constructor(
     public readonly name: string,
-    public readonly label: string,
     public readonly base: string,
     public readonly contextValue: string,
     public readonly collapsibleState: vscode.TreeItemCollapsibleState,
+    public readonly isActive: boolean,
     public readonly command?: vscode.Command
   ) {
-    super(label, collapsibleState);
+    super(name, collapsibleState);
     this.id = name;
     this.base = base;
     this.name = name;
     this.contextValue = contextValue;
+    this.isActive = isActive;
+    if (this.isActive) {
+      this.iconPath = new vscode.ThemeIcon("check-all");
+      this.description = "active";
+    } else {
+      if (this.name === this.base) {
+        this.iconPath = new vscode.ThemeIcon("repo");
+      } else {
+        this.iconPath = new vscode.ThemeIcon("git-branch");
+      }
+    }
   }
 }

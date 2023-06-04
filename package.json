@@ -33,42 +33,27 @@
       {
         "command": "odooDev.fetchOrCreate",
         "title": "Odoo Dev: Fetch/Create",
-        "icon": {
-          "light": "resources/plus-light.svg",
-          "dark": "resources/plus-dark.svg"
-        }
+        "icon": "$(add)"
       },
       {
         "command": "odooDev.deleteBranch",
         "title": "Odoo Dev: Delete",
-        "icon": {
-          "light": "resources/delete-branch-light.svg",
-          "dark": "resources/delete-branch-dark.svg"
-        }
+        "icon": "$(x)"
       },
       {
         "command": "odooDev.removeBranch",
         "title": "Odoo Dev: Remove",
-        "icon": {
-          "light": "resources/delete-branch-light.svg",
-          "dark": "resources/delete-branch-dark.svg"
-        }
+        "icon": "$(x)"
       },
       {
         "command": "odooDev.checkoutBranch",
         "title": "Odoo Dev: Checkout",
-        "icon": {
-          "light": "resources/checkout-light.svg",
-          "dark": "resources/checkout-dark.svg"
-        }
+        "icon": "$(export)"
       },
       {
         "command": "odooDev.selectBranch",
         "title": "Odoo Dev: Select",
-        "icon": {
-          "light": "resources/checkout-light.svg",
-          "dark": "resources/checkout-dark.svg"
-        }
+        "icon": "$(export)"
       },
       {
         "command": "odooDev.fetchStableBranch",
@@ -77,42 +62,26 @@
       {
         "command": "odooDev.resetActiveBranch",
         "title": "Odoo Dev: Reset Active Branch",
-        "icon": {
-          "light": "resources/refresh-light.svg",
-          "dark": "resources/refresh-dark.svg"
-        }
+        "icon": "$(sync)"
       },
       {
         "command": "odooDev.startFreshServer",
-        "title": "Odoo Dev: Start Fresh Server",
-        "icon": {
-          "light": "resources/start-fresh-light.svg",
-          "dark": "resources/start-fresh-dark.svg"
-        }
+        "title": "Odoo Dev: Start Fresh Server"
       },
       {
         "command": "odooDev.stopActiveServer",
         "title": "Odoo Dev: Stop Active Server",
-        "icon": {
-          "light": "resources/stop-server-light.svg",
-          "dark": "resources/stop-server-dark.svg"
-        }
+        "icon": "$(debug-stop)"
       },
       {
         "command": "odooDev.startServer",
         "title": "Odoo Dev: Start Server",
-        "icon": {
-          "light": "resources/start-server-light.svg",
-          "dark": "resources/start-server-dark.svg"
-        }
+        "icon": "$(play)"
       },
       {
         "command": "odooDev.debugServer",
         "title": "Odoo Dev: Debug Server",
-        "icon": {
-          "light": "resources/debug-server-light.svg",
-          "dark": "resources/debug-server-dark.svg"
-        }
+        "icon": "$(debug-alt-small)"
       },
       {
         "command": "odooDev.startServerWithInstall",
@@ -153,18 +122,12 @@
       {
         "command": "odooDev.openOdooConf",
         "title": "Odoo Dev: Config File",
-        "icon": {
-          "light": "resources/config-file-light.svg",
-          "dark": "resources/config-file-dark.svg"
-        }
+        "icon": "$(gear)"
       },
       {
         "command": "odooDev.openLinkedNote",
         "title": "Odoo Dev: Linked Note",
-        "icon": {
-          "light": "resources/linked-note-light.svg",
-          "dark": "resources/linked-note-dark.svg"
-        }
+        "icon": "$(file-text)"
       },
       {
         "command": "odooDev.openPullRequestLinkOdoo",
@@ -257,18 +220,12 @@
       {
         "id": "odooDev.links",
         "label": "Odoo Dev Links",
-        "icon": {
-          "dark": "resources/links-dark.svg",
-          "light": "resources/links-light.svg"
-        }
+        "icon": "$(globe)"
       },
       {
         "id": "odooDev.openChrome",
         "label": "Odoo Dev: Open Chrome",
-        "icon": {
-          "light": "resources/chrome-light.svg",
-          "dark": "resources/chrome-dark.svg"
-        }
+        "icon": "$(compass)"
       }
     ],
     "menus": {
