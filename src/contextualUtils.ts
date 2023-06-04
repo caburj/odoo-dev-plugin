@@ -21,7 +21,6 @@ import { DEBUG_JS_NAME, ODOO_TERMINAL_NAME, requirementsRegex } from "./constant
 import { OdooAddonsTree } from "./odoo_addons";
 import { getActiveBranch, getDebugSessions } from "./state";
 import { withProgress } from "./decorators";
-import { IExtensionApi } from "./dependencies/python/apiTypes";
 
 export type ContextualUtils = ReturnType<typeof createContextualUtils>;
 
