@@ -99,5 +99,10 @@ Initial release.
 
 ### 0.1.1
 
-- FIX: use user's python selection
-- FIX: always show the branches
+- fix: use user's python selection
+- fix: always show the branches
+
+### 0.1.2
+
+- imp: remove sourceFolder config and infer from loaded repositories
+- imp: use vscode icons instead of custom
