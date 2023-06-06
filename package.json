@@ -2,7 +2,7 @@
   "name": "odoo-dev-plugin",
   "displayName": "Odoo Dev",
   "description": "",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "publisher": "JosephCaburnay",
   "repository": {
     "url": "https://github.com/caburj/odoo-dev-plugin.git"

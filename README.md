@@ -105,7 +105,7 @@ This plugin can help.
 
 ### 0.1.0
 
-Initial release.
+- initial release
 
 ### 0.1.1
 
@@ -120,3 +120,8 @@ Initial release.
 ### 0.1.3
 
 - fix: update readme
+
+### 0.1.4
+
+- imp: rebase active branch command
+- imp: fetch based on fork name
