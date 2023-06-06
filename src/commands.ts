@@ -112,16 +112,24 @@ export const fetchBranch = createCommand(
       );
     }
 
-    const base = inferBaseBranch(input);
+    let forkName: string | undefined;
+    let branch: string;
+    if (input.includes(":")) {
+      [forkName, branch] = input.split(":").map((s) => s.trim());
+    } else {
+      branch = input.trim();
+    }
+
+    const base = inferBaseBranch(branch);
     const baseBranches = getBaseBranches();
     if (!baseBranches.includes(base)) {
       addBaseBranch(base);
-    } else if (devBranchExists({ base, name: input })) {
-      throw new Error(`'${input}' already exists!`);
+    } else if (devBranchExists({ base, name: branch })) {
+      throw new Error(`'${branch}' already exists!`);
     }
-    await utils.fetchBranches(base, input, dirtyRepos);
-    setActiveBranch(input);
-    addDevBranch(base, input);
+    await utils.fetchBranches(base, branch, dirtyRepos, forkName);
+    setActiveBranch(branch);
+    addDevBranch(base, branch);
   })
 );
 
@@ -157,14 +165,22 @@ export const fetchOrCreate = createCommand(
       );
     }
 
-    const base = inferBaseBranch(input);
-
-    if (devBranchExists({ base, name: input })) {
-      throw new Error(`'${input}' already exists!`);
+    let forkName: string | undefined;
+    let branch: string;
+    if (input.includes(":")) {
+      [forkName, branch] = input.split(":").map((s) => s.trim());
+    } else {
+      branch = input.trim();
     }
-    await utils.fetchOrCreateBranches(base, input, dirtyRepos);
-    setActiveBranch(input);
-    addDevBranch(base, input);
+
+    const base = inferBaseBranch(branch);
+
+    if (devBranchExists({ base, name: branch })) {
+      throw new Error(`'${branch}' already exists!`);
+    }
+    await utils.fetchOrCreateBranches(base, branch, dirtyRepos, forkName);
+    setActiveBranch(branch);
+    addDevBranch(base, branch);
   })
 );
 

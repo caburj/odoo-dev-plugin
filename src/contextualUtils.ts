@@ -279,9 +279,20 @@ export function createContextualUtils(
     repo: Repository,
     base: string,
     branch: string,
-    isDirty: boolean
+    isDirty: boolean,
+    fork?: string
   ) => {
-    const remote = (await findRemote(repo, branch)) || "origin";
+    let remote = "origin";
+    if (fork) {
+      for (const r of repo.state.remotes.filter(
+        (r) => r.name === fork || r.fetchUrl?.includes(fork)
+      )) {
+        remote = r.name;
+        break;
+      }
+    } else {
+      remote = (await findRemote(repo, branch)) || "origin";
+    }
     let branchToCheckout = branch;
     const fetchRes = await Result.call(() => repo.fetch(remote, branch));
     if (!Result.check(fetchRes)) {
@@ -323,18 +334,30 @@ export function createContextualUtils(
     return Result.success();
   };
 
-  const fetchBranches = async (base: string, branch: string, dirtyRepos: string[]) => {
+  const fetchBranches = async (
+    base: string,
+    branch: string,
+    dirtyRepos: string[],
+    fork?: string
+  ) => {
     const odoo = getOdooRepo();
     const enterprise = getRepo("enterprise");
     const upgrade = getRepo("upgrade");
 
     const fetchProms = [
-      fetchBranch("odoo", odoo, base, branch, dirtyRepos.includes("odoo")),
+      fetchBranch("odoo", odoo, base, branch, dirtyRepos.includes("odoo"), fork),
       enterprise
-        ? fetchBranch("enterprise", enterprise, base, branch, dirtyRepos.includes("enterprise"))
+        ? fetchBranch(
+            "enterprise",
+            enterprise,
+            base,
+            branch,
+            dirtyRepos.includes("enterprise"),
+            fork
+          )
         : Promise.resolve(Result.success()),
       upgrade && base === "master"
-        ? fetchBranch("upgrade", upgrade, base, branch, dirtyRepos.includes("upgrade"))
+        ? fetchBranch("upgrade", upgrade, base, branch, dirtyRepos.includes("upgrade"), fork)
         : Promise.resolve(Result.success()),
     ];
 
@@ -351,7 +374,17 @@ export function createContextualUtils(
     }
   };
 
-  const fetchOrCreateBranches = async (base: string, branch: string, dirtyRepos: string[]) => {
+  const fetchOrCreateBranches = async (
+    base: string,
+    branch: string,
+    dirtyRepos: string[],
+    fork?: string
+  ) => {
+    // If fork is provided, we shortcut to fetchBranches.
+    if (fork) {
+      return fetchBranches(base, branch, dirtyRepos, fork);
+    }
+
     const odoo = getOdooRepo();
     const enterprise = getRepo("enterprise");
     const upgrade = getRepo("upgrade");
