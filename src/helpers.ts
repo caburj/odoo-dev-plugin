@@ -4,6 +4,7 @@ import * as child_process from "child_process";
 import * as psTree from "ps-tree";
 import * as Result from "./Result";
 import { Repository } from "./dependencies/git";
+import { BASE_BRANCH_REGEX, DEV_BRANCH_REGEX } from "./constants";
 
 export function getFoldersInDirectory(directoryPath: string) {
   const filesAndDirs = fs.readdirSync(directoryPath);
@@ -207,4 +208,32 @@ export async function findRemote(
     }
   }
   return undefined;
+}
+
+export function getBase(branch: string) {
+  const check = branch.match(DEV_BRANCH_REGEX);
+  if (check) {
+    return check[1].replace(/-$/, "");
+  } else {
+    const checkIfBase = branch.match(BASE_BRANCH_REGEX);
+    if (checkIfBase) {
+      return checkIfBase[1];
+    }
+  }
+}
+
+export async function getRemoteOfBase(repo: Repository, branch: string) {
+  const base = getBase(branch);
+  if (base) {
+    const remoteSlashBranch = await runShellCommand(
+      `git rev-parse --abbrev-ref --symbolic-full-name ${base}@{u}`,
+      {
+        cwd: repo.rootUri.fsPath,
+      }
+    );
+    const [remote, branch] = remoteSlashBranch.split("/");
+    if (remote && branch) {
+      return remote;
+    }
+  }
 }

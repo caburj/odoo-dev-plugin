@@ -4,7 +4,7 @@
 import * as vscode from "vscode";
 import { BASE_BRANCH_REGEX, DEV_BRANCH_REGEX, LINE_BREAK_REGEX } from "./constants";
 import { ContextualUtils } from "./contextualUtils";
-import { runShellCommand } from "./helpers";
+import { getBase, runShellCommand } from "./helpers";
 
 const debugSessions: vscode.DebugSession[] = [];
 const baseBranches: string[] = [];
@@ -182,13 +182,6 @@ function extractBranchList(output: string): string[] {
 async function getBranches(repoPath: string): Promise<string[]> {
   const odooOutput = await runShellCommand("git branch", { cwd: repoPath });
   return extractBranchList(odooOutput);
-}
-
-function getBase(branch: string) {
-  const check = branch.match(DEV_BRANCH_REGEX);
-  if (check) {
-    return check[1].replace(/-$/, "");
-  }
 }
 
 function exists<T>(items: T[], pred: (x: T) => boolean): boolean {

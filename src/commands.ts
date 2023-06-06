@@ -316,6 +316,32 @@ export const checkoutBranch = createCommand(
   })
 );
 
+export const rebaseBranch = createCommand(
+  "odooDev.rebaseActiveBranch",
+  screamOnError(async (utils, item) => {
+    if (!Result.check(await utils.ensureNoRunningServer())) {
+      return;
+    }
+
+    const dirtyRepos = await utils.getDirtyRepos();
+    if (
+      dirtyRepos.length !== 0 &&
+      !(vscode.workspace.getConfiguration("odooDev").autoStash as boolean)
+    ) {
+      throw new Error(
+        `There are uncommitted changes in: ${dirtyRepos.join(
+          ", "
+        )}. Activate "Auto Stash" config to stash them automatically.`
+      );
+    }
+
+    const activeBranch = getActiveBranch();
+    if (activeBranch) {
+      await utils.rebaseBranches(activeBranch, dirtyRepos);
+    }
+  })
+);
+
 export const resetActiveBranch = createCommand(
   "odooDev.resetActiveBranch",
   screamOnError(async (utils) => {

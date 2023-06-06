@@ -15,6 +15,8 @@ import {
   tryRunShellCommand,
   runShellCommand,
   getAddons,
+  getRemoteOfBase,
+  getBase,
 } from "./helpers";
 import { assert } from "console";
 import { DEBUG_JS_NAME, ODOO_TERMINAL_NAME, requirementsRegex } from "./constants";
@@ -697,6 +699,77 @@ export function createContextualUtils(
     }
   };
 
+  const rebaseBranch = async (repo: Repository, base: string, branch: string, isDirty: boolean) => {
+    // stash changes
+    if (isDirty && (vscode.workspace.getConfiguration("odooDev").autoStash as boolean)) {
+      const stashRes = await tryRunShellCommand(`git stash -u`, { cwd: repo.rootUri.fsPath });
+      if (!Result.check(stashRes)) {
+        return Result.fail(
+          new Error(
+            `Failed to stash changes in '${repo.rootUri.fsPath}' because of "${stashRes.error.message}".`
+          )
+        );
+      }
+    }
+
+    // pull --rebase
+    const remoteOfBase = await getRemoteOfBase(repo, branch);
+    if (!remoteOfBase) {
+      return Result.fail(
+        new Error(`Failed to rebase '${branch}' because no remote found for the base branch.`)
+      );
+    }
+
+    const pullRes = await tryRunShellCommand(`git pull --rebase --quiet ${remoteOfBase} ${base}`, {
+      cwd: repo.rootUri.fsPath,
+    });
+
+    if (!Result.check(pullRes)) {
+      return Result.fail(
+        new Error(
+          `Failed to rebase '${branch}' because of "${pullRes.error.message}".\n\nYou probably need to resolve conflicts manually.`
+        )
+      );
+    }
+
+    // unstash changes
+    if (isDirty && (vscode.workspace.getConfiguration("odooDev").autoStash as boolean)) {
+      await unstash(repo, branch);
+    }
+
+    return Result.success();
+  };
+
+  const rebaseBranches = async (branch: string, dirtyRepos: string[]) => {
+    const enterprise = getRepo("enterprise");
+    const upgrade = getRepo("upgrade");
+    const base = getBase(branch);
+
+    const tasks = [
+      base
+        ? rebaseBranch(getOdooRepo(), base, branch, dirtyRepos.includes("odoo"))
+        : Promise.resolve(Result.success()),
+      enterprise && base
+        ? rebaseBranch(enterprise, base, branch, dirtyRepos.includes("enterprise"))
+        : Promise.resolve(Result.success()),
+      upgrade && base === "master"
+        ? rebaseBranch(upgrade, base, branch, dirtyRepos.includes("upgrade"))
+        : Promise.resolve(Result.success()),
+    ];
+
+    const spinner = withProgress({
+      message: `Rebasing '${branch}'...`,
+      cb: () => Promise.all(tasks),
+    });
+    const results = await spinner();
+    const [successes, errors] = Result.partition(results);
+    if (successes.length === 0) {
+      throw new Error("Failed to rebase the branch from any of the repositories.");
+    } else if (errors.length > 0) {
+      vscode.window.showErrorMessage(errors.map((f) => f.error.message).join("; "));
+    }
+  };
+
   const resetBranch = async (
     repoName: string,
     repo: Repository,
@@ -988,6 +1061,7 @@ export function createContextualUtils(
     fetchOrCreateBranches: refreshTrees(fetchOrCreateBranches),
     checkoutBranches: refreshTrees(checkoutBranches),
     deleteBranches: refreshTrees(deleteBranches),
+    rebaseBranches: refreshTrees(rebaseBranches),
     resetBranches,
     getTestTag,
     ensureNoActiveServer,
