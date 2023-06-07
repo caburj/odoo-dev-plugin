@@ -125,3 +125,9 @@ This plugin can help.
 
 - imp: rebase active branch command
 - imp: fetch based on fork name
+
+### 0.1.5
+
+- fix: look for the correct remote
+- fix: do not assume origin as the main remote
+- imp: start server button at status bar
