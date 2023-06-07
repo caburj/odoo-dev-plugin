@@ -426,13 +426,18 @@ export function createContextualUtils(
     }
   };
 
+  const getRemoteName = (repo: Repository, fork: string) => {
+    return repo.state.remotes.find((r) => isMatchingFork(r, fork))?.name || "origin";
+  };
+
   const fetchStableBranch = async (
     repoName: string,
     repo: Repository,
     name: string,
     isDirty: boolean
   ) => {
-    const fetchRes = await Result.call(() => repo.fetch("origin", name));
+    const remote = getRemoteName(repo, "odoo");
+    const fetchRes = await Result.call(() => repo.fetch(remote, name));
     if (!Result.check(fetchRes)) {
       return Result.fail(
         new Error(
@@ -452,7 +457,7 @@ export function createContextualUtils(
       }
     }
 
-    const checkoutRes = await tryRunShellCommand(`git checkout --track origin/${name}`, {
+    const checkoutRes = await tryRunShellCommand(`git checkout --track ${remote}/${name}`, {
       cwd: repo.rootUri.fsPath,
     });
     if (!Result.check(checkoutRes)) {
