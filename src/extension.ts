@@ -32,14 +32,15 @@ const ALIASES: Record<string, string[]> = {
 
 let addonsPathMap: Record<string, string> = {};
 
-let stopServerStatus: vscode.StatusBarItem;
+let odooServerStatus: vscode.StatusBarItem;
 
 export async function activate(context: vscode.ExtensionContext) {
   vscode.commands.executeCommand("setContext", "odooDev.state", "activating");
 
-  stopServerStatus = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left);
-  stopServerStatus.command = "odooDev.stopActiveServer";
-  stopServerStatus.text = "$(debug-stop) Stop Odoo Server";
+  odooServerStatus = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left);
+  odooServerStatus.command = "odooDev.startServer";
+  odooServerStatus.text = "$(debug-start) Start Odoo Server";
+  odooServerStatus.show();
 
   if (git.state === "uninitialized") {
     // Wait for git to initialize.
@@ -89,7 +90,7 @@ export async function activate(context: vscode.ExtensionContext) {
   }
 
   const utils = createContextualUtils(context, {
-    stopServerStatus,
+    odooServerStatus,
     addonsPathMap,
     getPythonPath,
     getRepo,
@@ -100,7 +101,8 @@ export async function activate(context: vscode.ExtensionContext) {
   vscode.debug.onDidTerminateDebugSession((session) => {
     if (session.name === DEBUG_PYTHON_NAME) {
       vscode.commands.executeCommand("setContext", "odooDev.hasActiveServer", false);
-      stopServerStatus.hide();
+      odooServerStatus.command = "odooDev.startServer";
+      odooServerStatus.text = "$(debug-start) Start Odoo Server";
     }
     debugSessions.splice(debugSessions.indexOf(session), 1);
   });
@@ -131,7 +133,7 @@ export async function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(disposable);
   }
 
-  context.subscriptions.push(stopServerStatus);
+  context.subscriptions.push(odooServerStatus);
   context.subscriptions.push(
     // When a new repository is added, we need to update the repositories list.
     git.onDidOpenRepository(

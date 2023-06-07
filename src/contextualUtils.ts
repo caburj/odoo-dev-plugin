@@ -45,14 +45,14 @@ async function getBranch(repo: Repository, name: string): Promise<Branch | undef
 export function createContextualUtils(
   context: vscode.ExtensionContext,
   options: {
-    stopServerStatus: vscode.StatusBarItem;
+    odooServerStatus: vscode.StatusBarItem;
     addonsPathMap: Record<string, string>;
     getPythonPath: () => Promise<string>;
     getRepo: (repoName: string) => Repository | undefined;
     getRepoPath: (name: string) => string | undefined;
   }
 ) {
-  const { stopServerStatus, addonsPathMap, getRepo, getPythonPath, getRepoPath } = options;
+  const { odooServerStatus, addonsPathMap, getRepo, getPythonPath, getRepoPath } = options;
 
   let odooDevTerminal: vscode.Terminal | undefined;
 
@@ -994,16 +994,19 @@ export function createContextualUtils(
       const pid = await terminal.processId;
       if (!pid) {
         vscode.commands.executeCommand("setContext", "odooDev.hasActiveServer", false);
-        stopServerStatus.hide();
+        odooServerStatus.command = "odooDev.startServer";
+        odooServerStatus.text = "$(debug-start) Start Odoo Server";
       } else {
         const isRunning = await isOdooServerRunning(pid);
         if (isRunning) {
           vscode.commands.executeCommand("setContext", "odooDev.hasActiveServer", true);
-          stopServerStatus.show();
+          odooServerStatus.command = "odooDev.stopActiveServer";
+          odooServerStatus.text = "$(debug-stop) Stop Odoo Server";
           timeout = setTimeout(poll, 500);
         } else {
           vscode.commands.executeCommand("setContext", "odooDev.hasActiveServer", false);
-          stopServerStatus.hide();
+          odooServerStatus.command = "odooDev.startServer";
+          odooServerStatus.text = "$(debug-start) Start Odoo Server";
           clearTimeout(timeout);
         }
       }
@@ -1120,7 +1123,7 @@ export function createContextualUtils(
     ensureNoDebugSession,
     ensureNoRunningServer,
     getDirtyRepos,
-    stopServerStatus,
+    odooServerStatus,
     getGithubAccessToken,
     isDependentOn,
     addonsPathMap,
