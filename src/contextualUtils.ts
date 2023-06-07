@@ -3,7 +3,7 @@ import * as os from "os";
 import * as fs from "fs";
 import * as ini from "ini";
 import * as Result from "./Result";
-import { Branch, Repository } from "./dependencies/git";
+import { Branch, Remote, Repository } from "./dependencies/git";
 import { OdooDevBranches } from "./odoo_dev_branch";
 import {
   findRemote,
@@ -19,7 +19,7 @@ import {
   getBase,
 } from "./helpers";
 import { assert } from "console";
-import { DEBUG_JS_NAME, ODOO_TERMINAL_NAME, requirementsRegex } from "./constants";
+import { DEBUG_JS_NAME, FETCH_URL_REGEX, ODOO_TERMINAL_NAME, requirementsRegex } from "./constants";
 import { OdooAddonsTree } from "./odoo_addons";
 import { getActiveBranch, getDebugSessions } from "./state";
 import { withProgress } from "./decorators";
@@ -274,6 +274,22 @@ export function createContextualUtils(
     return results.filter((r) => !r.result).map((r) => r.tag);
   };
 
+  const isMatchingFork = (r: Remote, name: string) => {
+    const nameMatched = r.name === name;
+    if (nameMatched) {
+      return true;
+    } else if (r.fetchUrl) {
+      const match = r.fetchUrl.match(FETCH_URL_REGEX);
+      if (match) {
+        return match[1] === name;
+      } else {
+        return false;
+      }
+    } else {
+      return false;
+    }
+  };
+
   const fetchBranch = async (
     repoName: string,
     repo: Repository,
@@ -284,9 +300,7 @@ export function createContextualUtils(
   ) => {
     let remote = "origin";
     if (fork) {
-      for (const r of repo.state.remotes.filter(
-        (r) => r.name === fork || r.fetchUrl?.includes(fork)
-      )) {
+      for (const r of repo.state.remotes.filter((r) => isMatchingFork(r, fork))) {
         remote = r.name;
         break;
       }
