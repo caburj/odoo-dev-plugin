@@ -19,7 +19,13 @@ import {
   getBase,
 } from "./helpers";
 import { assert } from "console";
-import { DEBUG_JS_NAME, FETCH_URL_REGEX, ODOO_TERMINAL_NAME, requirementsRegex } from "./constants";
+import {
+  DEBUG_JS_NAME,
+  FETCH_URL_REGEX,
+  ODOO_SERVER_TERMINAL,
+  ODOO_SHELL_TERMINAL,
+  requirementsRegex,
+} from "./constants";
 import { OdooAddonsTree } from "./odoo_addons";
 import { getActiveBranch, getDebugSessions } from "./state";
 import { withProgress } from "./decorators";
@@ -54,29 +60,36 @@ export function createContextualUtils(
 ) {
   const { odooServerStatus, addonsPathMap, getRepo, getPythonPath, getRepoPath } = options;
 
-  let odooDevTerminal: vscode.Terminal | undefined;
+  const odooDevTerminals = new Map<string, vscode.Terminal>();
 
-  const getOdooDevTerminal = () => {
-    if (!odooDevTerminal) {
-      const existingTerminals = vscode.window.terminals.filter(
-        (t) => t.name === ODOO_TERMINAL_NAME
-      );
+  const getOdooDevTerminal = (name: string) => {
+    let terminal = odooDevTerminals.get(name);
+    if (!terminal) {
+      const existingTerminals = vscode.window.terminals.filter((t) => t.name === name);
       if (existingTerminals.length > 0) {
-        odooDevTerminal = existingTerminals[0];
+        terminal = existingTerminals[0];
       } else {
-        odooDevTerminal = vscode.window.createTerminal({
-          name: ODOO_TERMINAL_NAME,
+        terminal = vscode.window.createTerminal({
+          name,
           cwd: getRepoPath("odoo"),
         });
         vscode.window.onDidCloseTerminal((t) => {
-          if (t === odooDevTerminal) {
-            odooDevTerminal = undefined;
+          if (t === terminal) {
+            terminal = undefined;
           }
         });
       }
-      odooDevTerminal.show();
+      terminal.show();
     }
-    return odooDevTerminal;
+    return terminal;
+  };
+
+  const getOdooServerTerminal = () => {
+    return getOdooDevTerminal(ODOO_SERVER_TERMINAL);
+  };
+
+  const getOdooShellTerminal = () => {
+    return getOdooDevTerminal(ODOO_SHELL_TERMINAL);
   };
 
   const getConfigFilePath = () => {
@@ -148,6 +161,12 @@ export function createContextualUtils(
     return args;
   };
 
+  const getOdooShellCommandArgs = () => {
+    const normalArgs = getNormalStartServerArgs();
+    // TODO: Make the port configurable.
+    return ["shell", ...normalArgs, "-p", "9999"];
+  };
+
   const getstartSelectedTestArgs = (testTag: string) => {
     const args = getNormalStartServerArgs();
     return [...args, "--stop-after-init", "--test-enable", "--test-tags", testTag];
@@ -182,7 +201,7 @@ export function createContextualUtils(
   };
 
   async function ensureNoActiveServer(shouldConfirm = true) {
-    const terminalPID = await getOdooDevTerminal().processId;
+    const terminalPID = await getOdooServerTerminal().processId;
     if (!terminalPID) {
       return Result.success();
     }
@@ -984,8 +1003,7 @@ export function createContextualUtils(
     return commandArgs;
   };
 
-  const startServer = async (command: string) => {
-    const terminal = getOdooDevTerminal();
+  const startServer = async (command: string, terminal: vscode.Terminal) => {
     terminal.show();
     terminal.sendText(command);
 
@@ -1018,7 +1036,7 @@ export function createContextualUtils(
     const args = [...startServerArgs, "-i", selectedAddons.join(",")];
     const python = await getPythonPath();
     const odooBin = `${getRepoPath("odoo")}/odoo-bin`;
-    startServer(`${python} ${odooBin} ${args.join(" ")}`);
+    startServer(`${python} ${odooBin} ${args.join(" ")}`, getOdooServerTerminal());
   };
 
   let githubSession: vscode.AuthenticationSession | undefined;
@@ -1103,7 +1121,9 @@ export function createContextualUtils(
     treeDataProvider,
     odooAddonsTreeProvider,
     getConfigFilePath,
-    getOdooDevTerminal,
+    getOdooServerTerminal,
+    getOdooShellTerminal,
+    getOdooShellCommandArgs,
     getPythonPath,
     getStartServerArgs,
     startServer,

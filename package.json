@@ -88,6 +88,14 @@
         "icon": "$(debug-alt-small)"
       },
       {
+        "command": "odooDev.startOdooShell",
+        "title": "Odoo Dev: Start Odoo Shell"
+      },
+      {
+        "command": "odooDev.debugOdooShell",
+        "title": "Odoo Dev: Debug Odoo Shell"
+      },
+      {
         "command": "odooDev.startServerWithInstall",
         "title": "Odoo Dev: Start Server With Install..."
       },

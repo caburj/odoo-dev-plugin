@@ -12,7 +12,7 @@ import {
 } from "./helpers";
 import { type ContextualUtils } from "./contextualUtils";
 import { OdooDevBranch } from "./odoo_dev_branch";
-import { DEBUG_JS_NAME, DEBUG_PYTHON_NAME } from "./constants";
+import { DEBUG_JS_NAME, DEBUG_ODOO_SHELL, DEBUG_PYTHON_NAME } from "./constants";
 import { screamOnError } from "./decorators";
 import {
   addBaseBranch,
@@ -424,7 +424,10 @@ export const startServer = createCommand(
     const commandArgs = await utils.getStartServerArgs();
     const python = await utils.getPythonPath();
     const odooBin = `${utils.getRepoPath("odoo")}/odoo-bin`;
-    utils.startServer(`${python} ${odooBin} ${commandArgs.join(" ")}`);
+    utils.startServer(
+      `${python} ${odooBin} ${commandArgs.join(" ")}`,
+      utils.getOdooServerTerminal()
+    );
   })
 );
 
@@ -452,6 +455,39 @@ export const debugServer = createCommand(
     vscode.commands.executeCommand("setContext", "odooDev.hasActiveServer", true);
     utils.odooServerStatus.command = "odooDev.stopActiveServer";
     utils.odooServerStatus.text = "$(debug-stop) Stop Odoo Server";
+  })
+);
+
+export const startOdooShell = createCommand(
+  "odooDev.startOdooShell",
+  screamOnError(async (utils) => {
+    const commandArgs = utils.getOdooShellCommandArgs();
+    const python = await utils.getPythonPath();
+    const odooBin = `${utils.getRepoPath("odoo")}/odoo-bin`;
+    utils.startServer(
+      `${python} ${odooBin} ${commandArgs.join(" ")}`,
+      utils.getOdooShellTerminal()
+    );
+  })
+);
+
+export const debugOdooShell = createCommand(
+  "odooDev.debugOdooShell",
+  screamOnError(async (utils) => {
+    const odooBin = `${utils.getRepoPath("odoo")}/odoo-bin`;
+    const commandArgs = utils.getOdooShellCommandArgs();
+    const debugOdooPythonLaunchConfig: vscode.DebugConfiguration = {
+      name: DEBUG_ODOO_SHELL,
+      type: "python",
+      request: "launch",
+      stopOnEntry: false,
+      console: "integratedTerminal",
+      cwd: `${utils.getRepoPath("odoo")}`,
+      python: await utils.getPythonPath(),
+      program: odooBin,
+      args: commandArgs,
+    };
+    await vscode.debug.startDebugging(undefined, debugOdooPythonLaunchConfig);
   })
 );
 
@@ -522,7 +558,7 @@ export const startServerWithUpdate = createCommand(
 
     const python = await utils.getPythonPath();
     const odooBin = `${utils.getRepoPath("odoo")}/odoo-bin`;
-    utils.startServer(`${python} ${odooBin} ${args.join(" ")}`);
+    utils.startServer(`${python} ${odooBin} ${args.join(" ")}`, utils.getOdooServerTerminal());
   })
 );
 
@@ -604,8 +640,8 @@ export const dropActiveDB = createCommand(
     }
     const dbName = utils.getActiveDBName();
     if (dbName) {
-      utils.getOdooDevTerminal().show();
-      utils.getOdooDevTerminal().sendText(`dropdb ${dbName}`);
+      utils.getOdooServerTerminal().show();
+      utils.getOdooServerTerminal().sendText(`dropdb ${dbName}`);
     }
   })
 );
