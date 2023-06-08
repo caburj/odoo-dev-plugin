@@ -92,7 +92,7 @@ export function createContextualUtils(
     return getOdooDevTerminal(ODOO_SHELL_TERMINAL);
   };
 
-  const getConfigFilePath = () => {
+  const getConfigFilePath = async () => {
     let configFilePath: string | undefined;
     let res = Result.call(() => {
       const odooConfigPath = vscode.workspace.getConfiguration("odooDev").odooConfigPath;
@@ -121,9 +121,29 @@ export function createContextualUtils(
     }
 
     if (!Result.check(res)) {
-      throw new Error(
-        `Unable to find an odoo config file. Generate a config file using '--save' option when executing 'odoo-bin' or if you already have a config file, specify it in the settings "Odoo Dev Config Path".`
+      const res = await vscode.window.showInformationMessage(
+        "No config file specified. Would you like to select one?",
+        "Yes",
+        "No"
       );
+      if (res === "Yes") {
+        const configFilePathUri = await vscode.window.showOpenDialog({
+          canSelectFiles: true,
+          canSelectFolders: false,
+          canSelectMany: false,
+          openLabel: "Select Config",
+        });
+        if (configFilePathUri) {
+          configFilePath = configFilePathUri[0].fsPath;
+          vscode.workspace
+            .getConfiguration("odooDev")
+            .update("odooConfigPath", configFilePath, vscode.ConfigurationTarget.Global);
+        } else {
+          throw new Error("Unable to run command. No config file selected.");
+        }
+      } else {
+        throw new Error("Unable to run command. No config file specified.");
+      }
     }
 
     return configFilePath!;
@@ -149,8 +169,8 @@ export function createContextualUtils(
     }
   };
 
-  const getNormalStartServerArgs = () => {
-    const configFilePath = getConfigFilePath();
+  const getNormalStartServerArgs = async () => {
+    const configFilePath = await getConfigFilePath();
     const args = ["-c", configFilePath];
     if (vscode.workspace.getConfiguration("odooDev").branchNameAsDB as boolean) {
       const branch = getActiveBranch();
@@ -161,35 +181,35 @@ export function createContextualUtils(
     return args;
   };
 
-  const getOdooShellCommandArgs = () => {
-    const normalArgs = getNormalStartServerArgs();
+  const getOdooShellCommandArgs = async () => {
+    const normalArgs = await getNormalStartServerArgs();
     // TODO: Make the port configurable.
     return ["shell", ...normalArgs, "-p", "9999"];
   };
 
-  const getstartSelectedTestArgs = (testTag: string) => {
-    const args = getNormalStartServerArgs();
+  const getstartSelectedTestArgs = async (testTag: string) => {
+    const args = await getNormalStartServerArgs();
     return [...args, "--stop-after-init", "--test-enable", "--test-tags", testTag];
   };
 
-  const getStartCurrentTestFileArgs = (testFilePath: string) => {
-    const args = getNormalStartServerArgs();
+  const getStartCurrentTestFileArgs = async (testFilePath: string) => {
+    const args = await getNormalStartServerArgs();
     return [...args, "--stop-after-init", "--test-file", testFilePath];
   };
 
-  function getOdooConfigValue(key: string) {
-    const configFilePath = getConfigFilePath();
+  async function getOdooConfigValue(key: string) {
+    const configFilePath = await getConfigFilePath();
     const configFileData = fs.readFileSync(configFilePath, "utf-8");
     const config = ini.parse(configFileData);
     return config?.options?.[key] as string | undefined;
   }
 
-  function getActiveDBName() {
+  async function getActiveDBName() {
     let dbName: string | undefined;
     if (vscode.workspace.getConfiguration("odooDev").branchNameAsDB as boolean) {
       dbName = getActiveBranch();
     } else {
-      dbName = getOdooConfigValue("db_name");
+      dbName = await getOdooConfigValue("db_name");
     }
     return dbName;
   }
@@ -987,18 +1007,18 @@ export function createContextualUtils(
         const { classSymbol, methodSymbol } = await getClassAndMethod(symbols, position);
 
         if (!classSymbol && !methodSymbol) {
-          commandArgs = getStartCurrentTestFileArgs(editor.document.uri.path);
+          commandArgs = await getStartCurrentTestFileArgs(editor.document.uri.path);
         } else {
           const testTag = `${addon}${classSymbol ? `:${classSymbol.name}` : ""}${
             methodSymbol ? `.${methodSymbol.name}` : ""
           }`;
-          commandArgs = getstartSelectedTestArgs(testTag);
+          commandArgs = await getstartSelectedTestArgs(testTag);
         }
       } else {
-        commandArgs = getNormalStartServerArgs();
+        commandArgs = await getNormalStartServerArgs();
       }
     } else {
-      commandArgs = getNormalStartServerArgs();
+      commandArgs = await getNormalStartServerArgs();
     }
     return commandArgs;
   };

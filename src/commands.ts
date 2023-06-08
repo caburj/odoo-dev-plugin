@@ -461,7 +461,7 @@ export const debugServer = createCommand(
 export const startOdooShell = createCommand(
   "odooDev.startOdooShell",
   screamOnError(async (utils) => {
-    const commandArgs = utils.getOdooShellCommandArgs();
+    const commandArgs = await utils.getOdooShellCommandArgs();
     const python = await utils.getPythonPath();
     const odooBin = `${utils.getRepoPath("odoo")}/odoo-bin`;
     utils.startServer(
@@ -701,7 +701,7 @@ export const openChromeLocalServer = createCommand(
 export const openOdooConf = createCommand(
   "odooDev.openOdooConf",
   screamOnError(async ({ getConfigFilePath }) => {
-    const filePath = getConfigFilePath();
+    const filePath = await getConfigFilePath();
     const confUri = vscode.Uri.file(filePath);
     if (confUri) {
       vscode.window.showTextDocument(confUri);
