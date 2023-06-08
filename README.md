@@ -131,3 +131,8 @@ This plugin can help.
 - fix: look for the correct remote
 - fix: do not assume origin as the main remote
 - imp: start server button at status bar
+
+### 0.1.6
+
+- start/debug odoo shell
+- ask user to locate config file
