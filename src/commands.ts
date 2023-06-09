@@ -396,7 +396,7 @@ export const startFreshServer = createCommand(
       return;
     }
 
-    const dbName = utils.getActiveDBName();
+    const dbName = await utils.getActiveDBName();
     if (dbName) {
       try {
         await runShellCommand(`dropdb ${dbName}`);
@@ -475,7 +475,7 @@ export const debugOdooShell = createCommand(
   "odooDev.debugOdooShell",
   screamOnError(async (utils) => {
     const odooBin = `${utils.getRepoPath("odoo")}/odoo-bin`;
-    const commandArgs = utils.getOdooShellCommandArgs();
+    const commandArgs = await utils.getOdooShellCommandArgs();
     const debugOdooPythonLaunchConfig: vscode.DebugConfiguration = {
       name: DEBUG_ODOO_SHELL,
       type: "python",
@@ -638,7 +638,7 @@ export const dropActiveDB = createCommand(
     if (!Result.check(await utils.ensureNoRunningServer())) {
       return;
     }
-    const dbName = utils.getActiveDBName();
+    const dbName = await utils.getActiveDBName();
     if (dbName) {
       utils.getOdooServerTerminal().show();
       utils.getOdooServerTerminal().sendText(`dropdb ${dbName}`);

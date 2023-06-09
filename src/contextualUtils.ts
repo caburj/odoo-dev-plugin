@@ -1119,7 +1119,7 @@ export function createContextualUtils(
     );
     const ipTrimmed = ip.trim();
     const host = ipTrimmed === "" ? "localhost" : ipTrimmed;
-    const port = getOdooConfigValue("http_port") || "8069";
+    const port = await getOdooConfigValue("http_port") || "8069";
     return `http://${host}:${port}` + `${queryParams ? toQueryString(queryParams) : ""}`;
   };
 
