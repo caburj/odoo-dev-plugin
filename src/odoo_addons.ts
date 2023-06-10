@@ -1,7 +1,8 @@
 import * as vscode from "vscode";
 import * as fs from "fs";
-import { getAddons, isAddon, removeComments } from "./helpers";
+import { OdooDevRepositories, getAddons, isAddon, removeComments } from "./helpers";
 import { requirementsRegex } from "./constants";
+import { Repository } from "./dependencies/git";
 
 function getRequirements(addonPath: string): string[] | undefined {
   const manifestFilePath = `${addonPath}/__manifest__.py`;
@@ -17,14 +18,13 @@ export class OdooAddonsTree implements vscode.TreeDataProvider<OdooAddon> {
   readonly onDidChangeTreeData: vscode.Event<OdooAddon | undefined | void> =
     this._onDidChangeTreeData.event;
 
-  constructor(private getRepoPath: (name: string) => string | undefined) {}
+  constructor(
+    private odevRepos: OdooDevRepositories,
+    private getRepoPath: (repo: Repository) => string
+  ) {}
 
   get odooPath(): string | undefined {
-    return this.getRepoPath("odoo");
-  }
-
-  get enterprisePath(): string | undefined {
-    return this.getRepoPath("enterprise");
+    return this.getRepoPath(this.odevRepos.odoo);
   }
 
   refresh(): void {
@@ -41,12 +41,12 @@ export class OdooAddonsTree implements vscode.TreeDataProvider<OdooAddon> {
         return [];
       }
       const odooRoot = new OdooAddon("odoo", this.odooPath, "addon-root");
-      if (!this.enterprisePath) {
-        return [odooRoot];
-      } else {
-        const enterpriseRoot = new OdooAddon("enterprise", this.enterprisePath, "addon-root");
-        return [odooRoot, enterpriseRoot];
-      }
+      return [
+        odooRoot,
+        ...Object.entries(this.odevRepos.custom).map(([name, repo]) => {
+          return new OdooAddon(name, this.getRepoPath(repo), "addon-root");
+        }),
+      ];
     } else {
       if (element.name === "odoo") {
         const path1 = `${this.odooPath}/addons`;
@@ -57,8 +57,8 @@ export class OdooAddonsTree implements vscode.TreeDataProvider<OdooAddon> {
         return odooAddons.map(([name, path]) => {
           return new OdooAddon(name, path, "addon");
         });
-      } else if (element.name === "enterprise") {
-        const path = this.enterprisePath!;
+      } else if (element.name in this.odevRepos.custom) {
+        const path = this.getRepoPath(this.odevRepos.custom[element.name]);
         const enterpriseAddons = (await getAddons(path)).map((name) => [name, `${path}/${name}`]);
         return enterpriseAddons.map(([name, path]) => {
           return new OdooAddon(name, path, "addon");
@@ -70,10 +70,11 @@ export class OdooAddonsTree implements vscode.TreeDataProvider<OdooAddon> {
         } else {
           return Promise.all(
             requirements.map(async (name) => {
-              const paths = [`${this.odooPath}/addons`, `${this.odooPath}/odoo/addons`];
-              if (this.enterprisePath) {
-                paths.push(this.enterprisePath);
-              }
+              const paths = [
+                `${this.odooPath}/addons`,
+                `${this.odooPath}/odoo/addons`,
+                ...Object.entries(this.odevRepos.custom).map(([, repo]) => this.getRepoPath(repo)),
+              ];
               const thePath = (
                 await Promise.all(
                   paths.map(

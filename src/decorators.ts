@@ -14,7 +14,7 @@ export function withProgress<A extends any[], R extends Promise<any>>(arg: {
         },
         async (progress) => {
           progress.report({ message: arg.message });
-          const result = await Result.call(arg.cb, ...args);
+          const result = await Result.try_(arg.cb, ...args);
           Result.process(result, resolve, reject);
         }
       )
@@ -24,7 +24,7 @@ export function withProgress<A extends any[], R extends Promise<any>>(arg: {
 
 export function screamOnError<A extends any[], R extends any>(cb: (...args: A) => Promise<R>) {
   return async (...args: A): Promise<R | undefined> => {
-    const result = await Result.call(cb, ...args);
+    const result = await Result.try_(cb, ...args);
     return Result.unwrapExcept(result, (error) => vscode.window.showErrorMessage(error.message));
   };
 }

@@ -1,5 +1,7 @@
 import * as vscode from "vscode";
-import { getActiveBranch, getBaseBranches, getDevBranches } from "./state";
+import { getBaseBranches, getDevBranches } from "./state";
+import { OdooDevRepositories } from "./helpers";
+import { Repository } from "./dependencies/git";
 
 export class OdooDevBranches implements vscode.TreeDataProvider<OdooDevBranch> {
   private _onDidChangeTreeData: vscode.EventEmitter<OdooDevBranch | undefined | void> =
@@ -7,14 +9,46 @@ export class OdooDevBranches implements vscode.TreeDataProvider<OdooDevBranch> {
   readonly onDidChangeTreeData: vscode.Event<OdooDevBranch | undefined | void> =
     this._onDidChangeTreeData.event;
 
-  constructor(private workspaceRoot: string | undefined) {}
+  constructor(private odevRepos: OdooDevRepositories) {}
 
   refresh(): void {
     this._onDidChangeTreeData.fire();
   }
 
-  getTreeItem(element: OdooDevBranch): vscode.TreeItem {
+  /**
+   * Override icon and description of the tree item based on the active branches in the repos.
+   * @param element
+   */
+  describe(element: OdooDevBranch): vscode.TreeItem {
+    const repos: [name: string, repo: Repository][] = [
+      ["odoo", this.odevRepos.odoo],
+      ...Object.entries(this.odevRepos.custom),
+    ];
+
+    if (this.odevRepos.upgrade) {
+      repos.push(["upgrade", this.odevRepos.upgrade]);
+    }
+
+    const descriptions: string[] = [];
+    for (const [name, repo] of repos) {
+      if (repo.state.HEAD?.name === element.name) {
+        descriptions.push(name);
+      }
+    }
+
+    if (descriptions.length === 1) {
+      element.iconPath = new vscode.ThemeIcon("check");
+    } else if (descriptions.length > 1) {
+      element.iconPath = new vscode.ThemeIcon("check-all");
+    }
+
+    element.description = descriptions.join(" ");
+
     return element;
+  }
+
+  async getTreeItem(element: OdooDevBranch): Promise<vscode.TreeItem> {
+    return this.describe(element);
   }
 
   async getChildren(element?: OdooDevBranch): Promise<OdooDevBranch[]> {
@@ -33,15 +67,13 @@ export class OdooDevBranches implements vscode.TreeDataProvider<OdooDevBranch> {
       });
       return baseBranches.map((name) => {
         const devBranches = getDevBranches(name);
-        const isActive = name === getActiveBranch();
         return new OdooDevBranch(
           name,
           name,
-          isActive ? "active-base-branch" : "base-branch",
+          "base-branch",
           devBranches.length > 0
             ? vscode.TreeItemCollapsibleState.Expanded
-            : vscode.TreeItemCollapsibleState.None,
-          isActive
+            : vscode.TreeItemCollapsibleState.None
         );
       });
     } else {
@@ -49,13 +81,11 @@ export class OdooDevBranches implements vscode.TreeDataProvider<OdooDevBranch> {
       const devBranches = [...getDevBranches(branchName)];
       devBranches.sort();
       return devBranches.map(({ name }) => {
-        const isActive = name === getActiveBranch();
         return new OdooDevBranch(
           name,
           element.base,
-          isActive ? "active-dev-branch" : "dev-branch",
-          vscode.TreeItemCollapsibleState.None,
-          isActive
+          "dev-branch",
+          vscode.TreeItemCollapsibleState.None
         );
       });
     }
@@ -68,7 +98,6 @@ export class OdooDevBranch extends vscode.TreeItem {
     public readonly base: string,
     public readonly contextValue: string,
     public readonly collapsibleState: vscode.TreeItemCollapsibleState,
-    public readonly isActive: boolean,
     public readonly command?: vscode.Command
   ) {
     super(name, collapsibleState);
@@ -76,16 +105,10 @@ export class OdooDevBranch extends vscode.TreeItem {
     this.base = base;
     this.name = name;
     this.contextValue = contextValue;
-    this.isActive = isActive;
-    if (this.isActive) {
-      this.iconPath = new vscode.ThemeIcon("check-all");
-      this.description = "active";
+    if (this.name === this.base) {
+      this.iconPath = new vscode.ThemeIcon("repo");
     } else {
-      if (this.name === this.base) {
-        this.iconPath = new vscode.ThemeIcon("repo");
-      } else {
-        this.iconPath = new vscode.ThemeIcon("git-branch");
-      }
+      this.iconPath = new vscode.ThemeIcon("git-branch");
     }
   }
 }

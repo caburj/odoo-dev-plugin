@@ -17,6 +17,8 @@ import {
   getAddons,
   getRemoteOfBase,
   getBase,
+  OdooDevRepositories,
+  isBase,
 } from "./helpers";
 import { assert } from "console";
 import {
@@ -27,15 +29,12 @@ import {
   requirementsRegex,
 } from "./constants";
 import { OdooAddonsTree } from "./odoo_addons";
-import { getActiveBranch, getDebugSessions } from "./state";
+import { getDebugSessions } from "./state";
 import { withProgress } from "./decorators";
 
 export type ContextualUtils = ReturnType<typeof createContextualUtils>;
 
-async function taggedCall<T>(
-  tag: string,
-  cb: () => Promise<T>
-): Promise<{ tag: string; result: T }> {
+async function taggedCall<L, T>(tag: L, cb: () => Promise<T>): Promise<{ tag: L; result: T }> {
   const result = await cb();
   return { tag, result };
 }
@@ -54,11 +53,11 @@ export function createContextualUtils(
     odooServerStatus: vscode.StatusBarItem;
     addonsPathMap: Record<string, string>;
     getPythonPath: () => Promise<string>;
-    getRepo: (repoName: string) => Repository | undefined;
-    getRepoPath: (name: string) => string | undefined;
+    getRepoPath: (repo: Repository) => string;
+    odevRepos: OdooDevRepositories;
   }
 ) {
-  const { odooServerStatus, addonsPathMap, getRepo, getPythonPath, getRepoPath } = options;
+  const { odooServerStatus, addonsPathMap, getPythonPath, getRepoPath, odevRepos } = options;
 
   const odooDevTerminals = new Map<string, vscode.Terminal>();
 
@@ -71,7 +70,7 @@ export function createContextualUtils(
       } else {
         terminal = vscode.window.createTerminal({
           name,
-          cwd: getRepoPath("odoo"),
+          cwd: getRepoPath(odevRepos.odoo),
         });
         vscode.window.onDidCloseTerminal((t) => {
           if (t === terminal) {
@@ -94,7 +93,7 @@ export function createContextualUtils(
 
   const getConfigFilePath = async () => {
     let configFilePath: string | undefined;
-    let res = Result.call(() => {
+    let res = Result.try_(() => {
       const odooConfigPath = vscode.workspace.getConfiguration("odooDev").odooConfigPath;
       if (odooConfigPath) {
         const stat = fs.statSync(odooConfigPath as string);
@@ -109,7 +108,7 @@ export function createContextualUtils(
     });
 
     if (!Result.check(res)) {
-      res = Result.call(() => {
+      res = Result.try_(() => {
         const homeOdooRc = `${os.homedir()}/.odoorc`;
         const homeOdooConfStat = fs.statSync(homeOdooRc);
         if (homeOdooConfStat.isFile()) {
@@ -169,11 +168,61 @@ export function createContextualUtils(
     }
   };
 
+  const getActiveBranch = async () => {
+    // NOTE: Upgrade repo is not considered at the moment because upgrade workflow is not yet implemented.
+    const repos = [odevRepos.odoo, ...Object.entries(odevRepos.custom).map(([, repo]) => repo)];
+    const branches: string[] = [];
+    for (const repo of repos) {
+      if (repo.state.HEAD?.name) {
+        branches.push(repo.state.HEAD.name);
+      }
+    }
+    if (branches.length === 0) {
+      throw new Error("Unable to determine active branch.");
+    }
+    const uniqueBranches = [...new Set(branches)];
+    if (uniqueBranches.length === 1) {
+      const [branch] = uniqueBranches;
+      return branch;
+    } else if (uniqueBranches.length === 2) {
+      const [branch1, branch2] = uniqueBranches;
+      // check if one is base of the other
+      const isBranch1Base = isBase(branch1);
+      const isBranch2Base = isBase(branch2);
+      if (isBranch1Base && getBase(branch2) === branch1) {
+        return branch2;
+      } else if (isBranch2Base && getBase(branch1) === branch2) {
+        return branch1;
+      } else if (getBase(branch1) !== getBase(branch2)) {
+        throw new Error("Branches in the repositories do not match.");
+      } else {
+        const res = await vscode.window.showQuickPick(uniqueBranches, {
+          placeHolder: "Branches in the repositories do not match. Select one as db name.",
+        });
+        if (res) {
+          return res;
+        } else {
+          throw new Error("Unable to determine active branch.");
+        }
+      }
+    } else {
+      // TODO: Generalize the case of more than 1 unique branches.
+      const res = await vscode.window.showQuickPick(uniqueBranches, {
+        placeHolder: "Branches in the repositories do not match. Select one as db name.",
+      });
+      if (res) {
+        return res;
+      } else {
+        throw new Error("Unable to determine active branch.");
+      }
+    }
+  };
+
   const getNormalStartServerArgs = async () => {
     const configFilePath = await getConfigFilePath();
     const args = ["-c", configFilePath];
     if (vscode.workspace.getConfiguration("odooDev").branchNameAsDB as boolean) {
-      const branch = getActiveBranch();
+      const branch = await getActiveBranch();
       if (branch) {
         args.push("-d", branch);
       }
@@ -204,10 +253,10 @@ export function createContextualUtils(
     return config?.options?.[key] as string | undefined;
   }
 
-  async function getActiveDBName() {
+  async function getDBName() {
     let dbName: string | undefined;
     if (vscode.workspace.getConfiguration("odooDev").branchNameAsDB as boolean) {
-      dbName = getActiveBranch();
+      dbName = await getActiveBranch();
     } else {
       dbName = await getOdooConfigValue("db_name");
     }
@@ -284,14 +333,6 @@ export function createContextualUtils(
       ? vscode.workspace.workspaceFolders[0].uri.fsPath
       : undefined;
 
-  const getOdooRepo = () => {
-    const repo = getRepo("odoo");
-    if (!repo) {
-      throw new Error("'odoo' repo not found.");
-    }
-    return repo;
-  };
-
   const isRepoClean = async (repo: Repository) => {
     const status = await runShellCommand("git status --porcelain", {
       cwd: repo.rootUri.fsPath,
@@ -299,15 +340,31 @@ export function createContextualUtils(
     return status.trim().length === 0;
   };
 
-  const getDirtyRepos = async () => {
-    const odoo = getOdooRepo();
-    const enterprise = getRepo("enterprise");
-    const upgrade = getRepo("upgrade");
+  const getDirtyRepoNames = async () => {
+    const odoo = odevRepos.odoo;
+    const upgrade = odevRepos.upgrade;
 
     const results = await Promise.all([
       taggedCall("odoo", () => isRepoClean(odoo)),
-      taggedCall("enterprise", async () => (enterprise ? isRepoClean(enterprise) : true)),
+      ...Object.entries(odevRepos.custom).map(([name, repo]) =>
+        taggedCall(name, () => isRepoClean(repo))
+      ),
       taggedCall("upgrade", async () => (upgrade ? isRepoClean(upgrade) : true)),
+    ]);
+
+    return results.filter((r) => !r.result).map((r) => r.tag);
+  };
+
+  const getDirtyRepos = async () => {
+    const odoo = odevRepos.odoo;
+    const upgrade = odevRepos.upgrade;
+
+    const results = await Promise.all([
+      taggedCall(odoo, () => isRepoClean(odoo)),
+      ...Object.entries(odevRepos.custom).map(([, repo]) =>
+        taggedCall(repo, () => isRepoClean(repo))
+      ),
+      ...(upgrade ? [taggedCall(upgrade, () => isRepoClean(upgrade))] : []),
     ]);
 
     return results.filter((r) => !r.result).map((r) => r.tag);
@@ -347,7 +404,7 @@ export function createContextualUtils(
       remote = (await findRemote(repo, branch)) || "origin";
     }
     let branchToCheckout = branch;
-    const fetchRes = await Result.call(() => repo.fetch(remote, branch));
+    const fetchRes = await Result.try_(() => repo.fetch(remote, branch));
     if (!Result.check(fetchRes)) {
       if (!base) {
         throw new Error("Unable to checkout the branch even its base.");
@@ -368,7 +425,7 @@ export function createContextualUtils(
       }
     }
 
-    const checkoutRes = await Result.call(() => repo.checkout(branchToCheckout));
+    const checkoutRes = await Result.try_(() => repo.checkout(branchToCheckout));
     if (!Result.check(checkoutRes)) {
       if (branchToCheckout !== branch) {
         return Result.fail(
@@ -393,22 +450,14 @@ export function createContextualUtils(
     dirtyRepos: string[],
     fork?: string
   ) => {
-    const odoo = getOdooRepo();
-    const enterprise = getRepo("enterprise");
-    const upgrade = getRepo("upgrade");
+    const odoo = odevRepos.odoo;
+    const upgrade = odevRepos.upgrade;
 
     const fetchProms = [
       fetchBranch("odoo", odoo, base, branch, dirtyRepos.includes("odoo"), fork),
-      enterprise
-        ? fetchBranch(
-            "enterprise",
-            enterprise,
-            base,
-            branch,
-            dirtyRepos.includes("enterprise"),
-            fork
-          )
-        : Promise.resolve(Result.success()),
+      ...Object.entries(odevRepos.custom).map(([name, repo]) =>
+        fetchBranch(name, repo, base, branch, dirtyRepos.includes(name), fork)
+      ),
       upgrade && base === "master"
         ? fetchBranch("upgrade", upgrade, base, branch, dirtyRepos.includes("upgrade"), fork)
         : Promise.resolve(Result.success()),
@@ -438,9 +487,8 @@ export function createContextualUtils(
       return fetchBranches(base, branch, dirtyRepos, fork);
     }
 
-    const odoo = getOdooRepo();
-    const enterprise = getRepo("enterprise");
-    const upgrade = getRepo("upgrade");
+    const odoo = odevRepos.odoo;
+    const upgrade = odevRepos.upgrade;
 
     // Check if at least one from the repos, it is available remotely.
     // If so, we call fetchBranches, otherwise we call createBranches.
@@ -449,9 +497,7 @@ export function createContextualUtils(
       cb: () =>
         Promise.all([
           findRemote(odoo, branch),
-          enterprise
-            ? findRemote(enterprise, branch)
-            : Promise.resolve(undefined as string | undefined),
+          ...Object.entries(odevRepos.custom).map(([, repo]) => findRemote(repo, branch)),
           upgrade ? findRemote(upgrade, branch) : Promise.resolve(undefined as string | undefined),
         ]),
     });
@@ -476,7 +522,7 @@ export function createContextualUtils(
     isDirty: boolean
   ) => {
     const remote = getRemoteName(repo, "odoo");
-    const fetchRes = await Result.call(() => repo.fetch(remote, name));
+    const fetchRes = await Result.try_(() => repo.fetch(remote, name));
     if (!Result.check(fetchRes)) {
       return Result.fail(
         new Error(
@@ -510,14 +556,11 @@ export function createContextualUtils(
   };
 
   const fetchStableBranches = async (name: string, dirtyRepos: string[]) => {
-    const odoo = getOdooRepo();
-    const enterprise = getRepo("enterprise");
-
     const fetchProms = [
-      fetchStableBranch("odoo", odoo, name, dirtyRepos.includes("odoo")),
-      enterprise
-        ? fetchStableBranch("enterprise", enterprise, name, dirtyRepos.includes("enterprise"))
-        : Promise.resolve(Result.success()),
+      fetchStableBranch("odoo", odevRepos.odoo, name, dirtyRepos.includes("odoo")),
+      ...Object.entries(odevRepos.custom).map(([name, repo]) =>
+        fetchStableBranch(name, repo, name, dirtyRepos.includes(name))
+      ),
     ];
 
     const fetchWithSpinner = withProgress({
@@ -546,11 +589,11 @@ export function createContextualUtils(
       }
     }
     let branchToUnstash: string | undefined;
-    const checkoutBranchRes = await Result.call(() => repo.checkout(branch));
+    const checkoutBranchRes = await Result.try_(() => repo.checkout(branch));
     if (!Result.check(checkoutBranchRes)) {
       const base = inferBaseBranch(branch);
       if (base) {
-        const checkoutBaseRes = await Result.call(() => repo.checkout(base));
+        const checkoutBaseRes = await Result.try_(() => repo.checkout(base));
         if (!Result.check(checkoutBaseRes)) {
           return Result.fail(
             new Error(`${checkoutBranchRes.error.message} & ${checkoutBaseRes.error.message}`)
@@ -568,17 +611,9 @@ export function createContextualUtils(
     return Result.success();
   };
 
-  const checkoutEnterprise = async (branch: string, isDirty: boolean) => {
-    const enterprise = getRepo("enterprise");
-    if (enterprise) {
-      return simpleCheckout(enterprise, branch, isDirty);
-    }
-    return Result.success();
-  };
-
   const checkoutUpgrade = async (branch: string, isDirty: boolean) => {
     const upgradeBranch = inferBaseBranch(branch) === "master" ? branch : "master";
-    const repo = getRepo("upgrade");
+    const repo = odevRepos.upgrade;
     if (repo) {
       if (isDirty && (vscode.workspace.getConfiguration("odooDev").autoStash as boolean)) {
         const stashRes = await tryRunShellCommand(`git stash -u`, { cwd: repo.rootUri.fsPath });
@@ -591,9 +626,9 @@ export function createContextualUtils(
         }
       }
       let branchToUnstash: string | undefined;
-      const checkoutBranchRes = await Result.call(() => repo.checkout(upgradeBranch));
+      const checkoutBranchRes = await Result.try_(() => repo.checkout(upgradeBranch));
       if (!Result.check(checkoutBranchRes) && upgradeBranch !== "master") {
-        const checkoutMasterRes = await Result.call(() => repo.checkout("master"));
+        const checkoutMasterRes = await Result.try_(() => repo.checkout("master"));
         if (!Result.check(checkoutMasterRes)) {
           return Result.fail(
             new Error(`${checkoutBranchRes.error.message} & ${checkoutMasterRes.error.message}`)
@@ -613,8 +648,10 @@ export function createContextualUtils(
 
   const checkoutBranches = async (branch: string, dirtyRepos: string[]) => {
     const checkoutProms = [
-      simpleCheckout(getOdooRepo(), branch, dirtyRepos.includes("odoo")),
-      checkoutEnterprise(branch, dirtyRepos.includes("enterprise")),
+      simpleCheckout(odevRepos.odoo, branch, dirtyRepos.includes("odoo")),
+      ...Object.entries(odevRepos.custom).map(([name, repo]) =>
+        simpleCheckout(repo, branch, dirtyRepos.includes(name))
+      ),
       checkoutUpgrade(branch, dirtyRepos.includes("upgrade")),
     ];
     const checkWithSpinner = withProgress({
@@ -642,7 +679,7 @@ export function createContextualUtils(
       }
     }
     // Checkout base first as basis for creating the new branch.
-    const checkoutBase = await Result.call(() => repo.checkout(base));
+    const checkoutBase = await Result.try_(() => repo.checkout(base));
     if (!Result.check(checkoutBase)) {
       return Result.fail(
         new Error(
@@ -657,7 +694,7 @@ export function createContextualUtils(
         // Creation of branch should continue even if the pull failed so we ignore the error.
       }
     }
-    const createAndCheckoutBranch = await Result.call(() => repo.createBranch(branch, true));
+    const createAndCheckoutBranch = await Result.try_(() => repo.createBranch(branch, true));
     if (!Result.check(createAndCheckoutBranch)) {
       return Result.fail(
         new Error(
@@ -687,7 +724,7 @@ export function createContextualUtils(
           );
         }
       }
-      return Result.call(() => repo.checkout("master"));
+      return Result.try_(() => repo.checkout("master"));
     }
   };
 
@@ -698,21 +735,18 @@ export function createContextualUtils(
    * @param branch
    */
   const createBranches = async (base: string, branch: string, dirtyRepos: string[]) => {
-    const enterprise = getRepo("enterprise");
-    const upgrade = getRepo("upgrade");
-
     const createBranchProms = [
       // branch in odoo
-      createBranch(getOdooRepo(), base, branch, dirtyRepos.includes("odoo")),
+      createBranch(odevRepos.odoo, base, branch, dirtyRepos.includes("odoo")),
 
-      // branch in enterprise
-      enterprise
-        ? createBranch(enterprise, base, branch, dirtyRepos.includes("enterprise"))
-        : Promise.resolve(Result.success()),
+      // branch in custom addons repos
+      ...Object.entries(odevRepos.custom).map(([name, repo]) =>
+        createBranch(repo, base, branch, dirtyRepos.includes(name))
+      ),
 
       // branch in upgrade
-      upgrade
-        ? createUpgradeBranch(upgrade, base, branch, dirtyRepos.includes("upgrade"))
+      odevRepos.upgrade
+        ? createUpgradeBranch(odevRepos.upgrade, base, branch, dirtyRepos.includes("upgrade"))
         : Promise.resolve(Result.success()),
     ];
 
@@ -729,14 +763,10 @@ export function createContextualUtils(
     }
   };
 
-  const deleteBranch = async (
-    repo: Repository,
-    base: string,
-    branch: string,
-    activeBranch: string | undefined
-  ) => {
+  const deleteBranch = async (repo: Repository, base: string, branch: string) => {
     assert(base !== branch, "Value of the base can't be the same as branch.");
-    if (activeBranch === branch) {
+    const currentBranch = repo.state.HEAD?.name;
+    if (currentBranch === branch) {
       // If the branch to delete is the active branch, we need to checkout to the base branch first.
       const checkoutBaseRes = await simpleCheckout(repo, base, false);
       if (!Result.check(checkoutBaseRes)) {
@@ -754,7 +784,7 @@ export function createContextualUtils(
     if (!repoBranch) {
       return Result.success();
     }
-    const deleteBranchRes = await Result.call(() => repo.deleteBranch(branch, true));
+    const deleteBranchRes = await Result.try_(() => repo.deleteBranch(branch, true));
     if (!Result.check(deleteBranchRes)) {
       return Result.fail(
         new Error(`Failed to delete '${branch}' because of "${deleteBranchRes.error.message}"`)
@@ -763,17 +793,14 @@ export function createContextualUtils(
     return Result.success();
   };
 
-  const deleteBranches = async (base: string, branch: string, activeBranch: string | undefined) => {
-    const enterprise = getRepo("enterprise");
-    const upgrade = getRepo("upgrade");
+  const deleteBranches = async (base: string, branch: string) => {
+    const upgrade = odevRepos.upgrade;
 
     const deleteProms = [
-      deleteBranch(getOdooRepo(), base, branch, activeBranch),
-      enterprise
-        ? deleteBranch(enterprise, base, branch, activeBranch)
-        : Promise.resolve(Result.success()),
+      deleteBranch(odevRepos.odoo, base, branch),
+      ...Object.entries(odevRepos.custom).map(([, repo]) => deleteBranch(repo, base, branch)),
       upgrade && base === "master"
-        ? deleteBranch(upgrade, base, branch, activeBranch)
+        ? deleteBranch(upgrade, base, branch)
         : Promise.resolve(Result.success()),
     ];
 
@@ -790,7 +817,27 @@ export function createContextualUtils(
     }
   };
 
-  const rebaseBranch = async (repo: Repository, base: string, branch: string, isDirty: boolean) => {
+  const getBranchAndBase = (repo: Repository) => {
+    const branch = repo.state.HEAD?.name;
+    if (!branch) {
+      return Result.fail(new Error(`Failed to rebase because no active branch found.`));
+    }
+    const base = getBase(branch);
+    if (!base) {
+      return Result.fail(
+        new Error(`Failed to rebase '${branch}' because the base branch can't be recognized.`)
+      );
+    }
+    return Result.success({ branch, base });
+  };
+
+  const rebaseBranch = async (repo: Repository, isDirty: boolean) => {
+    const branchAndBaseRes = getBranchAndBase(repo);
+    if (!Result.check(branchAndBaseRes)) {
+      return branchAndBaseRes;
+    }
+    const { branch, base } = branchAndBaseRes.value;
+
     // stash changes
     if (isDirty && (vscode.workspace.getConfiguration("odooDev").autoStash as boolean)) {
       const stashRes = await tryRunShellCommand(`git stash -u`, { cwd: repo.rootUri.fsPath });
@@ -831,25 +878,35 @@ export function createContextualUtils(
     return Result.success();
   };
 
-  const rebaseBranches = async (branch: string, dirtyRepos: string[]) => {
-    const enterprise = getRepo("enterprise");
-    const upgrade = getRepo("upgrade");
-    const base = getBase(branch);
+  const rebaseUpgrade = async (repo: Repository, isDirty: boolean) => {
+    const branchAndBaseRes = getBranchAndBase(repo);
+    if (!Result.check(branchAndBaseRes)) {
+      return branchAndBaseRes;
+    }
+    const { branch, base } = branchAndBaseRes.value;
+    if (base !== "master") {
+      return Result.fail(
+        new Error(`Failed to rebase '${branch}' because the base branch is not 'master'.`)
+      );
+    }
+    return rebaseBranch(repo, isDirty);
+  };
+
+  const rebaseBranches = async (dirtyRepos: string[]) => {
+    const upgrade = odevRepos.upgrade;
 
     const tasks = [
-      base
-        ? rebaseBranch(getOdooRepo(), base, branch, dirtyRepos.includes("odoo"))
-        : Promise.resolve(Result.success()),
-      enterprise && base
-        ? rebaseBranch(enterprise, base, branch, dirtyRepos.includes("enterprise"))
-        : Promise.resolve(Result.success()),
-      upgrade && base === "master"
-        ? rebaseBranch(upgrade, base, branch, dirtyRepos.includes("upgrade"))
+      rebaseBranch(odevRepos.odoo, dirtyRepos.includes("odoo")),
+      ...Object.entries(odevRepos.custom).map(([name, repo]) =>
+        rebaseBranch(repo, dirtyRepos.includes(name))
+      ),
+      upgrade
+        ? rebaseUpgrade(upgrade, dirtyRepos.includes("upgrade"))
         : Promise.resolve(Result.success()),
     ];
 
     const spinner = withProgress({
-      message: `Rebasing '${branch}'...`,
+      message: `Rebasing active branches...`,
       cb: () => Promise.all(tasks),
     });
     const results = await spinner();
@@ -861,14 +918,10 @@ export function createContextualUtils(
     }
   };
 
-  const resetBranch = async (
-    repoName: string,
-    repo: Repository,
-    branch: string,
-    isDirty: boolean
-  ) => {
-    if (repo.state.HEAD?.name !== branch) {
-      return Result.success(); // We don't care about resetting a repo that has different active branch.
+  const resetBranch = async (repoName: string, repo: Repository, isDirty: boolean) => {
+    const branch = repo.state.HEAD?.name;
+    if (!branch) {
+      return Result.fail(new Error(`Failed to reset the active branch of '${repoName}' repo.`));
     } else {
       const remote = repo.state.HEAD?.upstream?.remote;
 
@@ -900,23 +953,35 @@ export function createContextualUtils(
     }
   };
 
-  const resetBranches = async (branch: string, dirtyRepos: string[]) => {
-    const odoo = getOdooRepo();
-    const enterprise = getRepo("enterprise");
-    const upgrade = getRepo("upgrade");
+  const resetUpgrade = async (repo: Repository, isDirty: boolean) => {
+    const branch = repo.state.HEAD?.name;
+    if (!branch) {
+      return Result.fail(new Error(`Failed to reset the active branch of 'upgrade' repo.`));
+    } else {
+      const base = getBase(branch);
+      if (!base || base !== "master") {
+        return Result.fail(
+          new Error(`Failed to reset the active branch of 'upgrade' repo. Base is not 'master'.`)
+        );
+      } else {
+        return resetBranch("upgrade", repo, isDirty);
+      }
+    }
+  };
 
+  const resetBranches = async (dirtyRepos: string[]) => {
     const promises = [
-      resetBranch("odoo", odoo, branch, dirtyRepos.includes("odoo")),
-      enterprise
-        ? resetBranch("enterprise", enterprise, branch, dirtyRepos.includes("enterprise"))
-        : Promise.resolve(Result.success()),
-      upgrade && (inferBaseBranch(branch) === "master" || branch === "master")
-        ? resetBranch("upgrade", upgrade, branch, dirtyRepos.includes("upgrade"))
+      resetBranch("odoo", odevRepos.odoo, dirtyRepos.includes("odoo")),
+      ...Object.entries(odevRepos.custom).map(([name, repo]) =>
+        resetBranch(name, repo, dirtyRepos.includes(name))
+      ),
+      odevRepos.upgrade
+        ? resetUpgrade(odevRepos.upgrade, dirtyRepos.includes("upgrade"))
         : Promise.resolve(Result.success()),
     ];
 
     const resetWithSpinner = withProgress({
-      message: `Resetting '${branch}'...`,
+      message: `Resetting active branches...`,
       cb: () => Promise.all(promises),
     });
     const results = await resetWithSpinner();
@@ -964,8 +1029,21 @@ export function createContextualUtils(
     }`;
   };
 
-  const treeDataProvider = new OdooDevBranches(rootPath);
-  const odooAddonsTreeProvider = new OdooAddonsTree(getRepoPath);
+  const treeDataProvider = new OdooDevBranches(odevRepos);
+  const odooAddonsTreeProvider = new OdooAddonsTree(odevRepos, getRepoPath);
+
+  const debounce = <A extends any[], R extends any>(cb: (...args: A) => R, delay: number) => {
+    let timeout: NodeJS.Timeout;
+    return (...args: A) => {
+      clearTimeout(timeout);
+      timeout = setTimeout(() => cb(...args), delay);
+    };
+  };
+
+  const _debouncedRefreshTrees = debounce(() => {
+    treeDataProvider.refresh();
+    odooAddonsTreeProvider.refresh();
+  }, 1000);
 
   function refreshTrees<A extends any[], R extends any>(
     cb: (...args: A) => Promise<R>
@@ -976,13 +1054,11 @@ export function createContextualUtils(
       const result = cb(...args);
       if (result instanceof Promise) {
         return result.then((val) => {
-          treeDataProvider.refresh();
-          odooAddonsTreeProvider.refresh();
+          _debouncedRefreshTrees();
           return val;
         });
       } else {
-        treeDataProvider.refresh();
-        odooAddonsTreeProvider.refresh();
+        _debouncedRefreshTrees();
         return result;
       }
     };
@@ -1055,7 +1131,7 @@ export function createContextualUtils(
     const startServerArgs = await getStartServerArgs();
     const args = [...startServerArgs, "-i", selectedAddons.join(",")];
     const python = await getPythonPath();
-    const odooBin = `${getRepoPath("odoo")}/odoo-bin`;
+    const odooBin = `${getRepoPath(odevRepos.odoo)}/odoo-bin`;
     startServer(`${python} ${odooBin} ${args.join(" ")}`, getOdooServerTerminal());
   };
 
@@ -1119,22 +1195,18 @@ export function createContextualUtils(
     );
     const ipTrimmed = ip.trim();
     const host = ipTrimmed === "" ? "localhost" : ipTrimmed;
-    const port = await getOdooConfigValue("http_port") || "8069";
+    const port = (await getOdooConfigValue("http_port")) || "8069";
     return `http://${host}:${port}` + `${queryParams ? toQueryString(queryParams) : ""}`;
   };
 
   async function multiSelectAddons() {
-    const odooPath = `${getRepoPath("odoo")}/addons`;
-    const enterprisePath = getRepoPath("enterprise");
-
+    const odooPath = `${getRepoPath(odevRepos.odoo)}/addons`;
+    const customAddonPaths = Object.values(odevRepos.custom).map((repo) => `${getRepoPath(repo)}`);
     const odooAddons = await getAddons(odooPath);
-    let enterpriseAddons: string[] = [];
-    try {
-      if (enterprisePath) {
-        enterpriseAddons = await getAddons(enterprisePath);
-      }
-    } catch (error) {}
-    return vscode.window.showQuickPick([...odooAddons, ...enterpriseAddons], { canPickMany: true });
+    const customAddons = (
+      await Promise.all(customAddonPaths.map((path) => getAddons(path)))
+    ).flat();
+    return vscode.window.showQuickPick([...odooAddons, ...customAddons], { canPickMany: true });
   }
 
   return {
@@ -1148,8 +1220,7 @@ export function createContextualUtils(
     getStartServerArgs,
     startServer,
     startServerWithInstall,
-    getActiveDBName,
-    getRepo,
+    getDBName,
     fetchBranches: refreshTrees(fetchBranches),
     fetchStableBranches: refreshTrees(fetchStableBranches),
     createBranches: refreshTrees(createBranches),
@@ -1162,6 +1233,7 @@ export function createContextualUtils(
     ensureNoActiveServer,
     ensureNoDebugSession,
     ensureNoRunningServer,
+    getDirtyRepoNames,
     getDirtyRepos,
     odooServerStatus,
     getGithubAccessToken,
@@ -1171,5 +1243,7 @@ export function createContextualUtils(
     getRepoPath,
     multiSelectAddons,
     refreshTrees,
+    odevRepos,
+    getActiveBranch,
   };
 }

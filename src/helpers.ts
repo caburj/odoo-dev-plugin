@@ -222,6 +222,10 @@ export function getBase(branch: string) {
   }
 }
 
+export function isBase(branch: string) {
+  return BASE_BRANCH_REGEX.test(branch);
+}
+
 export async function getRemoteOfBase(repo: Repository, branch: string) {
   const base = getBase(branch);
   if (base) {
@@ -237,3 +241,59 @@ export async function getRemoteOfBase(repo: Repository, branch: string) {
     }
   }
 }
+
+export const getRepoName = (repo: Repository) => {
+  return repo.rootUri.path.split("/").pop()!;
+};
+
+export type OdooDevRepositories = {
+  odoo: Repository;
+  upgrade?: Repository;
+  custom: Record<string, Repository>;
+};
+
+export const constructOdooDevRepositories = (repositories: Repository[]): OdooDevRepositories => {
+  const odooRepo = repositories.find((repo) => repo.rootUri.path.endsWith("/odoo"));
+  if (!odooRepo) {
+    throw new Error("Odoo repo not found");
+  }
+  const odevRepos: OdooDevRepositories = {
+    odoo: odooRepo,
+    custom: {},
+  };
+  for (const repo of repositories) {
+    const repoName = getRepoName(repo);
+    if (repoName === "odoo") {
+      continue;
+    }
+    if (repoName === "upgrade") {
+      odevRepos.upgrade = repo;
+    } else {
+      odevRepos.custom[repoName] = repo;
+    }
+  }
+  return odevRepos;
+};
+
+export const updateOdooDevRepositories = (
+  odevRepos: OdooDevRepositories,
+  repositories: Repository[],
+  remove: boolean = false
+) => {
+  for (const repo of repositories) {
+    const repoName = getRepoName(repo);
+    if (repoName === "upgrade") {
+      if (remove) {
+        delete odevRepos.upgrade;
+      } else {
+        odevRepos.upgrade = repo;
+      }
+    } else {
+      if (remove) {
+        delete odevRepos.custom[repoName];
+      } else {
+        odevRepos.custom[repoName] = repo;
+      }
+    }
+  }
+};

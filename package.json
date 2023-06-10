@@ -13,7 +13,7 @@
   "categories": [
     "Other"
   ],
-  "activationEvents": [],
+  "activationEvents": ["onStartupFinished"],
   "main": "./out/extension.js",
   "icon": "./resources/not-really-odoo-icon.png",
   "extensionDependencies": [
@@ -60,12 +60,12 @@
         "title": "Odoo Dev: Fetch Stable"
       },
       {
-        "command": "odooDev.rebaseActiveBranch",
-        "title": "Odoo Dev: Rebase Active Branch"
+        "command": "odooDev.rebaseActive",
+        "title": "Odoo Dev: Rebase Active"
       },
       {
-        "command": "odooDev.resetActiveBranch",
-        "title": "Odoo Dev: Reset Active Branch",
+        "command": "odooDev.resetActive",
+        "title": "Odoo Dev: Reset Active",
         "icon": "$(sync)"
       },
       {
@@ -245,72 +245,62 @@
         {
           "submenu": "odooDev.links",
           "group": "inline@0",
-          "when": "viewItem == dev-branch || viewItem == active-dev-branch"
+          "when": "viewItem == dev-branch"
         },
         {
           "command": "odooDev.selectBranch",
           "group": "inline@10",
-          "when": "(viewItem == base-branch || viewItem == dev-branch) && (viewItem != active-base-branch && viewItem != active-dev-branch)"
+          "when": "viewItem == base-branch || viewItem == dev-branch"
         },
         {
           "command": "odooDev.openLinkedNote",
           "group": "inline@20",
-          "when": "viewItem == base-branch || viewItem == dev-branch || viewItem == active-base-branch || viewItem == active-dev-branch"
-        },
-        {
-          "command": "odooDev.resetActiveBranch",
-          "group": "inline@30",
-          "when": "viewItem == active-base-branch || viewItem == active-dev-branch"
+          "when": "viewItem == base-branch || viewItem == dev-branch"
         },
         {
           "command": "odooDev.deleteBranch",
           "group": "inline@40",
-          "when": "viewItem == dev-branch || viewItem == active-dev-branch"
+          "when": "viewItem == dev-branch"
         },
         {
           "command": "odooDev.openRunbotLink",
           "group": "1_links@0",
-          "when": "viewItem == dev-branch || viewItem == active-dev-branch"
+          "when": "viewItem == dev-branch"
         },
         {
           "command": "odooDev.openPullRequestLinkOdoo",
           "group": "2_github_links@10",
-          "when": "viewItem == dev-branch || viewItem == active-dev-branch"
+          "when": "viewItem == dev-branch"
         },
         {
           "command": "odooDev.openPullRequestLinkEnterprise",
           "group": "2_github_links@20",
-          "when": "viewItem == dev-branch || viewItem == active-dev-branch"
+          "when": "viewItem == dev-branch"
         },
         {
           "command": "odooDev.openPullRequestLinkUpgrade",
           "group": "2_github_links@30",
-          "when": "viewItem == dev-branch || viewItem == active-dev-branch"
+          "when": "viewItem == dev-branch"
         },
         {
           "command": "odooDev.copyBranchName",
           "group": "z_others@0",
-          "when": "viewItem == dev-branch || viewItem == active-dev-branch"
+          "when": "viewItem == dev-branch"
         },
         {
           "command": "odooDev.selectBranch",
           "group": "z_others@10",
-          "when": "(viewItem == base-branch || viewItem == dev-branch) && (viewItem != active-base-branch && viewItem != active-dev-branch)"
+          "when": "viewItem == base-branch || viewItem == dev-branch"
         },
         {
           "command": "odooDev.openLinkedNote",
           "group": "z_others@20",
-          "when": "viewItem == base-branch || viewItem == dev-branch || viewItem == active-base-branch || viewItem == active-dev-branch"
-        },
-        {
-          "command": "odooDev.resetActiveBranch",
-          "group": "z_others@30",
-          "when": "viewItem == active-base-branch || viewItem == active-dev-branch"
+          "when": "viewItem == base-branch || viewItem == dev-branch"
         },
         {
           "command": "odooDev.deleteBranch",
           "group": "z_others@40",
-          "when": "viewItem == dev-branch || viewItem == active-dev-branch"
+          "when": "viewItem == dev-branch"
         }
       ],
       "view/title": [

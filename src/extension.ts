@@ -1,11 +1,16 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 
 import * as vscode from "vscode";
-import { createContextualUtils } from "./contextualUtils";
+import { ContextualUtils, createContextualUtils } from "./contextualUtils";
 import * as commands from "./commands";
 import { DEBUG_PYTHON_NAME } from "./constants";
-import { getAddons } from "./helpers";
-import { getDebugSessions, initActiveBranch, initBaseBranches, initDevBranches } from "./state";
+import {
+  constructOdooDevRepositories,
+  getAddons,
+  getRepoName,
+  updateOdooDevRepositories,
+} from "./helpers";
+import { getDebugSessions, initBaseBranches, initDevBranches } from "./state";
 import { IExtensionApi } from "./dependencies/python/apiTypes";
 import { GitExtension, Repository } from "./dependencies/git";
 
@@ -34,6 +39,30 @@ let addonsPathMap: Record<string, string> = {};
 
 let odooServerStatus: vscode.StatusBarItem;
 
+const currentBranches: Record<string, string | undefined> = {};
+const repoSubscriptions: Record<string, vscode.Disposable> = {};
+const refreshTreesOnRepoChange = (repo: Repository, utils: ContextualUtils) => {
+  const refresh = utils.refreshTrees(() => {});
+  const repoName = getRepoName(repo);
+  currentBranches[repoName] = repo.state.HEAD?.name;
+  const disposable = repo.state.onDidChange(() => {
+    const newBranch = repo.state.HEAD?.name;
+    if (currentBranches[repoName] !== newBranch) {
+      currentBranches[repoName] = newBranch;
+      refresh();
+    }
+  });
+  repoSubscriptions[repoName] = disposable;
+};
+const stopRefreshTreesOnRepoChange = (repo: Repository) => {
+  const repoName = getRepoName(repo);
+  const disposable = repoSubscriptions[repoName];
+  if (disposable) {
+    disposable.dispose();
+  }
+  delete repoSubscriptions[repoName];
+};
+
 export async function activate(context: vscode.ExtensionContext) {
   vscode.commands.executeCommand("setContext", "odooDev.state", "activating");
 
@@ -53,37 +82,33 @@ export async function activate(context: vscode.ExtensionContext) {
     });
   }
 
+  const odevRepos = constructOdooDevRepositories(git.repositories);
+
   const repositories: Record<string, Repository | undefined> = Object.fromEntries(
     git.repositories.map((repo) => {
-      const repoPath = repo.rootUri.path;
-      const repoName = repoPath.split("/").pop()!;
+      const repoName = getRepoName(repo);
       return [repoName, repo];
     })
   );
 
-  const getRepo = (name: string) => {
-    return repositories[name];
+  const getRepoPath = (repo: Repository) => {
+    return repo.rootUri.fsPath;
   };
 
-  const getRepoPath = (repoName: string) => {
-    const repo = getRepo(repoName);
-    return repo?.rootUri.fsPath;
-  };
-
-  if (getRepo("odoo")) {
-    const odooAddonsPath = `${getRepoPath("odoo")}/addons`;
+  if (odevRepos.odoo) {
+    const odooAddonsPath = `${getRepoPath(odevRepos.odoo)}/addons`;
     for (const addon of await getAddons(odooAddonsPath)) {
       addonsPathMap[addon] = `${odooAddonsPath}/${addon}`;
     }
     try {
-      const enterpriseAddonsPath = getRepoPath("enterprise");
-      if (enterpriseAddonsPath) {
-        for (const addon of await getAddons(enterpriseAddonsPath)) {
-          addonsPathMap[addon] = `${enterpriseAddonsPath}/${addon}`;
+      for (const repo of Object.values(odevRepos.custom)) {
+        const customAddonsPath = getRepoPath(repo);
+        for (const addon of await getAddons(customAddonsPath)) {
+          addonsPathMap[addon] = `${customAddonsPath}/${addon}`;
         }
       }
     } catch (error) {}
-    addonsPathMap["base"] = `${getRepoPath("odoo")}/odoo/addons/base`;
+    addonsPathMap["base"] = `${getRepoPath(odevRepos.odoo)}/odoo/addons/base`;
   } else {
     vscode.commands.executeCommand("setContext", "odooDev.state", "failed");
     return;
@@ -93,8 +118,8 @@ export async function activate(context: vscode.ExtensionContext) {
     odooServerStatus,
     addonsPathMap,
     getPythonPath,
-    getRepo,
     getRepoPath,
+    odevRepos,
   });
   const debugSessions = getDebugSessions();
 
@@ -113,7 +138,6 @@ export async function activate(context: vscode.ExtensionContext) {
 
   await initBaseBranches(utils);
   await initDevBranches(utils);
-  await initActiveBranch(utils);
 
   vscode.window.registerTreeDataProvider("odoo-dev-branches", utils.treeDataProvider);
   vscode.window.registerTreeDataProvider("odoo-addons-tree", utils.odooAddonsTreeProvider);
@@ -138,9 +162,10 @@ export async function activate(context: vscode.ExtensionContext) {
     // When a new repository is added, we need to update the repositories list.
     git.onDidOpenRepository(
       utils.refreshTrees((repo) => {
-        const repoPath = repo.rootUri.path;
-        const repoName = repoPath.split("/").pop()!;
+        const repoName = getRepoName(repo);
         repositories[repoName] = repo;
+        updateOdooDevRepositories(odevRepos, [repo]);
+        refreshTreesOnRepoChange(repo, utils);
       })
     )
   );
@@ -149,15 +174,24 @@ export async function activate(context: vscode.ExtensionContext) {
     // When a repository is removed, we need to update the repositories list.
     git.onDidCloseRepository(
       utils.refreshTrees((repo) => {
-        const repoPath = repo.rootUri.path;
-        const repoName = repoPath.split("/").pop()!;
+        const repoName = getRepoName(repo);
         delete repositories[repoName];
+        updateOdooDevRepositories(odevRepos, [repo], true);
+        stopRefreshTreesOnRepoChange(repo);
       })
     )
   );
+
+  for (const repo of git.repositories) {
+    refreshTreesOnRepoChange(repo, utils);
+  }
 
   vscode.commands.executeCommand("setContext", "odooDev.state", "activated");
 }
 
 // This method is called when your extension is deactivated
-export function deactivate() {}
+export function deactivate() {
+  for (const disposable of Object.values(repoSubscriptions)) {
+    disposable.dispose();
+  }
+}

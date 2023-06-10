@@ -18,12 +18,11 @@ import {
   addBaseBranch,
   addDevBranch,
   devBranchExists,
-  getActiveBranch,
   getBaseBranches,
   getDevBranches,
   removeDevBranch,
-  setActiveBranch,
 } from "./state";
+import { Repository } from "./dependencies/git";
 
 function createCommand<T>(name: string, cb: (utils: ContextualUtils, item?: OdooDevBranch) => T) {
   return (utils: ContextualUtils) => {
@@ -52,7 +51,7 @@ export const createBranch = createCommand(
       return;
     }
 
-    const dirtyRepos = await utils.getDirtyRepos();
+    const dirtyRepos = await utils.getDirtyRepoNames();
     if (
       dirtyRepos.length !== 0 &&
       !(vscode.workspace.getConfiguration("odooDev").autoStash as boolean)
@@ -73,7 +72,6 @@ export const createBranch = createCommand(
       throw new Error(`'${input}' already exists!`);
     }
     await utils.createBranches(base, input, dirtyRepos);
-    setActiveBranch(input);
     addDevBranch(base, input);
   })
 );
@@ -100,7 +98,7 @@ export const fetchBranch = createCommand(
       return;
     }
 
-    const dirtyRepos = await utils.getDirtyRepos();
+    const dirtyRepos = await utils.getDirtyRepoNames();
     if (
       dirtyRepos.length !== 0 &&
       !(vscode.workspace.getConfiguration("odooDev").autoStash as boolean)
@@ -128,7 +126,6 @@ export const fetchBranch = createCommand(
       throw new Error(`'${branch}' already exists!`);
     }
     await utils.fetchBranches(base, branch, dirtyRepos, forkName);
-    setActiveBranch(branch);
     addDevBranch(base, branch);
   })
 );
@@ -153,7 +150,7 @@ export const fetchOrCreate = createCommand(
       return;
     }
 
-    const dirtyRepos = await utils.getDirtyRepos();
+    const dirtyRepos = await utils.getDirtyRepoNames();
     if (
       dirtyRepos.length !== 0 &&
       !(vscode.workspace.getConfiguration("odooDev").autoStash as boolean)
@@ -179,7 +176,6 @@ export const fetchOrCreate = createCommand(
       throw new Error(`'${branch}' already exists!`);
     }
     await utils.fetchOrCreateBranches(base, branch, dirtyRepos, forkName);
-    setActiveBranch(branch);
     addDevBranch(base, branch);
   })
 );
@@ -205,7 +201,7 @@ export const fetchStableBranch = createCommand(
       return;
     }
 
-    const dirtyRepos = await utils.getDirtyRepos();
+    const dirtyRepos = await utils.getDirtyRepoNames();
     if (
       dirtyRepos.length !== 0 &&
       !(vscode.workspace.getConfiguration("odooDev").autoStash as boolean)
@@ -222,7 +218,6 @@ export const fetchStableBranch = createCommand(
       addBaseBranch(branch);
     }
     await utils.fetchStableBranches(branch, dirtyRepos);
-    setActiveBranch(branch);
   })
 );
 
@@ -263,8 +258,7 @@ export const deleteBranch = createCommand(
         return;
       }
       await Promise.all(
-        dirtyRepos.map(async (repoName) => {
-          const repo = utils.getRepo(repoName);
+        dirtyRepos.map(async (repo) => {
           if (repo) {
             return runShellCommand(`git reset --hard`, { cwd: repo.rootUri.fsPath });
           }
@@ -277,11 +271,7 @@ export const deleteBranch = createCommand(
       // Not really possible at the moment. But better be sure.
       throw new Error(`Deleting base branch '${base}' is not allowed.`);
     }
-    const activeBranch = getActiveBranch();
-    await utils.deleteBranches(base, branch, activeBranch);
-    if (activeBranch === branch) {
-      setActiveBranch(base);
-    }
+    await utils.deleteBranches(base, branch);
     removeDevBranch(base, branch);
   })
 );
@@ -315,7 +305,7 @@ export const checkoutBranch = createCommand(
       return;
     }
 
-    const dirtyRepos = await utils.getDirtyRepos();
+    const dirtyRepos = await utils.getDirtyRepoNames();
     if (
       dirtyRepos.length !== 0 &&
       !(vscode.workspace.getConfiguration("odooDev").autoStash as boolean)
@@ -328,18 +318,17 @@ export const checkoutBranch = createCommand(
     }
 
     await utils.checkoutBranches(selected.name, dirtyRepos);
-    setActiveBranch(selected.name);
   })
 );
 
 export const rebaseBranch = createCommand(
-  "odooDev.rebaseActiveBranch",
+  "odooDev.rebaseActive",
   screamOnError(async (utils, item) => {
     if (!Result.check(await utils.ensureNoRunningServer())) {
       return;
     }
 
-    const dirtyRepos = await utils.getDirtyRepos();
+    const dirtyRepos = await utils.getDirtyRepoNames();
     if (
       dirtyRepos.length !== 0 &&
       !(vscode.workspace.getConfiguration("odooDev").autoStash as boolean)
@@ -351,21 +340,18 @@ export const rebaseBranch = createCommand(
       );
     }
 
-    const activeBranch = getActiveBranch();
-    if (activeBranch) {
-      await utils.rebaseBranches(activeBranch, dirtyRepos);
-    }
+    await utils.rebaseBranches(dirtyRepos);
   })
 );
 
 export const resetActiveBranch = createCommand(
-  "odooDev.resetActiveBranch",
+  "odooDev.resetActive",
   screamOnError(async (utils) => {
     if (!Result.check(await utils.ensureNoRunningServer())) {
       return;
     }
 
-    const dirtyRepos = await utils.getDirtyRepos();
+    const dirtyRepos = await utils.getDirtyRepoNames();
     if (
       dirtyRepos.length !== 0 &&
       !(vscode.workspace.getConfiguration("odooDev").autoStash as boolean)
@@ -377,10 +363,7 @@ export const resetActiveBranch = createCommand(
       );
     }
 
-    const activeBranch = getActiveBranch();
-    if (activeBranch) {
-      await utils.resetBranches(activeBranch, dirtyRepos);
-    }
+    await utils.resetBranches(dirtyRepos);
   })
 );
 
@@ -391,13 +374,13 @@ export const startFreshServer = createCommand(
       return;
     }
 
-    const selectedAddons = await utils.multiSelectAddons();
-    if (!selectedAddons) {
-      return;
-    }
+    const dbName = await utils.getDBName();
 
-    const dbName = await utils.getActiveDBName();
     if (dbName) {
+      const selectedAddons = await utils.multiSelectAddons();
+      if (!selectedAddons) {
+        return;
+      }
       try {
         await runShellCommand(`dropdb ${dbName}`);
       } catch (error) {
@@ -408,9 +391,8 @@ export const startFreshServer = createCommand(
           }
         }
       }
+      utils.startServerWithInstall(selectedAddons);
     }
-
-    utils.startServerWithInstall(selectedAddons);
   })
 );
 
@@ -423,7 +405,7 @@ export const startServer = createCommand(
 
     const commandArgs = await utils.getStartServerArgs();
     const python = await utils.getPythonPath();
-    const odooBin = `${utils.getRepoPath("odoo")}/odoo-bin`;
+    const odooBin = `${utils.getRepoPath(utils.odevRepos.odoo)}/odoo-bin`;
     utils.startServer(
       `${python} ${odooBin} ${commandArgs.join(" ")}`,
       utils.getOdooServerTerminal()
@@ -438,7 +420,7 @@ export const debugServer = createCommand(
       return;
     }
 
-    const odooBin = `${utils.getRepoPath("odoo")}/odoo-bin`;
+    const odooBin = `${utils.getRepoPath(utils.odevRepos.odoo)}/odoo-bin`;
     const commandArgs = await utils.getStartServerArgs();
     const debugOdooPythonLaunchConfig: vscode.DebugConfiguration = {
       name: DEBUG_PYTHON_NAME,
@@ -446,7 +428,7 @@ export const debugServer = createCommand(
       request: "launch",
       stopOnEntry: false,
       console: "integratedTerminal",
-      cwd: `${utils.getRepoPath("odoo")}`,
+      cwd: `${utils.getRepoPath(utils.odevRepos.odoo)}`,
       python: await utils.getPythonPath(),
       program: odooBin,
       args: commandArgs,
@@ -463,7 +445,7 @@ export const startOdooShell = createCommand(
   screamOnError(async (utils) => {
     const commandArgs = await utils.getOdooShellCommandArgs();
     const python = await utils.getPythonPath();
-    const odooBin = `${utils.getRepoPath("odoo")}/odoo-bin`;
+    const odooBin = `${utils.getRepoPath(utils.odevRepos.odoo)}/odoo-bin`;
     utils.startServer(
       `${python} ${odooBin} ${commandArgs.join(" ")}`,
       utils.getOdooShellTerminal()
@@ -474,7 +456,7 @@ export const startOdooShell = createCommand(
 export const debugOdooShell = createCommand(
   "odooDev.debugOdooShell",
   screamOnError(async (utils) => {
-    const odooBin = `${utils.getRepoPath("odoo")}/odoo-bin`;
+    const odooBin = `${utils.getRepoPath(utils.odevRepos.odoo)}/odoo-bin`;
     const commandArgs = await utils.getOdooShellCommandArgs();
     const debugOdooPythonLaunchConfig: vscode.DebugConfiguration = {
       name: DEBUG_ODOO_SHELL,
@@ -482,7 +464,7 @@ export const debugOdooShell = createCommand(
       request: "launch",
       stopOnEntry: false,
       console: "integratedTerminal",
-      cwd: `${utils.getRepoPath("odoo")}`,
+      cwd: `${utils.getRepoPath(utils.odevRepos.odoo)}`,
       python: await utils.getPythonPath(),
       program: odooBin,
       args: commandArgs,
@@ -519,7 +501,7 @@ export const debugServerWithInstall = createCommand(
       return;
     }
 
-    const odooBin = `${utils.getRepoPath("odoo")}/odoo-bin`;
+    const odooBin = `${utils.getRepoPath(utils.odevRepos.odoo)}/odoo-bin`;
     const startServerArgs = await utils.getStartServerArgs();
     const args = [...startServerArgs, "-i", selectedAddons.join(",")];
 
@@ -529,7 +511,7 @@ export const debugServerWithInstall = createCommand(
       request: "launch",
       stopOnEntry: false,
       console: "integratedTerminal",
-      cwd: `${utils.getRepoPath("odoo")}`,
+      cwd: `${utils.getRepoPath(utils.odevRepos.odoo)}`,
       python: await utils.getPythonPath(),
       program: odooBin,
       args,
@@ -557,7 +539,7 @@ export const startServerWithUpdate = createCommand(
     const args = [...startServerArgs, "-u", selectedAddons.join(",")];
 
     const python = await utils.getPythonPath();
-    const odooBin = `${utils.getRepoPath("odoo")}/odoo-bin`;
+    const odooBin = `${utils.getRepoPath(utils.odevRepos.odoo)}/odoo-bin`;
     utils.startServer(`${python} ${odooBin} ${args.join(" ")}`, utils.getOdooServerTerminal());
   })
 );
@@ -574,7 +556,7 @@ export const debugServerWithUpdate = createCommand(
       return;
     }
 
-    const odooBin = `${utils.getRepoPath("odoo")}/odoo-bin`;
+    const odooBin = `${utils.getRepoPath(utils.odevRepos.odoo)}/odoo-bin`;
     const startServerArgs = await utils.getStartServerArgs();
     const args = [...startServerArgs, "-u", selectedAddons.join(",")];
 
@@ -584,7 +566,7 @@ export const debugServerWithUpdate = createCommand(
       request: "launch",
       stopOnEntry: false,
       console: "integratedTerminal",
-      cwd: `${utils.getRepoPath("odoo")}`,
+      cwd: `${utils.getRepoPath(utils.odevRepos.odoo)}`,
       python: await utils.getPythonPath(),
       program: odooBin,
       args,
@@ -599,22 +581,15 @@ export const debugServerWithUpdate = createCommand(
 export const debugJS = createCommand(
   "odooDev.debugJS",
   screamOnError(async (utils) => {
-    const odooAddonsPath = `${utils.getRepoPath("odoo")}/addons`;
-    const enterpriseAddonsPath = utils.getRepoPath("enterprise");
+    const odooAddonsPath = `${utils.getRepoPath(utils.odevRepos.odoo)}/addons`;
+    const customAddonsPaths = Object.entries(utils.odevRepos.custom).map(([, repo]) => {
+      return utils.getRepoPath(repo);
+    });
 
     const url = await utils.getServerUrl({ debug: "assets" });
 
     const odooAddons = await getAddons(odooAddonsPath);
-    const addons: [path: string, name: string][] = odooAddons.map((name) => [odooAddonsPath, name]);
-
-    try {
-      if (enterpriseAddonsPath) {
-        const enterpriseAddons = await getAddons(enterpriseAddonsPath);
-        addons.push(
-          ...enterpriseAddons.map((a) => [enterpriseAddonsPath, a] as [path: string, name: string])
-        );
-      }
-    } catch (_e) {}
+    const addons = [...odooAddons, ...(await Promise.all(customAddonsPaths.map(getAddons))).flat()];
 
     const sourceMapPathOverrides = Object.fromEntries(
       addons.map(([path, name]) => [`../../..//${name}/*`, `${path}/${name}/*`])
@@ -638,7 +613,7 @@ export const dropActiveDB = createCommand(
     if (!Result.check(await utils.ensureNoRunningServer())) {
       return;
     }
-    const dbName = await utils.getActiveDBName();
+    const dbName = await utils.getDBName();
     if (dbName) {
       utils.getOdooServerTerminal().show();
       utils.getOdooServerTerminal().sendText(`dropdb ${dbName}`);
@@ -712,7 +687,7 @@ export const openOdooConf = createCommand(
 export const openLinkedNote = createCommand(
   "odooDev.openLinkedNote",
   screamOnError(async (utils, item) => {
-    const branch = item ? item.name : getActiveBranch();
+    const branch = item ? item.name : await utils.getActiveBranch();
     if (!branch) {
       throw new Error(`There is no selected branch.`);
     }
@@ -761,19 +736,20 @@ export const stopActiveServer = createCommand(
 export const openPullRequestLink = createCommand(
   "odooDev.openPullRequestLinkOdoo",
   screamOnError(async (utils, item) => {
-    const branchName = item ? item.name : getActiveBranch();
+    const odoo = utils.odevRepos.odoo;
+    const branch = item ? item.name : odoo.state.HEAD?.name;
 
-    if (!branchName || isBaseBranch(branchName)) {
+    if (!branch || isBaseBranch(branch)) {
       throw new Error(`Please select a dev branch.`);
     }
 
     const response = await fetch(
-      `https://api.github.com/repos/odoo/odoo/pulls?head=odoo-dev:${branchName}&state=all`
+      `https://api.github.com/repos/odoo/odoo/pulls?head=odoo-dev:${branch}&state=all`
     );
     const pullRequests = await response.json();
     const [pr] = pullRequests;
     if (!pr) {
-      throw new Error(`There is no pull request (odoo) from the branch '${branchName}'.`);
+      throw new Error(`There is no pull request (odoo) from the branch '${branch}'.`);
     }
     vscode.env.openExternal(vscode.Uri.parse(pr.html_url));
   })
@@ -783,15 +759,15 @@ export const openPullRequestLinkEnterprise = createCommand(
   "odooDev.openPullRequestLinkEnterprise",
   screamOnError(async (utils, item) => {
     const githubAccessToken = await utils.getGithubAccessToken();
+    const enterprise: Repository | undefined = utils.odevRepos.custom.enterprise;
+    const branch = item ? item.name : enterprise?.state.HEAD?.name;
 
-    const branchName = item ? item.name : getActiveBranch();
-
-    if (!branchName || isBaseBranch(branchName)) {
+    if (!branch || isBaseBranch(branch)) {
       throw new Error(`Please select a dev branch.`);
     }
 
     const response = await fetch(
-      `https://api.github.com/repos/odoo/enterprise/pulls?head=odoo-dev:${branchName}&state=all`,
+      `https://api.github.com/repos/odoo/enterprise/pulls?head=odoo-dev:${branch}&state=all`,
       {
         headers: {
           Authorization: `Bearer ${githubAccessToken}`,
@@ -801,7 +777,7 @@ export const openPullRequestLinkEnterprise = createCommand(
     const pullRequests = await response.json();
     const [pr] = pullRequests;
     if (!pr) {
-      throw new Error(`There is no pull request (enterprise) from the branch '${branchName}'.`);
+      throw new Error(`There is no pull request (enterprise) from the branch '${branch}'.`);
     }
     vscode.env.openExternal(vscode.Uri.parse(pr.html_url));
   })
@@ -811,15 +787,15 @@ export const openPullRequestLinkUpgrade = createCommand(
   "odooDev.openPullRequestLinkUpgrade",
   screamOnError(async (utils, item) => {
     const githubAccessToken = await utils.getGithubAccessToken();
+    const upgrade = utils.odevRepos.upgrade;
+    const branch = item ? item.name : upgrade?.state.HEAD?.name;
 
-    const branchName = item ? item.name : getActiveBranch();
-
-    if (!branchName || isBaseBranch(branchName)) {
+    if (!branch || isBaseBranch(branch)) {
       throw new Error(`Please select a dev branch.`);
     }
 
     const response = await fetch(
-      `https://api.github.com/repos/odoo/upgrade/pulls?head=odoo:${branchName}&state=all`,
+      `https://api.github.com/repos/odoo/upgrade/pulls?head=odoo:${branch}&state=all`,
       {
         headers: {
           Authorization: `Bearer ${githubAccessToken}`,
@@ -829,7 +805,7 @@ export const openPullRequestLinkUpgrade = createCommand(
     const pullRequests = await response.json();
     const [pr] = pullRequests;
     if (!pr) {
-      throw new Error(`There is no pull request (upgrade) from the branch '${branchName}'.`);
+      throw new Error(`There is no pull request (upgrade) from the branch '${branch}'.`);
     }
     vscode.env.openExternal(vscode.Uri.parse(pr.html_url));
   })
@@ -838,13 +814,11 @@ export const openPullRequestLinkUpgrade = createCommand(
 export const openRunbotLink = createCommand(
   "odooDev.openRunbotLink",
   screamOnError(async (utils, item) => {
-    const branchName = item ? item.name : getActiveBranch();
-
-    if (!branchName || isBaseBranch(branchName)) {
+    const branch = item ? item.name : await utils.getActiveBranch();
+    if (!branch || isBaseBranch(branch)) {
       throw new Error(`Please select a dev branch.`);
     }
-
-    const url = `https://runbot.odoo.com/runbot/r-d-1?search=${branchName}`;
+    const url = `https://runbot.odoo.com/runbot/r-d-1?search=${branch}`;
     vscode.env.openExternal(vscode.Uri.parse(url));
   })
 );
@@ -882,10 +856,10 @@ export const isDependentOn = createCommand(
 export const copyBranchName = createCommand(
   "odooDev.copyBranchName",
   screamOnError(async (utils, item) => {
-    const branchName = item ? item.name : getActiveBranch();
-    if (!branchName) {
+    const branch = item ? item.name : await utils.getActiveBranch();
+    if (!branch) {
       throw new Error(`Please select a dev branch.`);
     }
-    await vscode.env.clipboard.writeText(branchName);
+    await vscode.env.clipboard.writeText(branch);
   })
 );

@@ -53,12 +53,12 @@ export function process<T, E extends Error>(
   }
 }
 
-export function call<A extends any[], R extends Promise<any>, E extends Error>(
+export function try_<A extends any[], R extends Promise<any>, E extends Error>(
   cb: (...args: A) => R,
   ...args: A
 ): Promise<Result<Awaited<R>, E>>;
-export function call<A extends any[], R, E extends Error>(cb: (...args: A) => R, ...args: A): Result<R, E>;
-export function call<A extends any[]>(cb: (...args: A) => any, ...args: A): any {
+export function try_<A extends any[], R, E extends Error>(cb: (...args: A) => R, ...args: A): Result<R, E>;
+export function try_<A extends any[]>(cb: (...args: A) => any, ...args: A): any {
   const trycb = resultify(cb);
   return trycb(...args);
 }
