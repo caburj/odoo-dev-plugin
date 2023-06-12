@@ -142,3 +142,8 @@ This plugin can help.
 - no more active branch state
 - take into account repositories of custom addons
   - enterprise repo can be thought as one of them
+
+### 0.1.9
+
+- fix debugging chrome
+  - issue because of incorrect source map path overrides
