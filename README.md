@@ -136,3 +136,9 @@ This plugin can help.
 
 - start/debug odoo shell
 - ask user to locate config file
+
+### 0.1.8
+
+- no more active branch state
+- take into account repositories of custom addons
+  - enterprise repo can be thought as one of them
