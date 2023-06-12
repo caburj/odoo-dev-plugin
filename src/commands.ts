@@ -588,11 +588,19 @@ export const debugJS = createCommand(
 
     const url = await utils.getServerUrl({ debug: "assets" });
 
-    const odooAddons = await getAddons(odooAddonsPath);
-    const addons = [...odooAddons, ...(await Promise.all(customAddonsPaths.map(getAddons))).flat()];
+    const getAddonPairs = async (path: string) => {
+      const addons = await getAddons(path);
+      return addons.map((name) => [name, path]);
+    };
+
+    const odooAddonPairs = await getAddonPairs(odooAddonsPath);
+    const addonPairs = [
+      ...odooAddonPairs,
+      ...(await Promise.all(customAddonsPaths.map(getAddonPairs))).flat(),
+    ];
 
     const sourceMapPathOverrides = Object.fromEntries(
-      addons.map(([path, name]) => [`../../..//${name}/*`, `${path}/${name}/*`])
+      addonPairs.map(([name, path]) => [`../../..//${name}/*`, `${path}/${name}/*`])
     );
 
     const debugOdooPythonLaunchConfig: vscode.DebugConfiguration = {
