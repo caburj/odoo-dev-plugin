@@ -26,7 +26,7 @@ import {
   FETCH_URL_REGEX,
   ODOO_SERVER_TERMINAL,
   ODOO_SHELL_TERMINAL,
-  requirementsRegex,
+  REQUIREMENTS_REGEX,
 } from "./constants";
 import { OdooAddonsTree } from "./odoo_addons";
 import { getDebugSessions } from "./state";
@@ -1160,7 +1160,7 @@ export function createContextualUtils(
     }
 
     const manifestContent = removeComments(fs.readFileSync(manifestPath, "utf8"));
-    const requirementsMatch = manifestContent.match(requirementsRegex);
+    const requirementsMatch = manifestContent.match(REQUIREMENTS_REGEX);
     const requirementsStr = requirementsMatch ? requirementsMatch[1] : "";
 
     const requirements = eval(`${requirementsStr}`);

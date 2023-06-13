@@ -1,9 +1,9 @@
-export const DEBUG_PYTHON_NAME = "Odoo Python";
+export const DEBUG_PYTHON_NAME = "Odoo Server";
 export const DEBUG_ODOO_SHELL = "Odoo Shell";
 export const DEBUG_JS_NAME = "Odoo JS";
-export const requirementsRegex = /['"]depends['"]\s*:\s*(\[[\s\S]*?\])/;
-export const ODOO_SERVER_TERMINAL = "Odoo Server Terminal";
-export const ODOO_SHELL_TERMINAL = "Odoo Shell Terminal";
+export const REQUIREMENTS_REGEX = /['"]depends['"]\s*:\s*(\[[\s\S]*?\])/;
+export const ODOO_SERVER_TERMINAL = "Odoo Server";
+export const ODOO_SHELL_TERMINAL = "Odoo Shell";
 export const BASE_BRANCH_REGEX = /^(\d\d\.0|master|saas-\d\d\.\d)$/;
 export const DEV_BRANCH_REGEX = /^(\d\d\.0-|master-|saas-\d\d\.\d-)/;
 export const LINE_BREAK_REGEX = /[\r\n]+/;
