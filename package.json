@@ -133,7 +133,7 @@
       },
       {
         "command": "odooDev.openOdooConf",
-        "title": "Odoo Dev: Config File",
+        "title": "Odoo Dev: Open Config",
         "icon": "$(gear)"
       },
       {
