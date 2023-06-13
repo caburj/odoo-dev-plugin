@@ -406,7 +406,7 @@ export const startServer = createCommand(
     const commandArgs = await utils.getStartServerArgs();
     const python = await utils.getPythonPath();
     const odooBin = `${utils.getRepoPath(utils.odevRepos.odoo)}/odoo-bin`;
-    utils.startServer(
+    utils.sendStartServerCommand(
       `${python} ${odooBin} ${commandArgs.join(" ")}`,
       utils.getOdooServerTerminal()
     );
@@ -446,7 +446,7 @@ export const startOdooShell = createCommand(
     const commandArgs = await utils.getOdooShellCommandArgs();
     const python = await utils.getPythonPath();
     const odooBin = `${utils.getRepoPath(utils.odevRepos.odoo)}/odoo-bin`;
-    utils.startServer(
+    utils.sendStartServerCommand(
       `${python} ${odooBin} ${commandArgs.join(" ")}`,
       utils.getOdooShellTerminal()
     );
@@ -540,7 +540,7 @@ export const startServerWithUpdate = createCommand(
 
     const python = await utils.getPythonPath();
     const odooBin = `${utils.getRepoPath(utils.odevRepos.odoo)}/odoo-bin`;
-    utils.startServer(`${python} ${odooBin} ${args.join(" ")}`, utils.getOdooServerTerminal());
+    utils.sendStartServerCommand(`${python} ${odooBin} ${args.join(" ")}`, utils.getOdooServerTerminal());
   })
 );
 

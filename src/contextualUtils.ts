@@ -1099,9 +1099,11 @@ export function createContextualUtils(
     return commandArgs;
   };
 
-  const startServer = async (command: string, terminal: vscode.Terminal) => {
+  const sendStartServerCommand = async (command: string, terminal: vscode.Terminal) => {
     terminal.show();
-    terminal.sendText(command);
+    // In some odoo config files, the addons_path is set using relative paths.
+    // Important to cd to the odoo repo before running the command.
+    terminal.sendText(`cd ${odevRepos.odoo.rootUri.fsPath} && ${command}`);
 
     // when the server stops, set the context to false
     let timeout = setTimeout(async function poll() {
@@ -1132,7 +1134,7 @@ export function createContextualUtils(
     const args = [...startServerArgs, "-i", selectedAddons.join(",")];
     const python = await getPythonPath();
     const odooBin = `${getRepoPath(odevRepos.odoo)}/odoo-bin`;
-    startServer(`${python} ${odooBin} ${args.join(" ")}`, getOdooServerTerminal());
+    sendStartServerCommand(`${python} ${odooBin} ${args.join(" ")}`, getOdooServerTerminal());
   };
 
   let githubSession: vscode.AuthenticationSession | undefined;
@@ -1218,7 +1220,7 @@ export function createContextualUtils(
     getOdooShellCommandArgs,
     getPythonPath,
     getStartServerArgs,
-    startServer,
+    sendStartServerCommand,
     startServerWithInstall,
     getDBName,
     fetchBranches: refreshTrees(fetchBranches),
