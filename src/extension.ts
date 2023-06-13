@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 
 import * as vscode from "vscode";
+import * as Result from "./Result";
 import { ContextualUtils, createContextualUtils } from "./contextualUtils";
 import * as commands from "./commands";
 import { DEBUG_PYTHON_NAME } from "./constants";
@@ -82,8 +83,6 @@ export async function activate(context: vscode.ExtensionContext) {
     });
   }
 
-  const odevRepos = constructOdooDevRepositories(git.repositories);
-
   const repositories: Record<string, Repository | undefined> = Object.fromEntries(
     git.repositories.map((repo) => {
       const repoName = getRepoName(repo);
@@ -95,6 +94,14 @@ export async function activate(context: vscode.ExtensionContext) {
     return repo.rootUri.fsPath;
   };
 
+  const odevReposRes = Result.try_(constructOdooDevRepositories, git.repositories);
+
+  if (!Result.check(odevReposRes)) {
+    vscode.commands.executeCommand("setContext", "odooDev.state", "failed");
+    return;
+  }
+
+  const odevRepos = odevReposRes.value;
   if (odevRepos.odoo) {
     const odooAddonsPath = `${getRepoPath(odevRepos.odoo)}/addons`;
     for (const addon of await getAddons(odooAddonsPath)) {

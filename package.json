@@ -408,7 +408,7 @@
       {
         "view": "odoo-dev-branches",
         "when": "odooDev.state === 'failed'",
-        "contents": "Open a folder or a workspace that contains the odoo, enterprise and upgrade repositories.\n[Open Folder](command:workbench.action.files.openFolder)\n[Open Workspace](command:workbench.action.openWorkspace)"
+        "contents": "Open a folder or a workspace that contains the odoo, upgrade and custom addons (e.g. enterprise) repositories.\n[Open Folder](command:workbench.action.files.openFolder)\n[Open Workspace](command:workbench.action.openWorkspace)"
       }
     ]
   },
