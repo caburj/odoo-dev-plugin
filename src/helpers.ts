@@ -1,3 +1,4 @@
+import * as vscode from "vscode";
 import * as fs from "fs";
 import * as path from "path";
 import * as child_process from "child_process";
@@ -297,3 +298,16 @@ export const updateOdooDevRepositories = (
     }
   }
 };
+
+export function zip<T, U>(arr1: T[], arr2: U[]): [T, U | undefined][] {
+  const result: [T, U | undefined][] = [];
+  for (let i = 0; i < arr1.length; i++) {
+    result.push([arr1[i], arr2[i]]);
+  }
+  return result;
+}
+
+export function getPositionFromIndex(document: vscode.TextDocument, index: number) {
+  const offset = document.offsetAt(new vscode.Position(0, 0));
+  return document.positionAt(index + offset);
+}

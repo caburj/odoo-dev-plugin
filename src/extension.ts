@@ -34,6 +34,7 @@ const getPythonPath = async () => {
 const ALIASES: Record<string, string[]> = {
   "odooDev.checkoutBranch": ["odooDev.selectBranch"],
   "odooDev.deleteBranch": ["odooDev.removeBranch"],
+  "odooDev.gotoTestMethod": ["odooDev.findTestMethod"],
 };
 
 let addonsPathMap: Record<string, string> = {};

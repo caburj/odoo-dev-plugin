@@ -1,14 +1,17 @@
 import * as vscode from "vscode";
 import * as Result from "./Result";
+import * as fs from "fs";
 import fetch from "node-fetch";
 import {
   createTemplateNote,
   fileExists,
   getAddons,
+  getPositionFromIndex,
   inferBaseBranch,
   isBaseBranch,
   isValidDirectory,
   runShellCommand,
+  zip,
 } from "./helpers";
 import { type ContextualUtils } from "./contextualUtils";
 import { OdooDevBranch } from "./odoo_dev_branch";
@@ -540,7 +543,10 @@ export const startServerWithUpdate = createCommand(
 
     const python = await utils.getPythonPath();
     const odooBin = `${utils.getRepoPath(utils.odevRepos.odoo)}/odoo-bin`;
-    utils.sendStartServerCommand(`${python} ${odooBin} ${args.join(" ")}`, utils.getOdooServerTerminal());
+    utils.sendStartServerCommand(
+      `${python} ${odooBin} ${args.join(" ")}`,
+      utils.getOdooServerTerminal()
+    );
   })
 );
 
@@ -869,5 +875,116 @@ export const copyBranchName = createCommand(
       throw new Error(`Please select a dev branch.`);
     }
     await vscode.env.clipboard.writeText(branch);
+  })
+);
+
+export const gotoTestMethod = createCommand(
+  "odooDev.gotoTestMethod",
+  screamOnError(async (utils) => {
+    const input = await vscode.window.showInputBox({
+      placeHolder: "e.g. TestUi.test_01_pos_basic_order or test_01_pos_basic_order",
+      prompt: "Test method to navigate to",
+    });
+
+    if (!input) {
+      return;
+    }
+
+    const repositories: Record<string, Repository> = {
+      odoo: utils.odevRepos.odoo,
+      ...utils.odevRepos.custom,
+    };
+    if (utils.odevRepos.upgrade) {
+      repositories.upgrade = utils.odevRepos.upgrade;
+    }
+
+    let classToFind: string | undefined;
+    let methodToFind: string;
+
+    const splitInput = input.split(".");
+    if (splitInput.length === 1) {
+      methodToFind = splitInput[0];
+    } else {
+      [classToFind, methodToFind] = splitInput;
+    }
+
+    classToFind = classToFind === "" ? undefined : classToFind?.trim();
+    methodToFind = methodToFind.trim();
+
+    const potentialResults: { path: string; index: number; name: string; repoName: string }[] = [];
+
+    for (const [repoName, repo] of Object.entries(repositories)) {
+      const pattern = new vscode.RelativePattern(repo.rootUri, "**/tests/**/*.py");
+      const testFileUris = await vscode.workspace.findFiles(pattern, "**/node_modules/**");
+      for (const uri of testFileUris) {
+        const filePath = uri.fsPath;
+        const fileContent = fs.readFileSync(filePath, "utf-8");
+        const testClassRegex = /class\s+(\w+)\(.*\):/g;
+        const testMethodRegex = /\s+def\s+(test_\w+)\(\w+\):\n/g;
+        const testClassMatches = [...fileContent.matchAll(testClassRegex)];
+        if (testClassMatches.length > 0) {
+          const matchPairs = zip(testClassMatches, testClassMatches.slice(1));
+          for (const [classMatch1, classMatch2] of matchPairs) {
+            const [matchedString, className] = classMatch1;
+            if (classToFind && className !== classToFind) {
+              continue;
+            }
+            const classBodyStart = classMatch1.index! + matchedString.length;
+            const classBodyEnd = classMatch2 ? classMatch2.index! : fileContent.length;
+            const classBody = fileContent.slice(classBodyStart, classBodyEnd);
+            const testMethods = classBody.matchAll(testMethodRegex);
+            for (const testMethodMatch of testMethods) {
+              const [matchedString, testMethodName] = testMethodMatch;
+              const methodNameIndex = matchedString.indexOf(testMethodName);
+              if (testMethodName === methodToFind) {
+                const methodIndex = classBodyStart + testMethodMatch.index! + methodNameIndex;
+                potentialResults.push({
+                  path: filePath,
+                  index: methodIndex,
+                  name: `${className}.${testMethodName}`,
+                  repoName,
+                });
+              }
+            }
+          }
+        }
+      }
+    }
+
+    let selectedResult: { path: string; index: number; name: string } | undefined;
+    if (potentialResults.length === 0) {
+      throw new Error(`Unable to find test method '${input}'.`);
+    } else if (potentialResults.length === 1) {
+      selectedResult = potentialResults[0];
+    } else {
+      const result = await vscode.window.showQuickPick(
+        potentialResults.map((r) => {
+          const description = `${r.repoName}`;
+          return {
+            ...r,
+            label: r.name,
+            description,
+            detail: r.path,
+          };
+        }),
+        {
+          title: "Multiple methods found, please select one",
+        }
+      );
+      if (!result) {
+        return;
+      }
+      selectedResult = potentialResults.find((r) => r.path === result.path);
+    }
+
+    if (selectedResult) {
+      const { path, index } = selectedResult;
+      const document = await vscode.workspace.openTextDocument(path);
+      const start = getPositionFromIndex(document, index);
+      const end = getPositionFromIndex(document, index + methodToFind.length);
+      await vscode.window.showTextDocument(document, {
+        selection: new vscode.Range(start, end),
+      });
+    }
   })
 );

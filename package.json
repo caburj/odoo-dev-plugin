@@ -164,6 +164,14 @@
       {
         "command": "odooDev.copyBranchName",
         "title": "Odoo Dev: Copy Branch Name"
+      },
+      {
+        "command": "odooDev.gotoTestMethod",
+        "title": "Odoo Dev: Go To Test Method"
+      },
+      {
+        "command": "odooDev.findTestMethod",
+        "title": "Odoo Dev: Find Test Method"
       }
     ],
     "configuration": {
