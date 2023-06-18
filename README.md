@@ -1,7 +1,6 @@
 # odoo-dev-plugin
 
-Switching to different branches very often? Want to debug odoo inside VS Code?
-This plugin can help.
+Switch between projects, debug without configuration
 
 ## Features
 
@@ -18,8 +17,10 @@ This plugin can help.
 
 ## Getting started
 
-- Open the folder (or workspace) that contains the `odoo`, `enterprise` and/or
-  `upgrade` repositories.
+- Open the folder (or workspace) that contains the `odoo`, `upgrade` and/or
+  custom addons repositories.
+  - Check the Odoo Dev Activity Bar on the left to see if the repositories are
+    loaded.
 - Open the settings and search for "odoo dev".
   - Look for `Config Path` setting to specify the path of the config file that
     will be used for starting the odoo server.
@@ -37,59 +38,98 @@ This plugin can help.
 
 ### Settings
 
-- Branch Name as DB (`odooDev.branchNameAsDB`)
-- Pull Base Branch on Create (`odooDev.pullBaseOnCreate`)
-- Config Path (`odooDev.odooConfigPath`)
-- Notes Folder (`odooDev.notesFolder`)
-- Auto Stash (`odooDev.autoStash`)
-- Auto Test (`odooDev.autoTest`)
+| Setting Name               | Technical Name             | Description                                                                                                                                                |
+| -------------------------- | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Config Path                | `odooDev.odooConfigPath`   | Path to the odoo config file. If not set, the user will be prompted to locate it.                                                                          |
+| Notes Folder               | `odooDev.notesFolder`      | Path to the folder where the notes are stored. If not set, the user will be prompted to locate the folder.                                                 |
+| Auto Stash                 | `odooDev.autoStash`        | Automatically stash changes before switching branch.                                                                                                       |
+| Auto Test                  | `odooDev.autoTest`         | Automatically start the server with `--test-enable` option when the cursor is in a test file. `--test-tags` will be computed based on where the cursor is. |
+| Branch Name as DB          | `odooDev.branchNameAsDB`   | Use the branch name as the database name when starting the server. This overrides the db specified in the config file.                                     |
+| Pull Base Branch on Create | `odooDev.pullBaseOnCreate` | Pull the base branch first before creating the new branch.                                                                                                 |
 
 ### Commands
 
-**Branches management**
+**Management of dev branches**
 
-- Odoo Dev: Fetch
-- Odoo Dev: Create
-- Odoo Dev: Fetch/Create
-- Odoo Dev: Delete / Odoo Dev: Remove
-- Odoo Dev: Checkout / Odoo Dev: Select
-- Odoo Dev: Fetch Stable
-- Odoo Dev: Reset Active Branch
+The following commands, when executed, are applied to each repository that are
+loaded in the workspace.
 
-**Starting/Debugging**
+| Command                 | Description                                                                                                                                             |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Odoo Dev: Create        | Creates the branch using the provided name and checks out to it.                                                                                        |
+| Odoo Dev: Fetch         | Fetches remotely the given branch name (will check each remove from the git config) and checks out to it.                                               |
+| Odoo Dev: Fetch/Create  | Does `Odoo Dev: Fetch` and if unsuccessful, falls back to `Odoo Dev: Create`.                                                                           |
+| Odoo Dev: Delete        | Deletes branch of the given name.                                                                                                                       |
+| Odoo Dev: Checkout      | Checks out to the given branch.                                                                                                                         |
+| Odoo Dev: Fetch Stable  | Fetches the given stable branch from the official odoo repositories.                                                                                    |
+| Odoo Dev: Reset Active  | Fetches the latest version of the active branch from remote and resets the local.                                                                       |
+| Odoo Dev: Rebase Active | Fetches the latest version of the active branch's base and rebases the active branch on that updated base. Any conflict should be resolved by the user. |
+| Odoo Dev: Select        | Alias for `Odoo Dev: Checkout`                                                                                                                          |
+| Odoo Dev: Remove        | Alias for `Odoo Dev: Delete`                                                                                                                            |
 
-- Odoo Dev: Config File
-- Odoo Dev: Start Fresh Server
-- Odoo Dev: Start Server
-- Odoo Dev: Debug Server
-- Odoo Dev: Start Server With Install...
-- Odoo Dev: Debug Server With Install...
-- Odoo Dev: Start Server With Update...
-- Odoo Dev: Debug Server With Update...
-- Odoo Dev: Stop Active Server
-- Odoo Dev: Open Chrome (Debug)
+**Start server / Debug**
+
+The following commands relies on the `Config Path` setting. If the setting is
+not set, the user will be prompted to locate the config file.
+
+| Command                             | Description                                                                         |
+| ----------------------------------- | ----------------------------------------------------------------------------------- |
+| Odoo Dev: Open Config               | Opens an editor showing the odoo config that will be used when starting the server. |
+| Odoo Dev: Start Fresh Server        | Drops the db and starts the server install option using the user-selected addons.   |
+| Odoo Dev: Start Server              | Starts the server.                                                                  |
+| Odoo Dev: Start Server With Install | Starts the server with install option using the user-selected addons.               |
+| Odoo Dev: Start Server With Update  | Starts the server with update option using the user-selected addons.                |
+
+It's possible to start the server where you can put breakpoints in the python
+code and VS Code will stop at the breakpoint when reached. Normally, to achieve
+this, you'll need a launch configuration. However, the plugin can automatically
+generate the launch configuration needed to start the server in debug mode.
+
+| Command                             | Description                                                                         |
+| ----------------------------------- | ----------------------------------------------------------------------------------- |
+| Odoo Dev: Debug Server              | Starts the server in debug mode.                                                    |
+| Odoo Dev: Debug Server With Install | Starts the server in debug mode with install option using the user-selected addons. |
+| Odoo Dev: Debug Server With Update  | Starts the server in debug mode with update option using the user-selected addons.  |
+
+NOTE: When `odooDev.autoTest` is enabled, and the cursor is in a test file, the
+server will be started with `--test-enable` option. `--test-tag` option will be
+added if the cursor is in a test method/class.
+
+**Open Chrome**
+
+| Command                       | Description                                                                                                                                                                                                                                         |
+| ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Odoo Dev: Open Chrome         | Opens chrome browser automatically navigating to the homepage of the server. Note that the ip of the device is taken into account so that it's already compatible to IoT Box. For example, it automatically navigates to `http://192.12.44.1:8069`. |
+| Odoo Dev: Open Chrome (Debug) | Does `Odoo Dev: Open Chrome` in debug mode. This allows the user to debug JS code from the editor.                                                                                                                                                  |
 
 **Useful Links**
 
-- Odoo Dev: Pull Request (odoo)
-- Odoo Dev: Pull Request (enterprise)
-- Odoo Dev: Pull Request (upgrade)
-- Odoo Dev: Runbot
+Opens the default browser to some useful links related to the selected (or active) branch.
+
+| Command                             | Description                                                     |
+| ----------------------------------- | --------------------------------------------------------------- |
+| Odoo Dev: Pull Request (odoo)       | Opens the pull request page made for the odoo repository.       |
+| Odoo Dev: Pull Request (enterprise) | Opens the pull request page made for the enterprise repository. |
+| Odoo Dev: Pull Request (upgrade)    | Opens the pull request page made for the upgrade repository.    |
+| Odoo Dev: Runbot                    | Opens the runbot page.                                          |
 
 **Misc**
 
-- Odoo Dev: Drop Active DB
-- Odoo Dev: Get Test Tag
-- Odoo Dev: Open Chrome
-- Odoo Dev: Linked Note
-- Odoo Dev: Is Addon Dependent On?
-- Odoo Dev: Copy Branch Name
+Some commands that maybe useful.
+
+| Command                          | Description                                                                                                                                      |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Odoo Dev: Go To Test Method      | Given the test method name, the plugin will search for it and opens the test file with cursor highlighting the found test method.                |
+| Odoo Dev: Linked Note            | Opens the linked note to the selected branch.                                                                                                    |
+| Odoo Dev: Is Addon Dependent On? | User will be asked to select an addon, followed by another addon. Then the command will tell whether the first addon is dependent on the second. |
+| Odoo Dev: Copy Branch Name       | Copies the branch name of the active branch.                                                                                                     |
+| Odoo Dev: Stop Active Server     | Stops the active server.                                                                                                                         |
+| Odoo Dev: Drop Active DB         | Drops the active db.                                                                                                                             |
+| Odoo Dev: Get Test Tag           | Gets the test tag of the current cursor position.                                                                                                |
 
 ## Known Limitations
 
 - Doesn't support workflows that utilize worktrees.
-- It can only recognize `odoo`, `enterprise` and `upgrade`.
-  - Would be nice to support repositories for custom addons.
 
 ## Questions you might ask (FAQ)
 
@@ -100,6 +140,8 @@ This plugin can help.
 - Why did you waste your time on this?
   - I don't know. Perhaps I just want to learn more about VS Code extension
     creation.
+  - It's actually not easy to track many tasks. This helped me a lot in
+    switching between them.
 
 ## Release Notes
 
@@ -147,3 +189,9 @@ This plugin can help.
 
 - fix debugging chrome
   - issue because of incorrect source map path overrides
+
+### 0.1.11
+
+- cd to the odoo repo before running command
+- go to test method command
+- description of commands in readme
