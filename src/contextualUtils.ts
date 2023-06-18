@@ -1131,7 +1131,10 @@ export function createContextualUtils(
 
   const startServerWithInstall = async (selectedAddons: string[]) => {
     const startServerArgs = await getStartServerArgs();
-    const args = [...startServerArgs, "-i", selectedAddons.join(",")];
+    const args = [
+      ...startServerArgs,
+      ...(selectedAddons.length === 0 ? [] : ["-i", selectedAddons.join(",")]),
+    ];
     const python = await getPythonPath();
     const odooBin = `${getRepoPath(odevRepos.odoo)}/odoo-bin`;
     sendStartServerCommand(`${python} ${odooBin} ${args.join(" ")}`, getOdooServerTerminal());
