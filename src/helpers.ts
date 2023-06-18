@@ -5,7 +5,7 @@ import * as child_process from "child_process";
 import * as psTree from "ps-tree";
 import * as Result from "./Result";
 import { Repository } from "./dependencies/git";
-import { BASE_BRANCH_REGEX, DEV_BRANCH_REGEX } from "./constants";
+import { BASE_BRANCH_REGEX, DEV_BRANCH_REGEX, REQUIREMENTS_REGEX } from "./constants";
 
 export function getFoldersInDirectory(directoryPath: string) {
   const filesAndDirs = fs.readdirSync(directoryPath);
@@ -310,4 +310,28 @@ export function zip<T, U>(arr1: T[], arr2: U[]): [T, U | undefined][] {
 export function getPositionFromIndex(document: vscode.TextDocument, index: number) {
   const offset = document.offsetAt(new vscode.Position(0, 0));
   return document.positionAt(index + offset);
+}
+
+const parseStringArray = (str: string) => {
+  const strippedStr = str.replace(/'/g, '"').replace(/\s+/g, "").replace(",]", "]");
+  const parse = JSON.parse as (str: string) => string[];
+  const result = Result.try_(parse, strippedStr);
+  return Result.unwrap(result);
+};
+
+export function getRequirements(addonPath: string) {
+  const manifestFilePath = `${addonPath}/__manifest__.py`;
+
+  if (!fs.existsSync(manifestFilePath)) {
+    throw new Error(`Manifest file not found at path '${addonPath}'.`);
+  }
+
+  const manifestContent = removeComments(fs.readFileSync(manifestFilePath, "utf8"));
+
+  const requirementsMatch = manifestContent.match(REQUIREMENTS_REGEX);
+  if (!requirementsMatch) {
+    return undefined;
+  }
+
+  return parseStringArray(requirementsMatch[1]);
 }

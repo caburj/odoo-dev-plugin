@@ -11,7 +11,6 @@ import {
   inferBaseBranch,
   isOdooServer,
   killOdooServer,
-  removeComments,
   tryRunShellCommand,
   runShellCommand,
   getAddons,
@@ -19,6 +18,7 @@ import {
   getBase,
   OdooDevRepositories,
   isBase,
+  getRequirements,
 } from "./helpers";
 import { assert } from "console";
 import {
@@ -26,7 +26,6 @@ import {
   FETCH_URL_REGEX,
   ODOO_SERVER_TERMINAL,
   ODOO_SHELL_TERMINAL,
-  REQUIREMENTS_REGEX,
 } from "./constants";
 import { OdooAddonsTree } from "./odoo_addons";
 import { getDebugSessions } from "./state";
@@ -1158,17 +1157,8 @@ export function createContextualUtils(
 
   function isDependentOn(addon: string, dependency: string): boolean {
     const addonPath = `${addonsPathMap[addon]}`;
-    const manifestPath = `${addonPath}/__manifest__.py`;
+    const requirements = getRequirements(addonPath);
 
-    if (!fs.existsSync(manifestPath)) {
-      throw new Error(`Manifest file not found for '${addon}' addon at path ${addonPath}`);
-    }
-
-    const manifestContent = removeComments(fs.readFileSync(manifestPath, "utf8"));
-    const requirementsMatch = manifestContent.match(REQUIREMENTS_REGEX);
-    const requirementsStr = requirementsMatch ? requirementsMatch[1] : "";
-
-    const requirements = eval(`${requirementsStr}`);
     if (!requirements) {
       return false;
     }

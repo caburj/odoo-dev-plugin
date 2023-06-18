@@ -30,6 +30,14 @@ export function check<T, E extends Error>(result: Result<T, E>): result is Succe
   return "value" in result;
 }
 
+export function unwrap<T, E extends Error>(result: Result<T, E>): T {
+  if (check(result)) {
+    return result.value;
+  } else {
+    throw result.error;
+  }
+}
+
 export function unwrapExcept<T, E extends Error>(
   result: Result<T, E>,
   onFail: (fail: E) => void
@@ -57,7 +65,10 @@ export function try_<A extends any[], R extends Promise<any>, E extends Error>(
   cb: (...args: A) => R,
   ...args: A
 ): Promise<Result<Awaited<R>, E>>;
-export function try_<A extends any[], R, E extends Error>(cb: (...args: A) => R, ...args: A): Result<R, E>;
+export function try_<A extends any[], R, E extends Error>(
+  cb: (...args: A) => R,
+  ...args: A
+): Result<R, E>;
 export function try_<A extends any[]>(cb: (...args: A) => any, ...args: A): any {
   const trycb = resultify(cb);
   return trycb(...args);

@@ -1,16 +1,6 @@
 import * as vscode from "vscode";
-import * as fs from "fs";
-import { OdooDevRepositories, getAddons, isAddon, removeComments } from "./helpers";
-import { REQUIREMENTS_REGEX } from "./constants";
+import { OdooDevRepositories, getAddons, getRequirements, isAddon } from "./helpers";
 import { Repository } from "./dependencies/git";
-
-function getRequirements(addonPath: string): string[] | undefined {
-  const manifestFilePath = `${addonPath}/__manifest__.py`;
-  const manifestContent = removeComments(fs.readFileSync(manifestFilePath, "utf8"));
-  const requirementsMatch = manifestContent.match(REQUIREMENTS_REGEX);
-  const requirementsStr = requirementsMatch ? requirementsMatch[1] : "";
-  return eval(`${requirementsStr}`) as string[] | undefined;
-}
 
 export class OdooAddonsTree implements vscode.TreeDataProvider<OdooAddon> {
   private _onDidChangeTreeData: vscode.EventEmitter<OdooAddon | undefined | void> =
