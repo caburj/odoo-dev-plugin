@@ -224,7 +224,7 @@ export function createContextualUtils(
     if (vscode.workspace.getConfiguration("odooDev").branchNameAsDB as boolean) {
       const branch = await getActiveBranch();
       if (branch) {
-        args.push("-d", branch);
+        args.push("-d", branch.slice(0, 63));
       }
     }
     return args;
@@ -260,7 +260,7 @@ export function createContextualUtils(
     } else {
       dbName = await getOdooConfigValue("db_name");
     }
-    return dbName;
+    return dbName?.slice(0, 63);
   }
 
   const isOdooServerRunning = async (terminalPID: number) => {
