@@ -195,3 +195,8 @@ Some commands that maybe useful.
 - cd to the odoo repo before running command
 - go to test method command
 - description of commands in readme
+
+### 0.1.12
+
+- fix: limit db name to 63 characters
+- fix: when no selected addons, don't append `-i <addon>` when starting server
