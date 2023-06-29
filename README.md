@@ -200,3 +200,8 @@ Some commands that maybe useful.
 
 - fix: limit db name to 63 characters
 - fix: when no selected addons, don't append `-i <addon>` when starting server
+
+### 0.1.13
+
+- imp: default keyboad shortcuts
+- imp: opening pr links will ask for branch if not selected
