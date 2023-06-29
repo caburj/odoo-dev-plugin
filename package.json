@@ -427,38 +427,38 @@
       },
       {
         "command": "odooDev.startFreshServer",
-        "key": "ctrl+o ctrl+s f",
-        "mac": "cmd+o cmd+s f"
+        "key": "ctrl+o ctrl+x",
+        "mac": "cmd+o cmd+x"
       },
       {
         "command": "odooDev.startServer",
-        "key": "ctrl+o ctrl+s n",
-        "mac": "cmd+o cmd+s n"
+        "key": "ctrl+o ctrl+enter",
+        "mac": "cmd+o cmd+enter"
       },
       {
         "command": "odooDev.startServerWithInstall",
-        "key": "ctrl+o ctrl+s i",
-        "mac": "cmd+o cmd+s i"
+        "key": "ctrl+o ctrl+i",
+        "mac": "cmd+o cmd+i"
       },
       {
         "command": "odooDev.startServerWithUpdate",
-        "key": "ctrl+o ctrl+s u",
-        "mac": "cmd+o cmd+s u"
+        "key": "ctrl+o ctrl+u",
+        "mac": "cmd+o cmd+u"
       },
       {
         "command": "odooDev.debugServer",
-        "key": "ctrl+o ctrl+d n",
-        "mac": "cmd+o cmd+d n"
+        "key": "ctrl+o ctrl+shift+enter",
+        "mac": "cmd+o cmd+shift+enter"
       },
       {
         "command": "odooDev.debugServerWithInstall",
-        "key": "ctrl+o ctrl+d i",
-        "mac": "cmd+o cmd+d i"
+        "key": "ctrl+o ctrl+shift+i",
+        "mac": "cmd+o cmd+shift+i"
       },
       {
         "command": "odooDev.debugServerWithUpdate",
-        "key": "ctrl+o ctrl+d u",
-        "mac": "cmd+o cmd+d u"
+        "key": "ctrl+o ctrl+shift+u",
+        "mac": "cmd+o cmd+shift+u"
       },
       {
         "command": "odooDev.openChromeLocalServer",
@@ -472,38 +472,38 @@
       },
       {
         "command": "odooDev.createBranch",
-        "key": "ctrl+o ctrl+b n",
-        "mac": "cmd+o cmd+b n"
+        "key": "ctrl+o n",
+        "mac": "cmd+o n"
       },
       {
         "command": "odooDev.fetchBranch",
-        "key": "ctrl+o ctrl+b f",
-        "mac": "cmd+o cmd+b f"
+        "key": "ctrl+o f",
+        "mac": "cmd+o f"
       },
       {
         "command": "odooDev.checkoutBranch",
-        "key": "ctrl+o ctrl+b c",
-        "mac": "cmd+o ctrl+b c"
+        "key": "ctrl+o c",
+        "mac": "cmd+o c"
       },
       {
         "command": "odooDev.selectBranch",
-        "key": "ctrl+o ctrl+b s",
-        "mac": "cmd+o ctrl+b s"
+        "key": "ctrl+o s",
+        "mac": "cmd+o s"
       },
       {
         "command": "odooDev.deleteBranch",
-        "key": "ctrl+o ctrl+b d",
-        "mac": "cmd+o ctrl+b d"
+        "key": "ctrl+o d",
+        "mac": "cmd+o d"
       },
       {
         "command": "odooDev.rebaseActive",
-        "key": "ctrl+o ctrl+b p",
-        "mac": "cmd+o cmd+b p"
+        "key": "ctrl+o left",
+        "mac": "cmd+o left"
       },
       {
         "command": "odooDev.resetActive",
-        "key": "ctrl+o ctrl+b shift+p",
-        "mac": "cmd+o cmd+b shift+p"
+        "key": "ctrl+o shift+left",
+        "mac": "cmd+o shift+left"
       },
       {
         "command": "odooDev.openOdooConf",
