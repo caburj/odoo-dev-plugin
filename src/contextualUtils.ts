@@ -3,7 +3,7 @@ import * as os from "os";
 import * as fs from "fs";
 import * as ini from "ini";
 import * as Result from "./Result";
-import { Branch, Remote, Repository } from "./dependencies/git";
+import { Branch, ForcePushMode, Remote, Repository } from "./dependencies/git";
 import { OdooDevBranch, OdooDevBranches } from "./odoo_dev_branch";
 import {
   findRemote,
@@ -22,7 +22,9 @@ import {
 } from "./helpers";
 import { assert } from "console";
 import {
+  BASE_BRANCH_REGEX,
   DEBUG_JS_NAME,
+  DEV_BRANCH_REGEX,
   FETCH_URL_REGEX,
   ODOO_SERVER_TERMINAL,
   ODOO_SHELL_TERMINAL,
@@ -1206,10 +1208,71 @@ export function createContextualUtils(
 
   function selectDevBranch() {
     const devBranches = getBaseBranches()
-      .map((base) => getDevBranches(base).map(b => b.name))
+      .map((base) => getDevBranches(base).map((b) => b.name))
       .flat();
 
     return vscode.window.showQuickPick(devBranches, { title: "Choose a branch" });
+  }
+
+  async function push(force: boolean) {
+    // get all repos that is not base
+    const repos: Record<string, Repository> = {
+      odoo: odevRepos.odoo,
+      ...odevRepos.custom,
+    };
+    if (odevRepos.upgrade) {
+      repos["upgrade"] = odevRepos.upgrade;
+    }
+
+    const repoSelection = Object.entries(repos)
+      .filter(([, repo]) => !BASE_BRANCH_REGEX.test(repo.state.HEAD?.name ?? ""))
+      .map(([name]) => name);
+
+    if (repoSelection.length === 0) {
+      throw new Error("No repos to push.");
+    }
+
+    const repoName =
+      repoSelection.length === 1
+        ? repoSelection[0]
+        : await vscode.window.showQuickPick(repoSelection, {
+            title: "Select repo to push",
+          });
+
+    if (!repoName) {
+      return;
+    }
+
+    const repo = repos[repoName];
+    // check if repo is clean
+    if (repo.state.workingTreeChanges.length > 0) {
+      throw new Error(`Repo '${repoName}' is not clean.`);
+    }
+
+    const branch = repo.state.HEAD?.name;
+    if (!branch || !DEV_BRANCH_REGEX.test(branch)) {
+      throw new Error(`Repo '${repoName}' is not on a dev branch.`);
+    }
+
+    // check if branch has a remote
+    let remote = repo.state.HEAD?.upstream?.remote;
+    if (!remote) {
+      // if not, ask user to select a remote
+      const remotes = repo.state.remotes.map((r) => r.name);
+      remote = await vscode.window.showQuickPick(remotes, {
+        title: `Select remote for '${repoName}'`,
+      });
+      if (!remote) {
+        return;
+      }
+    }
+
+    const push = withProgress({
+      message: `Pushing ${branch} to ${repoName}/${remote}...`,
+      cb: () => repo.push(remote, branch, true, force ? ForcePushMode.Force : undefined),
+    });
+
+    await push();
   }
 
   return {
@@ -1249,5 +1312,6 @@ export function createContextualUtils(
     odevRepos,
     getActiveBranch,
     selectDevBranch,
+    push,
   };
 }

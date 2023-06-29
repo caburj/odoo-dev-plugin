@@ -997,3 +997,17 @@ export const gotoTestMethod = createCommand(
     }
   })
 );
+
+export const push = createCommand(
+  "odooDev.push",
+  screamOnError(async (utils) => {
+    return utils.push(false);
+  })
+);
+
+export const pushForce = createCommand(
+  "odooDev.pushForce",
+  screamOnError(async (utils) => {
+    return utils.push(true);
+  })
+);

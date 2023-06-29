@@ -506,6 +506,16 @@
         "mac": "cmd+o shift+left"
       },
       {
+        "command": "odooDev.push",
+        "key": "ctrl+o right",
+        "mac": "cmd+o right"
+      },
+      {
+        "command": "odooDev.pushForce",
+        "key": "ctrl+o shift+right",
+        "mac": "cmd+o shift+right"
+      },
+      {
         "command": "odooDev.openOdooConf",
         "key": "ctrl+o o",
         "mac": "cmd+o o"
