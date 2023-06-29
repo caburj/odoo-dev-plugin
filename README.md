@@ -205,3 +205,8 @@ Some commands that maybe useful.
 
 - imp: default keyboad shortcuts
 - imp: opening pr links will ask for branch if not selected
+
+### 0.1.14
+
+- fix: better default shortcuts
+- imp: push active branch command
