@@ -54,18 +54,18 @@ Switch between projects, debug without configuration
 The following commands, when executed, are applied to each repository that are
 loaded in the workspace.
 
-| Command                 | Description                                                                                                                                             |
-| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Odoo Dev: Create        | Creates the branch using the provided name and checks out to it.                                                                                        |
-| Odoo Dev: Fetch         | Fetches remotely the given branch name (will check each remove from the git config) and checks out to it.                                               |
-| Odoo Dev: Fetch/Create  | Does `Odoo Dev: Fetch` and if unsuccessful, falls back to `Odoo Dev: Create`.                                                                           |
-| Odoo Dev: Delete        | Deletes branch of the given name.                                                                                                                       |
-| Odoo Dev: Checkout      | Checks out to the given branch.                                                                                                                         |
-| Odoo Dev: Fetch Stable  | Fetches the given stable branch from the official odoo repositories.                                                                                    |
-| Odoo Dev: Reset Active  | Fetches the latest version of the active branch from remote and resets the local.                                                                       |
-| Odoo Dev: Rebase Active | Fetches the latest version of the active branch's base and rebases the active branch on that updated base. Any conflict should be resolved by the user. |
-| Odoo Dev: Select        | Alias for `Odoo Dev: Checkout`                                                                                                                          |
-| Odoo Dev: Remove        | Alias for `Odoo Dev: Delete`                                                                                                                            |
+| Command                        | Description                                                                                                                                             |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Odoo Dev: Create               | Creates the branch using the provided name and checks out to it.                                                                                        |
+| Odoo Dev: Fetch                | Fetches remotely the given branch name (will check each remove from the git config) and checks out to it.                                               |
+| Odoo Dev: Fetch/Create         | Does `Odoo Dev: Fetch` and if unsuccessful, falls back to `Odoo Dev: Create`.                                                                           |
+| Odoo Dev: Delete               | Deletes branch of the given name.                                                                                                                       |
+| Odoo Dev: Checkout             | Checks out to the given branch.                                                                                                                         |
+| Odoo Dev: Fetch Stable         | Fetches the given stable branch from the official odoo repositories.                                                                                    |
+| Odoo Dev: Pull (Reset) Active  | Fetches the latest version of the active branch from remote and resets the local.                                                                       |
+| Odoo Dev: Pull (Rebase) Active | Fetches the latest version of the active branch's base and rebases the active branch on that updated base. Any conflict should be resolved by the user. |
+| Odoo Dev: Select               | Alias for `Odoo Dev: Checkout`                                                                                                                          |
+| Odoo Dev: Remove               | Alias for `Odoo Dev: Delete`                                                                                                                            |
 
 **Start server / Debug**
 

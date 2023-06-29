@@ -61,11 +61,11 @@
       },
       {
         "command": "odooDev.rebaseActive",
-        "title": "Odoo Dev: Rebase Active"
+        "title": "Odoo Dev: Pull (Rebase) Active"
       },
       {
         "command": "odooDev.resetActive",
-        "title": "Odoo Dev: Reset Active",
+        "title": "Odoo Dev: Pull (Reset) Active",
         "icon": "$(sync)"
       },
       {
@@ -417,6 +417,123 @@
         "view": "odoo-dev-branches",
         "when": "odooDev.state === 'failed'",
         "contents": "Open a folder or a workspace that contains the odoo, upgrade and custom addons (e.g. enterprise) repositories.\n[Open Folder](command:workbench.action.files.openFolder)\n[Open Workspace](command:workbench.action.openWorkspace)"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "odooDev.stopActiveServer",
+        "key": "ctrl+o ctrl+q",
+        "mac": "cmd+o cmd+q"
+      },
+      {
+        "command": "odooDev.startFreshServer",
+        "key": "ctrl+o ctrl+s f",
+        "mac": "cmd+o cmd+s f"
+      },
+      {
+        "command": "odooDev.startServer",
+        "key": "ctrl+o ctrl+s n",
+        "mac": "cmd+o cmd+s n"
+      },
+      {
+        "command": "odooDev.startServerWithInstall",
+        "key": "ctrl+o ctrl+s i",
+        "mac": "cmd+o cmd+s i"
+      },
+      {
+        "command": "odooDev.startServerWithUpdate",
+        "key": "ctrl+o ctrl+s u",
+        "mac": "cmd+o cmd+s u"
+      },
+      {
+        "command": "odooDev.debugServer",
+        "key": "ctrl+o ctrl+d n",
+        "mac": "cmd+o cmd+d n"
+      },
+      {
+        "command": "odooDev.debugServerWithInstall",
+        "key": "ctrl+o ctrl+d i",
+        "mac": "cmd+o cmd+d i"
+      },
+      {
+        "command": "odooDev.debugServerWithUpdate",
+        "key": "ctrl+o ctrl+d u",
+        "mac": "cmd+o cmd+d u"
+      },
+      {
+        "command": "odooDev.openChromeLocalServer",
+        "key": "ctrl+o ctrl+g",
+        "mac": "cmd+o cmd+g"
+      },
+      {
+        "command": "odooDev.debugJS",
+        "key": "ctrl+o ctrl+shift+g",
+        "mac": "cmd+o cmd+shift+g"
+      },
+      {
+        "command": "odooDev.createBranch",
+        "key": "ctrl+o ctrl+b n",
+        "mac": "cmd+o cmd+b n"
+      },
+      {
+        "command": "odooDev.fetchBranch",
+        "key": "ctrl+o ctrl+b f",
+        "mac": "cmd+o cmd+b f"
+      },
+      {
+        "command": "odooDev.checkoutBranch",
+        "key": "ctrl+o ctrl+b c",
+        "mac": "cmd+o ctrl+b c"
+      },
+      {
+        "command": "odooDev.selectBranch",
+        "key": "ctrl+o ctrl+b s",
+        "mac": "cmd+o ctrl+b s"
+      },
+      {
+        "command": "odooDev.deleteBranch",
+        "key": "ctrl+o ctrl+b d",
+        "mac": "cmd+o ctrl+b d"
+      },
+      {
+        "command": "odooDev.rebaseActive",
+        "key": "ctrl+o ctrl+b p",
+        "mac": "cmd+o cmd+b p"
+      },
+      {
+        "command": "odooDev.resetActive",
+        "key": "ctrl+o ctrl+b shift+p",
+        "mac": "cmd+o cmd+b shift+p"
+      },
+      {
+        "command": "odooDev.openOdooConf",
+        "key": "ctrl+o o",
+        "mac": "cmd+o o"
+      },
+      {
+        "command": "odooDev.findTestMethod",
+        "key": "ctrl+o t",
+        "mac": "cmd+o t"
+      },
+      {
+        "command": "odooDev.openRunbotLink",
+        "key": "ctrl+o ctrl+l r",
+        "mac": "cmd+o cmd+l r"
+      },
+      {
+        "command": "odooDev.openPullRequestLinkOdoo",
+        "key": "ctrl+o ctrl+l o",
+        "mac": "cmd+o cmd+l o"
+      },
+      {
+        "command": "odooDev.openPullRequestLinkEnterprise",
+        "key": "ctrl+o ctrl+l e",
+        "mac": "cmd+o cmd+l e"
+      },
+      {
+        "command": "odooDev.openPullRequestLinkUpgrade",
+        "key": "ctrl+o ctrl+l u",
+        "mac": "cmd+o cmd+l u"
       }
     ]
   },
