@@ -3,7 +3,7 @@ import * as os from "os";
 import * as fs from "fs";
 import * as ini from "ini";
 import * as Result from "./Result";
-import { Branch, ForcePushMode, Remote, Repository } from "./dependencies/git";
+import { Branch, Remote, Repository } from "./dependencies/git";
 import { OdooDevBranch, OdooDevBranches } from "./odoo_dev_branch";
 import {
   findRemote,
@@ -1269,7 +1269,7 @@ export function createContextualUtils(
 
     const push = withProgress({
       message: `Pushing ${branch} to ${repoName}/${remote}...`,
-      cb: () => repo.push(remote, branch, true, force ? ForcePushMode.Force : undefined),
+      cb: () => repo.push(remote, branch, true, force ? 0 : undefined),
     });
 
     await push();
