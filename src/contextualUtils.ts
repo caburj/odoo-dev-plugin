@@ -4,7 +4,7 @@ import * as fs from "fs";
 import * as ini from "ini";
 import * as Result from "./Result";
 import { Branch, Remote, Repository } from "./dependencies/git";
-import { OdooDevBranches } from "./odoo_dev_branch";
+import { OdooDevBranch, OdooDevBranches } from "./odoo_dev_branch";
 import {
   findRemote,
   getChildProcs,
@@ -28,7 +28,7 @@ import {
   ODOO_SHELL_TERMINAL,
 } from "./constants";
 import { OdooAddonsTree } from "./odoo_addons";
-import { getDebugSessions } from "./state";
+import { getBaseBranches, getDebugSessions, getDevBranches } from "./state";
 import { withProgress } from "./decorators";
 
 export type ContextualUtils = ReturnType<typeof createContextualUtils>;
@@ -1204,6 +1204,14 @@ export function createContextualUtils(
     return vscode.window.showQuickPick([...odooAddons, ...customAddons], { canPickMany: true });
   }
 
+  function selectDevBranch() {
+    const devBranches = getBaseBranches()
+      .map((base) => getDevBranches(base).map(b => b.name))
+      .flat();
+
+    return vscode.window.showQuickPick(devBranches, { title: "Choose a branch" });
+  }
+
   return {
     treeDataProvider,
     odooAddonsTreeProvider,
@@ -1240,5 +1248,6 @@ export function createContextualUtils(
     refreshTrees,
     odevRepos,
     getActiveBranch,
+    selectDevBranch,
   };
 }

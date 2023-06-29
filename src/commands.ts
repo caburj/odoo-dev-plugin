@@ -751,10 +751,13 @@ export const openPullRequestLink = createCommand(
   "odooDev.openPullRequestLinkOdoo",
   screamOnError(async (utils, item) => {
     const odoo = utils.odevRepos.odoo;
-    const branch = item ? item.name : odoo.state.HEAD?.name;
+    let branch = item ? item.name : odoo.state.HEAD?.name;
 
     if (!branch || isBaseBranch(branch)) {
-      throw new Error(`Please select a dev branch.`);
+      branch = await utils.selectDevBranch();
+      if (!branch) {
+        throw new Error(`Please select a dev branch.`);
+      }
     }
 
     const response = await fetch(
@@ -774,10 +777,13 @@ export const openPullRequestLinkEnterprise = createCommand(
   screamOnError(async (utils, item) => {
     const githubAccessToken = await utils.getGithubAccessToken();
     const enterprise: Repository | undefined = utils.odevRepos.custom.enterprise;
-    const branch = item ? item.name : enterprise?.state.HEAD?.name;
+    let branch = item ? item.name : enterprise.state.HEAD?.name;
 
     if (!branch || isBaseBranch(branch)) {
-      throw new Error(`Please select a dev branch.`);
+      branch = await utils.selectDevBranch();
+      if (!branch) {
+        throw new Error(`Please select a dev branch.`);
+      }
     }
 
     const response = await fetch(
@@ -802,10 +808,13 @@ export const openPullRequestLinkUpgrade = createCommand(
   screamOnError(async (utils, item) => {
     const githubAccessToken = await utils.getGithubAccessToken();
     const upgrade = utils.odevRepos.upgrade;
-    const branch = item ? item.name : upgrade?.state.HEAD?.name;
+    let branch = item ? item.name : upgrade?.state.HEAD?.name;
 
     if (!branch || isBaseBranch(branch)) {
-      throw new Error(`Please select a dev branch.`);
+      branch = await utils.selectDevBranch();
+      if (!branch) {
+        throw new Error(`Please select a dev branch.`);
+      }
     }
 
     const response = await fetch(
