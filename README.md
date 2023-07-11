@@ -145,50 +145,24 @@ Some commands that maybe useful.
 
 ## Release Notes
 
-### 0.1.0
+### 0.1.15
 
-- initial release
+- imp: ask to checkout if branch to fetch is already present
 
-### 0.1.1
+### 0.1.14
 
-- fix: use user's python selection
-- fix: always show the branches
+- fix: better default shortcuts
+- imp: push active branch command
 
-### 0.1.2
+### 0.1.13
 
-- imp: remove sourceFolder config and infer from loaded repositories
-- imp: use vscode icons instead of custom
+- imp: default keyboad shortcuts
+- imp: opening pr links will ask for branch if not selected
 
-### 0.1.3
+### 0.1.12
 
-- fix: update readme
-
-### 0.1.4
-
-- imp: rebase active branch command
-- imp: fetch based on fork name
-
-### 0.1.5
-
-- fix: look for the correct remote
-- fix: do not assume origin as the main remote
-- imp: start server button at status bar
-
-### 0.1.6
-
-- start/debug odoo shell
-- ask user to locate config file
-
-### 0.1.8
-
-- no more active branch state
-- take into account repositories of custom addons
-  - enterprise repo can be thought as one of them
-
-### 0.1.9
-
-- fix debugging chrome
-  - issue because of incorrect source map path overrides
+- fix: limit db name to 63 characters
+- fix: when no selected addons, don't append `-i <addon>` when starting server
 
 ### 0.1.11
 
@@ -196,17 +170,47 @@ Some commands that maybe useful.
 - go to test method command
 - description of commands in readme
 
-### 0.1.12
+### 0.1.9
 
-- fix: limit db name to 63 characters
-- fix: when no selected addons, don't append `-i <addon>` when starting server
+- fix debugging chrome
+  - issue because of incorrect source map path overrides
 
-### 0.1.13
+### 0.1.8
 
-- imp: default keyboad shortcuts
-- imp: opening pr links will ask for branch if not selected
+- no more active branch state
+- take into account repositories of custom addons
+  - enterprise repo can be thought as one of them
 
-### 0.1.14
+### 0.1.6
 
-- fix: better default shortcuts
-- imp: push active branch command
+- start/debug odoo shell
+- ask user to locate config file
+
+### 0.1.5
+
+- fix: look for the correct remote
+- fix: do not assume origin as the main remote
+- imp: start server button at status bar
+
+### 0.1.4
+
+- imp: rebase active branch command
+- imp: fetch based on fork name
+
+### 0.1.3
+
+- fix: update readme
+
+### 0.1.2
+
+- imp: remove sourceFolder config and infer from loaded repositories
+- imp: use vscode icons instead of custom
+
+### 0.1.1
+
+- fix: use user's python selection
+- fix: always show the branches
+
+### 0.1.0
+
+- initial release
