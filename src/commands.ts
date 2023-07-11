@@ -126,7 +126,13 @@ export const fetchBranch = createCommand(
     if (!baseBranches.includes(base)) {
       addBaseBranch(base);
     } else if (devBranchExists({ base, name: branch })) {
-      throw new Error(`'${branch}' already exists!`);
+      const response = await vscode.window.showQuickPick(["Okay"], {
+        title: "Branch already exists, checkout?",
+      });
+      if (response === "Okay") {
+        await utils.checkoutBranches(branch, dirtyRepos);
+      }
+      return;
     }
     await utils.fetchBranches(base, branch, dirtyRepos, forkName);
     addDevBranch(base, branch);
