@@ -260,10 +260,9 @@ export const deleteBranch = createCommand(
 
     const dirtyRepos = await utils.getDirtyRepos();
     if (dirtyRepos.length !== 0) {
+      const names = dirtyRepos.map((repo) => repo.state.HEAD?.name).filter(Boolean);
       const answer = await vscode.window.showQuickPick(["Yes", "No"], {
-        title: `Uncommitted changes in: ${dirtyRepos.join(
-          ", "
-        )}. The changes will be lost. Continue?`,
+        title: `Uncommitted changes in: ${names.join(", ")}. The changes will be lost. Continue?`,
       });
       if (answer !== "Yes") {
         return;
