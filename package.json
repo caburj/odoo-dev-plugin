@@ -172,6 +172,10 @@
       {
         "command": "odooDev.findTestMethod",
         "title": "Odoo Dev: Find Test Method"
+      },
+      {
+        "command": "odooDev.deleteMerged",
+        "title": "Odoo Dev: Delete Merged"
       }
     ],
     "configuration": {

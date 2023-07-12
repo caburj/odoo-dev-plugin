@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/naming-convention */
 import * as vscode from "vscode";
 import * as Result from "./Result";
 import * as fs from "fs";
@@ -6,6 +7,7 @@ import {
   createTemplateNote,
   fileExists,
   getAddons,
+  getBase,
   getPositionFromIndex,
   inferBaseBranch,
   isBaseBranch,
@@ -15,7 +17,7 @@ import {
 } from "./helpers";
 import { type ContextualUtils } from "./contextualUtils";
 import { OdooDevBranch } from "./odoo_dev_branch";
-import { DEBUG_JS_NAME, DEBUG_ODOO_SHELL, DEBUG_PYTHON_NAME } from "./constants";
+import { DEBUG_JS_NAME, DEBUG_ODOO_SHELL, DEBUG_PYTHON_NAME, DEV_BRANCH_REGEX } from "./constants";
 import { screamOnError } from "./decorators";
 import {
   addBaseBranch,
@@ -1015,5 +1017,86 @@ export const pushForce = createCommand(
   "odooDev.pushForce",
   screamOnError(async (utils) => {
     return utils.push(true);
+  })
+);
+
+export const deleteMerged = createCommand(
+  "odooDev.deleteMerged",
+  screamOnError(async (utils) => {
+    const githubAccessToken = await utils.getGithubAccessToken();
+
+    // Limitation: For now, we only support the repositories in odoo.
+    const repos = [
+      ["odoo", utils.odevRepos.odoo],
+      ...Object.entries(utils.odevRepos.custom).map(([name, repo]) => [name, repo]),
+      ["upgrade", utils.odevRepos.upgrade],
+    ] as [string, Repository][];
+
+    const getUrl = (repoName: string, branch: string) => {
+      const fork = repoName === "upgrade" ? "origin" : "odoo-dev";
+      return `https://api.github.com/repos/odoo/${repoName}/pulls?head=${fork}:${branch}&state=closed`;
+    };
+
+    /**
+     * Branch is closed if there is a closed PR linked to it.
+     */
+    const isBranchClosed = async (repoName: string, branch: string) => {
+      const url = getUrl(repoName, branch);
+      const response = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${githubAccessToken}`,
+        },
+      });
+      const pullRequests = await response.json();
+      const [pr] = pullRequests;
+      return Boolean(pr);
+    };
+
+    const result = repos
+      .filter(([name]) => ["odoo", "upgrade", "enterprise"].includes(name))
+      .map(async ([repoName, repo]) => {
+        const activeBranch = repo.state.HEAD?.name;
+        if (!activeBranch) {
+          return [];
+        }
+        const branches = await repo.getBranches({
+          remote: false,
+        });
+        const toDelete = [];
+        for (const { name: branch } of branches) {
+          if (!branch || branch === activeBranch || !DEV_BRANCH_REGEX.test(branch)) {
+            continue;
+          }
+          const isClosed = await isBranchClosed(repoName, branch);
+          if (isClosed) {
+            toDelete.push(branch);
+          }
+        }
+        return toDelete;
+      });
+
+    const branchesToDelete = new Set((await Promise.all(result)).flat());
+
+    if (branchesToDelete.size === 0) {
+      vscode.window.showInformationMessage("No branches to delete.");
+      return;
+    }
+
+    const branchToDelete = await vscode.window.showQuickPick([...branchesToDelete], {
+      title: "Select branches to delete",
+      canPickMany: true,
+    });
+
+    if (!branchToDelete || branchToDelete.length === 0) {
+      return;
+    }
+
+    for (const branch of branchToDelete) {
+      const base = getBase(branch);
+      if (base) {
+        await utils.deleteBranches(base, branch);
+        removeDevBranch(base, branch);
+      }
+    }
   })
 );
