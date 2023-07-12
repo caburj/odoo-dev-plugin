@@ -18,7 +18,7 @@ import {
 import { type ContextualUtils } from "./contextualUtils";
 import { OdooDevBranch } from "./odoo_dev_branch";
 import { DEBUG_JS_NAME, DEBUG_ODOO_SHELL, DEBUG_PYTHON_NAME, DEV_BRANCH_REGEX } from "./constants";
-import { screamOnError } from "./decorators";
+import { screamOnError, withProgress } from "./decorators";
 import {
   addBaseBranch,
   addDevBranch,
@@ -1052,30 +1052,36 @@ export const deleteMerged = createCommand(
       return Boolean(pr);
     };
 
-    const result = repos
-      .filter(([name]) => ["odoo", "upgrade", "enterprise"].includes(name))
-      .map(async ([repoName, repo]) => {
-        const activeBranch = repo.state.HEAD?.name;
-        if (!activeBranch) {
-          return [];
-        }
-        const branches = await repo.getBranches({
-          remote: false,
-        });
-        const toDelete = [];
-        for (const { name: branch } of branches) {
-          if (!branch || branch === activeBranch || !DEV_BRANCH_REGEX.test(branch)) {
-            continue;
-          }
-          const isClosed = await isBranchClosed(repoName, branch);
-          if (isClosed) {
-            toDelete.push(branch);
-          }
-        }
-        return toDelete;
-      });
+    const findMerged = withProgress({
+      message: `Finding merged branches...`,
+      cb: () =>
+        Promise.all(
+          repos
+            .filter(([name]) => ["odoo", "upgrade", "enterprise"].includes(name))
+            .map(async ([repoName, repo]) => {
+              const activeBranch = repo.state.HEAD?.name;
+              if (!activeBranch) {
+                return [];
+              }
+              const branches = await repo.getBranches({
+                remote: false,
+              });
+              const toDelete = [];
+              for (const { name: branch } of branches) {
+                if (!branch || branch === activeBranch || !DEV_BRANCH_REGEX.test(branch)) {
+                  continue;
+                }
+                const isClosed = await isBranchClosed(repoName, branch);
+                if (isClosed) {
+                  toDelete.push(branch);
+                }
+              }
+              return toDelete;
+            })
+        ),
+    });
 
-    const branchesToDelete = new Set((await Promise.all(result)).flat());
+    const branchesToDelete = new Set((await findMerged()).flat());
 
     if (branchesToDelete.size === 0) {
       vscode.window.showInformationMessage("No branches to delete.");
@@ -1091,12 +1097,19 @@ export const deleteMerged = createCommand(
       return;
     }
 
-    for (const branch of branchToDelete) {
-      const base = getBase(branch);
-      if (base) {
-        await utils.deleteBranches(base, branch);
-        removeDevBranch(base, branch);
-      }
-    }
+    const deleteAll = withProgress({
+      message: `Deleting selected branches...`,
+      cb: async () => {
+        for (const branch of branchToDelete) {
+          const base = getBase(branch);
+          if (base) {
+            await utils.deleteBranches(base, branch, false);
+            removeDevBranch(base, branch);
+          }
+        }
+      },
+    });
+
+    await deleteAll();
   })
 );

@@ -794,7 +794,7 @@ export function createContextualUtils(
     return Result.success();
   };
 
-  const deleteBranches = async (base: string, branch: string) => {
+  const deleteBranches = async (base: string, branch: string, withSpinner: boolean = true) => {
     const upgrade = odevRepos.upgrade;
 
     const deleteProms = [
@@ -805,11 +805,14 @@ export function createContextualUtils(
         : Promise.resolve(Result.success()),
     ];
 
-    const deleteWithSpinner = withProgress({
-      message: `Deleting '${branch}'...`,
-      cb: () => Promise.all(deleteProms),
-    });
-    const deleteResults = await deleteWithSpinner();
+    const delBranch = withSpinner
+      ? withProgress({
+          message: `Deleting '${branch}'...`,
+          cb: () => Promise.all(deleteProms),
+        })
+      : () => Promise.all(deleteProms);
+
+    const deleteResults = await delBranch();
     const [successes, errors] = Result.partition(deleteResults);
     if (successes.length === 0) {
       throw new Error("Failed to delete the branch from any of the repositories.");
