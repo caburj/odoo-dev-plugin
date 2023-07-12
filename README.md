@@ -145,6 +145,10 @@ Some commands that maybe useful.
 
 ## Release Notes
 
+### 0.1.16
+
+- imp: allow deleting merged branches
+
 ### 0.1.15
 
 - imp: ask to checkout if branch to fetch is already present
