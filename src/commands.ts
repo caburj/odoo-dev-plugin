@@ -17,7 +17,7 @@ import {
 } from "./helpers";
 import { type ContextualUtils } from "./contextualUtils";
 import { OdooDevBranch } from "./odoo_dev_branch";
-import { DEBUG_JS_NAME, DEBUG_ODOO_SHELL, DEBUG_PYTHON_NAME, DEV_BRANCH_REGEX } from "./constants";
+import { DEBUG_JS_NAME, DEBUG_ODOO_SHELL, DEBUG_PYTHON_NAME, DEV_BRANCH_REGEX, FETCH_URL_REGEX } from "./constants";
 import { screamOnError, withProgress } from "./decorators";
 import {
   addBaseBranch,
@@ -27,7 +27,7 @@ import {
   getDevBranches,
   removeDevBranch,
 } from "./state";
-import { Repository } from "./dependencies/git";
+import { Branch, Repository } from "./dependencies/git";
 
 function createCommand<T>(name: string, cb: (utils: ContextualUtils, item?: OdooDevBranch) => T) {
   return (utils: ContextualUtils) => {
@@ -1031,16 +1031,15 @@ export const deleteMerged = createCommand(
       ["upgrade", utils.odevRepos.upgrade],
     ] as [string, Repository][];
 
-    const getUrl = (repoName: string, branch: string) => {
-      const fork = repoName === "upgrade" ? "origin" : "odoo-dev";
+    const getUrl = (repoName: string, fork: string, branch: string) => {
       return `https://api.github.com/repos/odoo/${repoName}/pulls?head=${fork}:${branch}&state=closed`;
     };
 
     /**
      * Branch is closed if there is a closed PR linked to it.
      */
-    const isBranchClosed = async (repoName: string, branch: string) => {
-      const url = getUrl(repoName, branch);
+    const isBranchClosed = async (repoName: string, fork: string, branch: string) => {
+      const url = getUrl(repoName, fork, branch);
       const response = await fetch(url, {
         headers: {
           Authorization: `Bearer ${githubAccessToken}`,
@@ -1066,11 +1065,17 @@ export const deleteMerged = createCommand(
                 remote: false,
               });
               const toDelete = [];
-              for (const { name: branch } of branches) {
-                if (!branch || branch === activeBranch || !DEV_BRANCH_REGEX.test(branch)) {
+              for (const { name: branch, remote: remoteName } of branches) {
+                const remote = remoteName && repo.state.remotes.find(r => r.name === remoteName);
+                if (!branch || branch === activeBranch || !DEV_BRANCH_REGEX.test(branch) || !remote) {
                   continue;
                 }
-                const isClosed = await isBranchClosed(repoName, branch);
+                const fetchUrlMatch = remote.fetchUrl?.match(FETCH_URL_REGEX);
+                const fork = fetchUrlMatch && fetchUrlMatch[1]
+                if (!fork) {
+                  continue;
+                }
+                const isClosed = await isBranchClosed(repoName, fork, branch);
                 if (isClosed) {
                   toDelete.push(branch);
                 }
