@@ -145,6 +145,10 @@ Some commands that maybe useful.
 
 ## Release Notes
 
+### 0.1.18
+
+- imp: log debug session configuration in the output
+
 ### 0.1.17
 
 - imp: simplier object when python debugging

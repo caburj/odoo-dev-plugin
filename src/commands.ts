@@ -35,6 +35,14 @@ function createCommand<T>(name: string, cb: (utils: ContextualUtils, item?: Odoo
   };
 }
 
+const odooDevOutput = vscode.window.createOutputChannel("Odoo Dev");
+
+function startDebugging(config: vscode.DebugConfiguration) {
+  odooDevOutput.appendLine("Starting debug session...");
+  odooDevOutput.appendLine(JSON.stringify(config, null, 2));
+  return vscode.debug.startDebugging(undefined, config);
+}
+
 export const createBranch = createCommand(
   "odooDev.createBranch",
   screamOnError(async (utils) => {
@@ -446,7 +454,7 @@ export const debugServer = createCommand(
       },
       args: commandArgs,
     };
-    await vscode.debug.startDebugging(undefined, debugOdooPythonLaunchConfig);
+    await startDebugging(debugOdooPythonLaunchConfig);
     vscode.commands.executeCommand("setContext", "odooDev.hasActiveServer", true);
     utils.odooServerStatus.command = "odooDev.stopActiveServer";
     utils.odooServerStatus.text = "$(debug-stop) Stop Odoo Server";
@@ -485,7 +493,7 @@ export const debugOdooShell = createCommand(
       },
       args: commandArgs,
     };
-    await vscode.debug.startDebugging(undefined, debugOdooPythonLaunchConfig);
+    await startDebugging(debugOdooPythonLaunchConfig);
   })
 );
 
@@ -535,7 +543,7 @@ export const debugServerWithInstall = createCommand(
       },
       args,
     };
-    await vscode.debug.startDebugging(undefined, debugOdooPythonLaunchConfig);
+    await startDebugging(debugOdooPythonLaunchConfig);
     vscode.commands.executeCommand("setContext", "odooDev.hasActiveServer", true);
     utils.odooServerStatus.command = "odooDev.stopActiveServer";
     utils.odooServerStatus.text = "$(debug-stop) Stop Odoo Server";
@@ -596,7 +604,7 @@ export const debugServerWithUpdate = createCommand(
       },
       args,
     };
-    await vscode.debug.startDebugging(undefined, debugOdooPythonLaunchConfig);
+    await startDebugging(debugOdooPythonLaunchConfig);
     vscode.commands.executeCommand("setContext", "odooDev.hasActiveServer", true);
     utils.odooServerStatus.command = "odooDev.stopActiveServer";
     utils.odooServerStatus.text = "$(debug-stop) Stop Odoo Server";
@@ -636,7 +644,7 @@ export const debugJS = createCommand(
       sourceMaps: true,
       sourceMapPathOverrides,
     };
-    await vscode.debug.startDebugging(undefined, debugOdooPythonLaunchConfig);
+    await startDebugging(debugOdooPythonLaunchConfig);
   })
 );
 
