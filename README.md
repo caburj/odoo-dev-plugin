@@ -145,6 +145,10 @@ Some commands that maybe useful.
 
 ## Release Notes
 
+### 0.1.17
+
+- imp: simplier object when python debugging
+
 ### 0.1.16
 
 - imp: allow deleting merged branches
