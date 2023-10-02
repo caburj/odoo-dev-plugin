@@ -441,6 +441,9 @@ export const debugServer = createCommand(
       cwd: `${utils.getRepoPath(utils.odevRepos.odoo)}`,
       python: await utils.getPythonPath(),
       program: odooBin,
+      variablePresentation: {
+        all: "hide",
+      },
       args: commandArgs,
     };
     await vscode.debug.startDebugging(undefined, debugOdooPythonLaunchConfig);
@@ -477,6 +480,9 @@ export const debugOdooShell = createCommand(
       cwd: `${utils.getRepoPath(utils.odevRepos.odoo)}`,
       python: await utils.getPythonPath(),
       program: odooBin,
+      variablePresentation: {
+        all: "hide",
+      },
       args: commandArgs,
     };
     await vscode.debug.startDebugging(undefined, debugOdooPythonLaunchConfig);
@@ -524,6 +530,9 @@ export const debugServerWithInstall = createCommand(
       cwd: `${utils.getRepoPath(utils.odevRepos.odoo)}`,
       python: await utils.getPythonPath(),
       program: odooBin,
+      variablePresentation: {
+        all: "hide",
+      },
       args,
     };
     await vscode.debug.startDebugging(undefined, debugOdooPythonLaunchConfig);
@@ -582,6 +591,9 @@ export const debugServerWithUpdate = createCommand(
       cwd: `${utils.getRepoPath(utils.odevRepos.odoo)}`,
       python: await utils.getPythonPath(),
       program: odooBin,
+      variablePresentation: {
+        all: "hide",
+      },
       args,
     };
     await vscode.debug.startDebugging(undefined, debugOdooPythonLaunchConfig);
