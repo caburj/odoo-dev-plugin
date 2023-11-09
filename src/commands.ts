@@ -431,6 +431,13 @@ export const startServer = createCommand(
   })
 );
 
+export const toggleWithDemoData = createCommand(
+  "odooDev.toggleWithDemoData",
+  screamOnError(async (utils) => {
+    return utils.toggleWithDemoData();
+  })
+);
+
 export const debugServer = createCommand(
   "odooDev.debugServer",
   screamOnError(async (utils) => {

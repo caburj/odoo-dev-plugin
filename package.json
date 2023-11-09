@@ -83,6 +83,10 @@
         "icon": "$(play)"
       },
       {
+        "command": "odooDev.toggleWithDemoData",
+        "title": "Odoo Dev: Toggle With Demo Data"
+      },
+      {
         "command": "odooDev.debugServer",
         "title": "Odoo Dev: Debug Server",
         "icon": "$(debug-alt-small)"

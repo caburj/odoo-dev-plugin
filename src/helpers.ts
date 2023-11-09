@@ -335,3 +335,15 @@ export function getRequirements(addonPath: string) {
 
   return parseStringArray(requirementsMatch[1]);
 }
+
+export function getWithDemoDataStatusText(withDemoData: boolean | null) {
+  if (typeof withDemoData === "boolean") {
+    if (withDemoData) {
+      return "$(eye) With Demo";
+    } else {
+      return "$(eye-closed) Without Demo";
+    }
+  } else {
+    return "$(eye-closed) Config-Based Demo";
+  }
+}
