@@ -9,6 +9,7 @@ import {
   constructOdooDevRepositories,
   getAddons,
   getRepoName,
+  getWithDemoDataStatusText,
   updateOdooDevRepositories,
 } from "./helpers";
 import { getDebugSessions, initBaseBranches, initDevBranches } from "./state";
@@ -40,6 +41,7 @@ const ALIASES: Record<string, string[]> = {
 let addonsPathMap: Record<string, string> = {};
 
 let odooServerStatus: vscode.StatusBarItem;
+let withDemoDataStatus: vscode.StatusBarItem;
 
 const currentBranches: Record<string, string | undefined> = {};
 const repoSubscriptions: Record<string, vscode.Disposable> = {};
@@ -67,11 +69,6 @@ const stopRefreshTreesOnRepoChange = (repo: Repository) => {
 
 export async function activate(context: vscode.ExtensionContext) {
   vscode.commands.executeCommand("setContext", "odooDev.state", "activating");
-
-  odooServerStatus = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left);
-  odooServerStatus.command = "odooDev.startServer";
-  odooServerStatus.text = "$(debug-start) Start Odoo Server";
-  odooServerStatus.show();
 
   if (git.state === "uninitialized") {
     // Wait for git to initialize.
@@ -102,6 +99,18 @@ export async function activate(context: vscode.ExtensionContext) {
     return;
   }
 
+  odooServerStatus = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left);
+  odooServerStatus.command = "odooDev.startServer";
+  odooServerStatus.text = "$(debug-start) Start Odoo Server";
+  odooServerStatus.show();
+
+  withDemoDataStatus = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left);
+  withDemoDataStatus.command = "odooDev.toggleWithDemoData";
+
+  const withDemoData = context.globalState.get("withDemoData", false);
+  withDemoDataStatus.text = getWithDemoDataStatusText(withDemoData);
+  withDemoDataStatus.show();
+
   const odevRepos = odevReposRes.value;
   if (odevRepos.odoo) {
     const odooAddonsPath = `${getRepoPath(odevRepos.odoo)}/addons`;
@@ -123,6 +132,7 @@ export async function activate(context: vscode.ExtensionContext) {
   }
 
   const utils = createContextualUtils(context, {
+    withDemoDataStatus,
     odooServerStatus,
     addonsPathMap,
     getPythonPath,

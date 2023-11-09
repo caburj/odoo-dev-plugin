@@ -19,6 +19,7 @@ import {
   OdooDevRepositories,
   isBase,
   getRequirements,
+  getWithDemoDataStatusText,
 } from "./helpers";
 import { assert } from "console";
 import {
@@ -51,6 +52,7 @@ async function getBranch(repo: Repository, name: string): Promise<Branch | undef
 export function createContextualUtils(
   context: vscode.ExtensionContext,
   options: {
+    withDemoDataStatus: vscode.StatusBarItem;
     odooServerStatus: vscode.StatusBarItem;
     addonsPathMap: Record<string, string>;
     getPythonPath: () => Promise<string>;
@@ -58,7 +60,14 @@ export function createContextualUtils(
     odevRepos: OdooDevRepositories;
   }
 ) {
-  const { odooServerStatus, addonsPathMap, getPythonPath, getRepoPath, odevRepos } = options;
+  const {
+    withDemoDataStatus,
+    odooServerStatus,
+    addonsPathMap,
+    getPythonPath,
+    getRepoPath,
+    odevRepos,
+  } = options;
 
   const odooDevTerminals = new Map<string, vscode.Terminal>();
 
@@ -1100,6 +1109,16 @@ export function createContextualUtils(
     } else {
       commandArgs = await getNormalStartServerArgs();
     }
+    const withDemoData = await getWithDemoData();
+
+    if (typeof withDemoData === "boolean") {
+      if (withDemoData) {
+        commandArgs.push("--without-demo=");
+      } else {
+        commandArgs.push("--without-demo=all");
+      }
+    }
+
     return commandArgs;
   };
 
@@ -1278,6 +1297,30 @@ export function createContextualUtils(
     await push();
   }
 
+  async function toggleWithDemoData() {
+    // Rotate: null -> false -> true
+    const withDemoData = context.globalState.get("withDemoData", null);
+
+    let newValue: boolean | null = null;
+
+    if (typeof withDemoData === 'boolean') {
+      if (withDemoData) {
+        newValue = null;
+      } else {
+        newValue = true;
+      }
+    } else {
+      newValue = false;
+    }
+
+    await context.globalState.update("withDemoData", newValue);
+    withDemoDataStatus.text = getWithDemoDataStatusText(newValue);
+  }
+
+  async function getWithDemoData(): Promise<boolean | null> {
+    return context.globalState.get("withDemoData", null);
+  }
+
   return {
     treeDataProvider,
     odooAddonsTreeProvider,
@@ -1316,5 +1359,7 @@ export function createContextualUtils(
     getActiveBranch,
     selectDevBranch,
     push,
+    toggleWithDemoData,
+    getWithDemoData,
   };
 }
