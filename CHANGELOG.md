@@ -6,6 +6,12 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 ## [Unreleased]
 
+## [0.1.20] - 2023-11-11
+
+### Added
+
+- Log error messages in the Odoo Dev output channel.
+
 ## [0.1.19] - 2023-11-09
 
 ### Added

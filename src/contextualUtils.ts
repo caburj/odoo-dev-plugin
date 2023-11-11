@@ -482,7 +482,7 @@ export function createContextualUtils(
     if (successes.length === 0) {
       throw new Error("Failed to fetch the branch from any of the repositories.");
     } else if (errors.length > 0) {
-      vscode.window.showErrorMessage(errors.map((f) => f.error.message).join("; "));
+      throw new Error(errors.map((f) => f.error.message).join("\n"));
     }
   };
 
@@ -583,7 +583,7 @@ export function createContextualUtils(
     if (successes.length === 0) {
       throw new Error("Failed to fetch the branch from any of the repositories.");
     } else if (errors.length > 0) {
-      vscode.window.showErrorMessage(errors.map((f) => f.error.message).join(" "));
+      throw new Error(errors.map((f) => f.error.message).join(" "));
     }
   };
 
@@ -673,7 +673,7 @@ export function createContextualUtils(
     if (successes.length === 0) {
       throw new Error("Failed to checkout the branch from any of the repositories.");
     } else if (errors.length > 0) {
-      vscode.window.showErrorMessage(errors.map((f) => f.error.message).join("; "));
+      throw new Error(errors.map((f) => f.error.message).join("\n"));
     }
   };
 
@@ -769,7 +769,7 @@ export function createContextualUtils(
     if (successes.length === 0) {
       throw new Error("Failed to create the branch from any of the repositories.");
     } else if (errors.length > 0) {
-      vscode.window.showErrorMessage(errors.map((f) => f.error.message).join("; "));
+      throw new Error(errors.map((f) => f.error.message).join("\n"));
     }
   };
 
@@ -826,7 +826,7 @@ export function createContextualUtils(
     if (successes.length === 0) {
       throw new Error("Failed to delete the branch from any of the repositories.");
     } else if (errors.length > 0) {
-      vscode.window.showErrorMessage(errors.map((f) => f.error.message).join("; "));
+      throw new Error(errors.map((f) => f.error.message).join("\n"));
     }
   };
 
@@ -927,7 +927,7 @@ export function createContextualUtils(
     if (successes.length === 0) {
       throw new Error("Failed to rebase the branch from any of the repositories.");
     } else if (errors.length > 0) {
-      vscode.window.showErrorMessage(errors.map((f) => f.error.message).join("; "));
+      throw new Error(errors.map((f) => f.error.message).join("\n"));
     }
   };
 
@@ -1002,7 +1002,7 @@ export function createContextualUtils(
     if (successes.length === 0) {
       throw new Error("Failed to reset the branch from any of the repositories.");
     } else if (errors.length > 0) {
-      vscode.window.showErrorMessage(errors.map((f) => f.error.message).join("; "));
+      throw new Error(errors.map((f) => f.error.message).join("\n"));
     }
   };
 
@@ -1303,7 +1303,7 @@ export function createContextualUtils(
 
     let newValue: boolean | null = null;
 
-    if (typeof withDemoData === 'boolean') {
+    if (typeof withDemoData === "boolean") {
       if (withDemoData) {
         newValue = null;
       } else {

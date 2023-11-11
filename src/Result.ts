@@ -38,17 +38,6 @@ export function unwrap<T, E extends Error>(result: Result<T, E>): T {
   }
 }
 
-export function unwrapExcept<T, E extends Error>(
-  result: Result<T, E>,
-  onFail: (fail: E) => void
-): T | undefined {
-  if (check(result)) {
-    return result.value;
-  } else {
-    onFail(result.error);
-  }
-}
-
 export function process<T, E extends Error>(
   result: Result<T, E>,
   onSuccess: (value: T) => void,
