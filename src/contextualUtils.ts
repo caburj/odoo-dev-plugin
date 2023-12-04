@@ -324,7 +324,8 @@ export function createContextualUtils(
     return Result.success();
   }
 
-  async function ensureNoRunningServer(shouldConfirm = true) {
+  async function ensureNoRunningServer() {
+    const shouldConfirm = vscode.workspace.getConfiguration("odooDev").confirmStopServer as boolean;
     const noActiveServerResult = await ensureNoActiveServer(shouldConfirm);
     if (!Result.check(noActiveServerResult)) {
       return noActiveServerResult;

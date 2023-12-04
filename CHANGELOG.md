@@ -6,6 +6,12 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 ## [Unreleased]
 
+## [0.1.21] - 2023-12-04
+
+### Added
+
+- Config setting: "Confirm Stop Server" which defaults to false.
+
 ## [0.1.20] - 2023-11-11
 
 ### Added

@@ -2,7 +2,7 @@
   "name": "odoo-dev-plugin",
   "displayName": "Odoo Dev",
   "description": "Switch between projects, debug without configuration",
-  "version": "0.1.20",
+  "version": "0.1.21",
   "publisher": "JosephCaburnay",
   "repository": {
     "url": "https://github.com/caburj/odoo-dev-plugin.git"
@@ -190,6 +190,12 @@
           "type": "boolean",
           "default": false,
           "description": "Use the name of the branch as the name of the db."
+        },
+        "odooDev.confirmStopServer": {
+          "title": "Confirm Stop Server",
+          "type": "boolean",
+          "default": false,
+          "description": "Ask for confirmation before stopping the server."
         },
         "odooDev.pullBaseOnCreate": {
           "title": "Pull Base Branch on Create",
