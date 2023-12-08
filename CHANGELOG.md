@@ -6,6 +6,21 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 ## [Unreleased]
 
+## [0.1.22] - 2023-12-08
+
+### Added
+
+- Config setting: "DB Name" which defaults to devBranchName.
+  - Other options are baseBranchName and configBased.
+  - This config allows user to use the base branch e.g. 16.0 as db name. This is
+    useful when comparing results to the base branch using the same db.
+
+### Removed
+
+- Config setting: "Branch Name as DB" is no longer used in favor of "DB Name".
+  - It's still there but it will be ignored. It will probably be removed in next
+    subversion.
+
 ## [0.1.21] - 2023-12-04
 
 ### Added

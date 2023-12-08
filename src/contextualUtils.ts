@@ -231,10 +231,17 @@ export function createContextualUtils(
   const getNormalStartServerArgs = async () => {
     const configFilePath = await getConfigFilePath();
     const args = ["-c", configFilePath];
-    if (vscode.workspace.getConfiguration("odooDev").branchNameAsDB as boolean) {
+    const dbNameConfig = vscode.workspace.getConfiguration("odooDev").dbName as string;
+    if (dbNameConfig !== "configBased") {
       const branch = await getActiveBranch();
-      if (branch) {
-        args.push("-d", branch.slice(0, 63));
+      let dbName: string | undefined;
+      if (dbNameConfig === "devBranchName") {
+        dbName = branch;
+      } else if (dbNameConfig === "baseBranchName") {
+        dbName = getBase(branch);
+      }
+      if (dbName) {
+        args.push("-d", dbName.slice(0, 63));
       }
     }
     return args;
@@ -265,10 +272,16 @@ export function createContextualUtils(
 
   async function getDBName() {
     let dbName: string | undefined;
-    if (vscode.workspace.getConfiguration("odooDev").branchNameAsDB as boolean) {
-      dbName = await getActiveBranch();
-    } else {
+    const dbNameConfig = vscode.workspace.getConfiguration("odooDev").dbName as string;
+    if (dbNameConfig === "configBased") {
       dbName = await getOdooConfigValue("db_name");
+    } else if (dbNameConfig === "devBranchName") {
+      dbName = await getActiveBranch();
+    } else if (dbNameConfig === "baseBranchName") {
+      const branch = await getActiveBranch();
+      if (branch) {
+        dbName = getBase(branch);
+      }
     }
     return dbName?.slice(0, 63);
   }
