@@ -189,7 +189,18 @@
           "title": "Branch Name as DB",
           "type": "boolean",
           "default": false,
-          "description": "Use the name of the branch as the name of the db."
+          "description": "Use the name of the branch as the name of the db. NOTE: This is now ignored. Check the `DB Name` setting."
+        },
+        "odooDev.dbName": {
+          "title": "DB Name",
+          "type": "string",
+          "default": "devBranchName",
+          "enum": ["baseBranchName", "devBranchName", "configBased"],
+          "enumDescriptions": [
+            "Base branch name (e.g. 16.0)",
+            "Branch name",
+            "DB name from config file"
+          ]
         },
         "odooDev.confirmStopServer": {
           "title": "Confirm Stop Server",

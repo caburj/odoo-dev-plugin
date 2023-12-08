@@ -44,7 +44,7 @@ Switch between projects, debug without configuration
 | Notes Folder               | `odooDev.notesFolder`      | Path to the folder where the notes are stored. If not set, the user will be prompted to locate the folder.                                                 |
 | Auto Stash                 | `odooDev.autoStash`        | Automatically stash changes before switching branch.                                                                                                       |
 | Auto Test                  | `odooDev.autoTest`         | Automatically start the server with `--test-enable` option when the cursor is in a test file. `--test-tags` will be computed based on where the cursor is. |
-| Branch Name as DB          | `odooDev.branchNameAsDB`   | Use the branch name as the database name when starting the server. This overrides the db specified in the config file.                                     |
+| DB Name                    | `odooDev.dbName`           | Describes which db name to you for the server.                                                                                                             |
 | Pull Base Branch on Create | `odooDev.pullBaseOnCreate` | Pull the base branch first before creating the new branch.                                                                                                 |
 
 ### Commands
