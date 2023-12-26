@@ -311,7 +311,7 @@ export function createContextualUtils(
           );
         }
       }
-      await killOdooServer(terminalPID);
+      killOdooServer(terminalPID);
     }
     return Result.success();
   }
