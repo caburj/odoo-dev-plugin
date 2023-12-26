@@ -144,9 +144,11 @@ export const fetchBranch = createCommand("odooDev.fetchBranch", async (utils) =>
   if (!baseBranches.includes(base)) {
     addBaseBranch(base);
   } else if (devBranchExists({ base, name: branch })) {
-    const response = await vscode.window.showQuickPick(["Okay"], {
-      title: "Branch already exists, checkout?",
-    });
+    const response = await vscode.window.showInformationMessage(
+      "Branch already exists, checkout?",
+      { modal: true },
+      "Okay"
+    );
     if (response === "Okay") {
       await utils.checkoutBranches(branch, dirtyRepos);
     }
@@ -266,9 +268,13 @@ export const deleteBranch = createCommand("odooDev.deleteBranch", async (utils, 
   const dirtyRepos = await utils.getDirtyRepos();
   if (dirtyRepos.length !== 0) {
     const names = dirtyRepos.map((repo) => repo.state.HEAD?.name).filter(Boolean);
-    const answer = await vscode.window.showQuickPick(["Yes", "No"], {
-      title: `Uncommitted changes in: ${names.join(", ")}. The changes will be lost. Continue?`,
-    });
+    const answer = await vscode.window.showInformationMessage(
+      `Uncommitted changes in: ${names.join(", ")}. The changes will be lost. Continue?`,
+      {
+        modal: true,
+      },
+      "Yes"
+    );
     if (answer !== "Yes") {
       return;
     }
@@ -691,10 +697,14 @@ export const openLinkedNote = createCommand("odooDev.openLinkedNote", async (uti
 
   let notesFolder = (vscode.workspace.getConfiguration("odooDev").notesFolder || "") as string;
   if (!isValidDirectory(notesFolder)) {
-    const willSelectFolder = await vscode.window.showQuickPick(["Yes", "No"], {
-      title: "Odoo Dev Notes Folder isn't properly set, do you want to set it?",
-    });
-    if (!willSelectFolder || willSelectFolder === "No") {
+    const willSelectFolder = await vscode.window.showInformationMessage(
+      "Odoo Dev Notes Folder isn't properly set, do you want to set it?",
+      {
+        modal: true,
+      },
+      "Yes"
+    );
+    if (!willSelectFolder) {
       return;
     }
     const dialogSelection = await vscode.window.showOpenDialog({
