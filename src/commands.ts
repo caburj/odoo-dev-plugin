@@ -5,6 +5,7 @@ import * as fs from "fs";
 import fetch from "node-fetch";
 import {
   createTemplateNote,
+  debounce,
   fileExists,
   getAddons,
   getBase,
@@ -98,6 +99,80 @@ export const createBranch = createCommand("odooDev.createBranch", async (utils) 
   }
   await utils.createBranches(base, input, dirtyRepos);
   addDevBranch(base, input);
+});
+
+/**
+ * This is a quick picker that allows custom value from the user.
+ */
+function showQuickInput(options: { label: string }[], title: string): Promise<{ label: string }> {
+  return new Promise((resolve) => {
+    const quickPick = vscode.window.createQuickPick();
+    quickPick.canSelectMany = false;
+    quickPick.items = options;
+    quickPick.title = title;
+    quickPick.onDidAccept(() => {
+      if (quickPick.activeItems.length === 0) {
+        resolve({ label: quickPick.value });
+      } else {
+        resolve(quickPick.activeItems[0]);
+      }
+      quickPick.hide();
+    });
+    quickPick.onDidHide(() => quickPick.dispose());
+    quickPick.show();
+  });
+}
+
+export const findBranch = createCommand("odooDev.findBranch", async (utils) => {
+  if (!Result.check(await utils.ensureNoRunningServer())) {
+    return;
+  }
+
+  const devBranches = getBaseBranches()
+    .map((base) => [
+      { base, name: base },
+      ...getDevBranches(base).map((branch) => ({ ...branch, base })),
+    ])
+    .flat();
+
+  const { label: input } = await showQuickInput(
+    devBranches.map((b) => ({ label: b.name })),
+    "Branch Name"
+  );
+
+  if (input === "") {
+    throw new Error("Empty input is invalid.");
+  }
+
+  const dirtyRepos = await utils.getDirtyRepoNames();
+  if (
+    dirtyRepos.length !== 0 &&
+    !(vscode.workspace.getConfiguration("odooDev").autoStash as boolean)
+  ) {
+    throw new Error(
+      `There are uncommitted changes in: ${dirtyRepos.join(
+        ", "
+      )}. Activate "Auto Stash" config to stash them automatically.`
+    );
+  }
+
+  let forkName: string | undefined;
+  let branch: string;
+  if (input.includes(":")) {
+    [forkName, branch] = input.split(":").map((s) => s.trim());
+  } else {
+    branch = input.trim();
+  }
+
+  const base = inferBaseBranch(branch);
+  const baseBranches = getBaseBranches();
+  if (base && !baseBranches.includes(base)) {
+    addBaseBranch(base);
+  } else if (devBranchExists({ base, name: branch }) || baseBranches.includes(branch)) {
+    return await utils.checkoutBranches(branch, dirtyRepos);
+  }
+  await utils.fetchOrCreateBranches(base, branch, dirtyRepos, forkName, true);
+  addDevBranch(base, branch);
 });
 
 export const fetchBranch = createCommand("odooDev.fetchBranch", async (utils) => {

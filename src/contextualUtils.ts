@@ -4,7 +4,7 @@ import * as fs from "fs";
 import * as ini from "ini";
 import * as Result from "./Result";
 import { Branch, Remote, Repository } from "./dependencies/git";
-import { OdooDevBranch, OdooDevBranches } from "./odoo_dev_branch";
+import { OdooDevBranches } from "./odoo_dev_branch";
 import {
   findRemote,
   getChildProcs,
@@ -20,6 +20,7 @@ import {
   isBase,
   getRequirements,
   getWithDemoDataStatusText,
+  debounce,
 } from "./helpers";
 import { assert } from "console";
 import {
@@ -510,7 +511,8 @@ export function createContextualUtils(
     base: string,
     branch: string,
     dirtyRepos: string[],
-    fork?: string
+    fork: string | undefined,
+    confirmCreate: boolean = false
   ) => {
     // If fork is provided, we shortcut to fetchBranches.
     if (fork) {
@@ -537,7 +539,17 @@ export function createContextualUtils(
     if (isFromRemote) {
       return fetchBranches(base, branch, dirtyRepos);
     } else {
-      return createBranches(base, branch, dirtyRepos);
+      if (confirmCreate) {
+        const res = await vscode.window.showInformationMessage(
+          `The branch '${branch}' is not available remotely. Would you like to create it?`,
+          { modal: true },
+          "Yes"
+        );
+        if (!res) {
+          throw new Error(`The branch '${branch}' is not found.`);
+        }
+        return createBranches(base, branch, dirtyRepos);
+      }
     }
   };
 
@@ -1064,14 +1076,6 @@ export function createContextualUtils(
 
   const treeDataProvider = new OdooDevBranches(odevRepos);
   const odooAddonsTreeProvider = new OdooAddonsTree(odevRepos, getRepoPath);
-
-  const debounce = <A extends any[], R extends any>(cb: (...args: A) => R, delay: number) => {
-    let timeout: NodeJS.Timeout;
-    return (...args: A) => {
-      clearTimeout(timeout);
-      timeout = setTimeout(() => cb(...args), delay);
-    };
-  };
 
   const _debouncedRefreshTrees = debounce(() => {
     treeDataProvider.refresh();

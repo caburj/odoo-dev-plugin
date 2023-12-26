@@ -347,3 +347,11 @@ export function getWithDemoDataStatusText(withDemoData: boolean | null) {
     return "$(eye-closed) Config-Based Demo";
   }
 }
+
+export const debounce = <A extends any[], R extends any>(cb: (...args: A) => R, delay: number) => {
+  let timeout: NodeJS.Timeout;
+  return (...args: A) => {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => cb(...args), delay);
+  };
+};
