@@ -6,6 +6,18 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 ## [Unreleased]
 
+## [0.1.24] - 2023-12-26
+
+### Added
+
+- Command: Find Branch
+  - Tries to checkout first.
+  - If nothing to checkout, it will check the branch remotely.
+  - If branch not found remotely, it will ask the user to create the branch.
+- When asking for confirmation, modal is shown instead of a quickpick.
+- Killing the server is now async which is a better UX when user is fast at
+  copy-pasting text.
+
 ## [0.1.23] - 2023-12-08
 
 ### Added
