@@ -5,7 +5,6 @@ import * as fs from "fs";
 import fetch from "node-fetch";
 import {
   createTemplateNote,
-  debounce,
   fileExists,
   getAddons,
   getBase,
@@ -480,7 +479,7 @@ export const startFreshServer = createCommand("odooDev.startFreshServer", async 
 });
 
 export const startServer = createCommand("odooDev.startServer", async (utils) => {
-  if (!Result.check(await utils.ensureNoRunningServer())) {
+  if (!Result.check(await utils.ensureNoRunningServer({ waitForKill: true }))) {
     return;
   }
 
@@ -498,7 +497,7 @@ export const toggleWithDemoData = createCommand("odooDev.toggleWithDemoData", as
 });
 
 export const debugServer = createCommand("odooDev.debugServer", async (utils) => {
-  if (!Result.check(await utils.ensureNoRunningServer())) {
+  if (!Result.check(await utils.ensureNoRunningServer({ waitForKill: true }))) {
     return;
   }
 
@@ -557,7 +556,7 @@ export const debugOdooShell = createCommand("odooDev.debugOdooShell", async (uti
 export const startServerWithInstall = createCommand(
   "odooDev.startServerWithInstall",
   async (utils) => {
-    if (!Result.check(await utils.ensureNoRunningServer())) {
+    if (!Result.check(await utils.ensureNoRunningServer({ waitForKill: true }))) {
       return;
     }
 
@@ -573,7 +572,7 @@ export const startServerWithInstall = createCommand(
 export const debugServerWithInstall = createCommand(
   "odooDev.debugServerWithInstall",
   async (utils) => {
-    if (!Result.check(await utils.ensureNoRunningServer())) {
+    if (!Result.check(await utils.ensureNoRunningServer({ waitForKill: true }))) {
       return;
     }
 
@@ -610,7 +609,7 @@ export const debugServerWithInstall = createCommand(
 export const startServerWithUpdate = createCommand(
   "odooDev.startServerWithUpdate",
   async (utils) => {
-    if (!Result.check(await utils.ensureNoRunningServer())) {
+    if (!Result.check(await utils.ensureNoRunningServer({ waitForKill: true }))) {
       return;
     }
 
@@ -634,7 +633,7 @@ export const startServerWithUpdate = createCommand(
 export const debugServerWithUpdate = createCommand(
   "odooDev.debugServerWithUpdate",
   async (utils) => {
-    if (!Result.check(await utils.ensureNoRunningServer())) {
+    if (!Result.check(await utils.ensureNoRunningServer({ waitForKill: true }))) {
       return;
     }
 
@@ -703,7 +702,7 @@ export const debugJS = createCommand("odooDev.debugJS", async (utils) => {
 });
 
 export const dropActiveDB = createCommand("odooDev.dropActiveDB", async (utils) => {
-  if (!Result.check(await utils.ensureNoRunningServer())) {
+  if (!Result.check(await utils.ensureNoRunningServer({ waitForKill: true }))) {
     return;
   }
   const dbName = await utils.getDBName();
@@ -804,7 +803,7 @@ export const openLinkedNote = createCommand("odooDev.openLinkedNote", async (uti
 });
 
 export const stopActiveServer = createCommand("odooDev.stopActiveServer", async (utils) => {
-  await utils.ensureNoActiveServer(false);
+  await utils.ensureNoActiveServer({ shouldConfirm: false });
   await utils.ensureNoDebugSession(false);
   vscode.commands.executeCommand("setContext", "odooDev.hasActiveServer", false);
   utils.odooServerStatus.command = "odooDev.startServer";

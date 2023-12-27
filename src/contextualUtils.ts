@@ -293,7 +293,7 @@ export function createContextualUtils(
     return serverProcs.filter((x) => x).length > 0;
   };
 
-  async function ensureNoActiveServer(shouldConfirm = true) {
+  async function ensureNoActiveServer({ shouldConfirm = true, waitForKill = false } = {}) {
     const terminalPID = await getOdooServerTerminal().processId;
     if (!terminalPID) {
       return Result.success();
@@ -312,7 +312,10 @@ export function createContextualUtils(
           );
         }
       }
-      killOdooServer(terminalPID);
+      const killServerProm = killOdooServer(terminalPID);
+      if (waitForKill) {
+        await killServerProm;
+      }
     }
     return Result.success();
   }
@@ -344,9 +347,9 @@ export function createContextualUtils(
     return Result.success();
   }
 
-  async function ensureNoRunningServer() {
+  async function ensureNoRunningServer({ waitForKill = false } = {}) {
     const shouldConfirm = vscode.workspace.getConfiguration("odooDev").confirmStopServer as boolean;
-    const noActiveServerResult = await ensureNoActiveServer(shouldConfirm);
+    const noActiveServerResult = await ensureNoActiveServer({ shouldConfirm, waitForKill });
     if (!Result.check(noActiveServerResult)) {
       return noActiveServerResult;
     }
