@@ -14,6 +14,7 @@ import {
   isValidDirectory,
   runShellCommand,
   zip,
+  startDebugging,
 } from "./helpers";
 import { type ContextualUtils } from "./contextualUtils";
 import { OdooDevBranch } from "./odoo_dev_branch";
@@ -50,12 +51,6 @@ function createCommand<T>(
       },
     };
   };
-}
-
-function startDebugging(config: vscode.DebugConfiguration) {
-  odooDevOutput.appendLine("Starting debug session...");
-  odooDevOutput.appendLine(JSON.stringify(config, null, 2));
-  return vscode.debug.startDebugging(undefined, config);
 }
 
 export const createBranch = createCommand("odooDev.createBranch", async (utils) => {
@@ -478,6 +473,32 @@ export const startFreshServer = createCommand("odooDev.startFreshServer", async 
   }
 });
 
+export const debugFreshServer = createCommand("odooDev.debugFreshServer", async (utils) => {
+  if (!Result.check(await utils.ensureNoRunningServer({ waitForKill: true }))) {
+    return;
+  }
+
+  const dbName = await utils.getDBName();
+
+  if (dbName) {
+    const selectedAddons = await utils.multiSelectAddons();
+    if (!selectedAddons) {
+      return;
+    }
+    try {
+      await runShellCommand(`dropdb ${dbName}`);
+    } catch (error) {
+      if (error instanceof Error) {
+        const rx = new RegExp(`database .${dbName}. does not exist`);
+        if (!rx.test(error.message)) {
+          throw error;
+        }
+      }
+    }
+    utils.debugServerWithInstall(selectedAddons, odooDevOutput);
+  }
+});
+
 export const startServer = createCommand("odooDev.startServer", async (utils) => {
   if (!Result.check(await utils.ensureNoRunningServer({ waitForKill: true }))) {
     return;
@@ -517,7 +538,7 @@ export const debugServer = createCommand("odooDev.debugServer", async (utils) =>
     },
     args: commandArgs,
   };
-  await startDebugging(debugOdooPythonLaunchConfig);
+  await startDebugging(debugOdooPythonLaunchConfig, odooDevOutput);
   vscode.commands.executeCommand("setContext", "odooDev.hasActiveServer", true);
   utils.odooServerStatus.command = "odooDev.stopActiveServer";
   utils.odooServerStatus.text = "$(debug-stop) Stop Odoo Server";
@@ -550,7 +571,7 @@ export const debugOdooShell = createCommand("odooDev.debugOdooShell", async (uti
     },
     args: commandArgs,
   };
-  await startDebugging(debugOdooPythonLaunchConfig);
+  await startDebugging(debugOdooPythonLaunchConfig, odooDevOutput);
 });
 
 export const startServerWithInstall = createCommand(
@@ -581,28 +602,7 @@ export const debugServerWithInstall = createCommand(
       return;
     }
 
-    const odooBin = `${utils.getRepoPath(utils.odevRepos.odoo)}/odoo-bin`;
-    const startServerArgs = await utils.getStartServerArgs();
-    const args = [...startServerArgs, "-i", selectedAddons.join(",")];
-
-    const debugOdooPythonLaunchConfig: vscode.DebugConfiguration = {
-      name: DEBUG_PYTHON_NAME,
-      type: "python",
-      request: "launch",
-      stopOnEntry: false,
-      console: "integratedTerminal",
-      cwd: `${utils.getRepoPath(utils.odevRepos.odoo)}`,
-      python: await utils.getPythonPath(),
-      program: odooBin,
-      variablePresentation: {
-        all: "hide",
-      },
-      args,
-    };
-    await startDebugging(debugOdooPythonLaunchConfig);
-    vscode.commands.executeCommand("setContext", "odooDev.hasActiveServer", true);
-    utils.odooServerStatus.command = "odooDev.stopActiveServer";
-    utils.odooServerStatus.text = "$(debug-stop) Stop Odoo Server";
+    utils.debugServerWithInstall(selectedAddons, odooDevOutput);
   }
 );
 
@@ -660,7 +660,7 @@ export const debugServerWithUpdate = createCommand(
       },
       args,
     };
-    await startDebugging(debugOdooPythonLaunchConfig);
+    await startDebugging(debugOdooPythonLaunchConfig, odooDevOutput);
     vscode.commands.executeCommand("setContext", "odooDev.hasActiveServer", true);
     utils.odooServerStatus.command = "odooDev.stopActiveServer";
     utils.odooServerStatus.text = "$(debug-stop) Stop Odoo Server";
@@ -698,7 +698,7 @@ export const debugJS = createCommand("odooDev.debugJS", async (utils) => {
     sourceMaps: true,
     sourceMapPathOverrides,
   };
-  await startDebugging(debugOdooPythonLaunchConfig);
+  await startDebugging(debugOdooPythonLaunchConfig, odooDevOutput);
 });
 
 export const dropActiveDB = createCommand("odooDev.dropActiveDB", async (utils) => {

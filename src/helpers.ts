@@ -355,3 +355,9 @@ export const debounce = <A extends any[], R extends any>(cb: (...args: A) => R, 
     timeout = setTimeout(() => cb(...args), delay);
   };
 };
+
+export function startDebugging(config: vscode.DebugConfiguration, output: vscode.OutputChannel) {
+  output.appendLine("Starting debug session...");
+  output.appendLine(JSON.stringify(config, null, 2));
+  return vscode.debug.startDebugging(undefined, config);
+}

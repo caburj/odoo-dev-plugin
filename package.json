@@ -73,6 +73,10 @@
         "icon": "$(sync)"
       },
       {
+        "command": "odooDev.debugFreshServer",
+        "title": "Odoo Dev: Debug Fresh Server"
+      },
+      {
         "command": "odooDev.startFreshServer",
         "title": "Odoo Dev: Start Fresh Server"
       },

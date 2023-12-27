@@ -21,11 +21,13 @@ import {
   getRequirements,
   getWithDemoDataStatusText,
   debounce,
+  startDebugging,
 } from "./helpers";
 import { assert } from "console";
 import {
   BASE_BRANCH_REGEX,
   DEBUG_JS_NAME,
+  DEBUG_PYTHON_NAME,
   DEV_BRANCH_REGEX,
   FETCH_URL_REGEX,
   ODOO_SERVER_TERMINAL,
@@ -1190,6 +1192,31 @@ export function createContextualUtils(
     sendStartServerCommand(`${python} ${odooBin} ${args.join(" ")}`, getOdooServerTerminal());
   };
 
+  const debugServerWithInstall = async (selectedAddons: string[], output: vscode.OutputChannel) => {
+    const odooBin = `${getRepoPath(odevRepos.odoo)}/odoo-bin`;
+    const startServerArgs = await getStartServerArgs();
+    const args = [...startServerArgs, "-i", selectedAddons.join(",")];
+
+    const debugOdooPythonLaunchConfig: vscode.DebugConfiguration = {
+      name: DEBUG_PYTHON_NAME,
+      type: "python",
+      request: "launch",
+      stopOnEntry: false,
+      console: "integratedTerminal",
+      cwd: `${getRepoPath(odevRepos.odoo)}`,
+      python: await getPythonPath(),
+      program: odooBin,
+      variablePresentation: {
+        all: "hide",
+      },
+      args,
+    };
+    await startDebugging(debugOdooPythonLaunchConfig, output);
+    vscode.commands.executeCommand("setContext", "odooDev.hasActiveServer", true);
+    odooServerStatus.command = "odooDev.stopActiveServer";
+    odooServerStatus.text = "$(debug-stop) Stop Odoo Server";
+  };
+
   let githubSession: vscode.AuthenticationSession | undefined;
 
   const getGithubAccessToken = async () => {
@@ -1359,6 +1386,7 @@ export function createContextualUtils(
     getStartServerArgs,
     sendStartServerCommand,
     startServerWithInstall,
+    debugServerWithInstall,
     getDBName,
     fetchBranches: refreshTrees(fetchBranches),
     fetchStableBranches: refreshTrees(fetchStableBranches),
