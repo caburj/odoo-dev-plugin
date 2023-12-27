@@ -6,6 +6,17 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 ## [Unreleased]
 
+## [0.1.25] - 2023-12-27
+
+### Added
+
+- Command: Debug Fresh Server
+  - It starts a server with fresh db in debug mode.
+
+### Fixed
+
+- Wait for server to stop before starting the server.
+
 ## [0.1.24] - 2023-12-26
 
 ### Added
