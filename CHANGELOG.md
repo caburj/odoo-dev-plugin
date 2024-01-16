@@ -6,6 +6,12 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 ## [Unreleased]
 
+## [0.1.26] - 2024-01-17
+
+### Added
+
+- Recently accessed branches are now listed at the top of the selection.
+
 ## [0.1.25] - 2023-12-27
 
 ### Added

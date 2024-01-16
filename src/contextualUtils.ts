@@ -73,6 +73,35 @@ export function createContextualUtils(
   } = options;
 
   const odooDevTerminals = new Map<string, vscode.Terminal>();
+  const branchHistory = context.globalState.get<string[]>("odooDev.branchHistory") || [];
+  const pushBranchHistory = async (branch: string) => {
+    const index = branchHistory.indexOf(branch);
+    if (index !== -1) {
+      branchHistory.splice(index, 1);
+    }
+    branchHistory.push(branch);
+    await context.globalState.update("odooDev.branchHistory", branchHistory);
+  };
+  const removeAndPushBranchHistory = async (toRemove: string, toPush: string) => {
+    const index = branchHistory.indexOf(toRemove);
+    if (index !== -1) {
+      branchHistory.splice(index, 1);
+    }
+    branchHistory.push(toPush);
+    await context.globalState.update("odooDev.branchHistory", branchHistory);
+  };
+  const sortBranchSelections = (selections: { name: string; base: string }[]) => {
+    const reversedBranchHistory = [...branchHistory].reverse();
+    const notInHistorySelections = selections.filter((s) => !branchHistory.includes(s.name));
+    const inHistorySelections = [];
+    for (const branch of reversedBranchHistory) {
+      const selection = selections.find((s) => s.name === branch);
+      if (selection) {
+        inHistorySelections.push(selection);
+      }
+    }
+    return [...inHistorySelections, ...notInHistorySelections];
+  };
 
   const getOdooDevTerminal = (name: string) => {
     let terminal = odooDevTerminals.get(name);
@@ -1416,5 +1445,8 @@ export function createContextualUtils(
     push,
     toggleWithDemoData,
     getWithDemoData,
+    sortBranchSelections,
+    pushBranchHistory,
+    removeAndPushBranchHistory,
   };
 }

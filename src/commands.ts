@@ -93,6 +93,7 @@ export const createBranch = createCommand("odooDev.createBranch", async (utils) 
   }
   await utils.createBranches(base, input, dirtyRepos);
   addDevBranch(base, input);
+  utils.pushBranchHistory(input);
 });
 
 /**
@@ -130,7 +131,7 @@ export const findBranch = createCommand("odooDev.findBranch", async (utils) => {
     .flat();
 
   const { label: input } = await showQuickInput(
-    devBranches.map((b) => ({ label: b.name })),
+    utils.sortBranchSelections(devBranches).map((b) => ({ label: b.name })),
     "Branch Name"
   );
 
@@ -163,10 +164,12 @@ export const findBranch = createCommand("odooDev.findBranch", async (utils) => {
   if (base && !baseBranches.includes(base)) {
     addBaseBranch(base);
   } else if (devBranchExists({ base, name: branch }) || baseBranches.includes(branch)) {
-    return await utils.checkoutBranches(branch, dirtyRepos);
+    await utils.checkoutBranches(branch, dirtyRepos);
+    return utils.pushBranchHistory(branch);
   }
   await utils.fetchOrCreateBranches(base, branch, dirtyRepos, forkName, true);
   addDevBranch(base, branch);
+  utils.pushBranchHistory(branch);
 });
 
 export const fetchBranch = createCommand("odooDev.fetchBranch", async (utils) => {
@@ -221,10 +224,11 @@ export const fetchBranch = createCommand("odooDev.fetchBranch", async (utils) =>
     if (response === "Okay") {
       await utils.checkoutBranches(branch, dirtyRepos);
     }
-    return;
+    return utils.pushBranchHistory(branch);
   }
   await utils.fetchBranches(base, branch, dirtyRepos, forkName);
   addDevBranch(base, branch);
+  utils.pushBranchHistory(branch);
 });
 
 export const fetchOrCreate = createCommand("odooDev.fetchOrCreate", async (utils) => {
@@ -271,6 +275,7 @@ export const fetchOrCreate = createCommand("odooDev.fetchOrCreate", async (utils
   }
   await utils.fetchOrCreateBranches(base, branch, dirtyRepos, forkName);
   addDevBranch(base, branch);
+  utils.pushBranchHistory(branch);
 });
 
 export const fetchStableBranch = createCommand("odooDev.fetchStableBranch", async (utils) => {
@@ -308,6 +313,7 @@ export const fetchStableBranch = createCommand("odooDev.fetchStableBranch", asyn
     addBaseBranch(branch);
   }
   await utils.fetchStableBranches(branch, dirtyRepos);
+  utils.pushBranchHistory(branch);
 });
 
 export const deleteBranch = createCommand("odooDev.deleteBranch", async (utils, item) => {
@@ -326,7 +332,7 @@ export const deleteBranch = createCommand("odooDev.deleteBranch", async (utils, 
         name: item.name,
       }
     : await vscode.window.showQuickPick(
-        devBranches.map((b) => ({ ...b, label: b.name })),
+        utils.sortBranchSelections(devBranches).map((b) => ({ ...b, label: b.name })),
         { title: "Select the dev branch to delete" }
       );
 
@@ -363,6 +369,7 @@ export const deleteBranch = createCommand("odooDev.deleteBranch", async (utils, 
   }
   await utils.deleteBranches(base, branch);
   removeDevBranch(base, branch);
+  utils.removeAndPushBranchHistory(branch, base);
 });
 
 export const checkoutBranch = createCommand("odooDev.checkoutBranch", async (utils, item) => {
@@ -384,7 +391,7 @@ export const checkoutBranch = createCommand("odooDev.checkoutBranch", async (uti
         name: item.name,
       }
     : await vscode.window.showQuickPick(
-        devBranches.map((b) => ({ ...b, label: b.name })),
+        utils.sortBranchSelections(devBranches).map((b) => ({ ...b, label: b.name })),
         { title: "Choose from the list" }
       );
 
@@ -405,6 +412,7 @@ export const checkoutBranch = createCommand("odooDev.checkoutBranch", async (uti
   }
 
   await utils.checkoutBranches(selected.name, dirtyRepos);
+  utils.pushBranchHistory(selected.name);
 });
 
 export const rebaseBranch = createCommand("odooDev.rebaseActive", async (utils, item) => {
