@@ -675,6 +675,90 @@ export const debugServerWithUpdate = createCommand(
   }
 );
 
+export const runTestMethods = createCommand("odooDev.runTestMethods", async (utils) => {
+  const odooPath = `${utils.getRepoPath(utils.odevRepos.odoo)}/addons`;
+  const customAddonPaths = Object.values(utils.odevRepos.custom).map(
+    (repo) => `${utils.getRepoPath(repo)}`
+  );
+
+  const odooAddons = (await getAddons(odooPath)).map((name) => [name, odooPath] as const);
+  const customAddons = (
+    await Promise.all(
+      customAddonPaths.map(async (path) =>
+        (await getAddons(path)).map((name) => [name, path] as const)
+      )
+    )
+  ).flat();
+
+  const selectedAddons = await vscode.window.showQuickPick(
+    [...odooAddons, ...customAddons].map(([name, rootUri]) => {
+      return { label: name, rootUri };
+    }),
+    { canPickMany: true, title: "Select modules (to reduce the method selections)" }
+  );
+
+  if (!selectedAddons) {
+    return;
+  }
+
+  const allTestMethods = [];
+  for (const { label: addon, rootUri } of selectedAddons) {
+    const pattern = new vscode.RelativePattern(rootUri, `**/${addon}/tests/**/*.py`);
+    const testFileUris = await vscode.workspace.findFiles(pattern, "**/node_modules/**");
+
+    for (const uri of testFileUris) {
+      const symbols = await vscode.commands.executeCommand<vscode.DocumentSymbol[] | undefined>(
+        "vscode.executeDocumentSymbolProvider",
+        uri
+      );
+
+      if (!symbols) {
+        continue;
+      }
+
+      const testMethods = symbols
+        .filter((symbol) => symbol.kind === vscode.SymbolKind.Class)
+        .map((s) => {
+          const testMethods = s.children.filter((child) => child.kind === vscode.SymbolKind.Method);
+          return testMethods
+            .filter((m) => m.name.startsWith("test"))
+            .map((method) => ({
+              class: s.name,
+              method: method.name,
+            }));
+        })
+        .flat();
+
+      allTestMethods.push(...testMethods);
+    }
+  }
+
+  const selectedTestMethods = await vscode.window.showQuickPick(
+    allTestMethods.map((x) => {
+      const label = `${x.class}.${x.method}`;
+      return { label, tag: `:${label}` };
+    }),
+    {
+      title: "Select test methods to run",
+      canPickMany: true,
+    }
+  );
+
+  if (!selectedTestMethods) {
+    return;
+  }
+
+  const commandArgs = await utils.getStartServerArgs({
+    testTags: selectedTestMethods.map(({ tag }) => tag),
+  });
+  const python = await utils.getPythonPath();
+  const odooBin = `${utils.getRepoPath(utils.odevRepos.odoo)}/odoo-bin`;
+  utils.sendStartServerCommand(
+    `${python} ${odooBin} ${commandArgs.join(" ")}`,
+    utils.getOdooServerTerminal()
+  );
+});
+
 export const debugJS = createCommand("odooDev.debugJS", async (utils) => {
   const odooAddonsPath = `${utils.getRepoPath(utils.odevRepos.odoo)}/addons`;
   const customAddonsPaths = Object.entries(utils.odevRepos.custom).map(([, repo]) => {

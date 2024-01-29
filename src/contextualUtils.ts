@@ -276,7 +276,7 @@ export function createContextualUtils(
         args.push("-d", dbName.slice(0, 63));
       }
     }
-    return args;
+    return withDemoFlags(args);
   };
 
   const getOdooShellCommandArgs = async () => {
@@ -285,14 +285,14 @@ export function createContextualUtils(
     return ["shell", ...normalArgs, "-p", "9999"];
   };
 
-  const getstartSelectedTestArgs = async (testTag: string) => {
+  const getStartSelectedTestArgs = async (testTag: string) => {
     const args = await getNormalStartServerArgs();
-    return [...args, "--stop-after-init", "--test-enable", "--test-tags", testTag];
+    return withDemoFlags([...args, "--stop-after-init", "--test-enable", "--test-tags", testTag]);
   };
 
   const getStartCurrentTestFileArgs = async (testFilePath: string) => {
     const args = await getNormalStartServerArgs();
-    return [...args, "--stop-after-init", "--test-file", testFilePath];
+    return withDemoFlags([...args, "--stop-after-init", "--test-file", testFilePath]);
   };
 
   async function getOdooConfigValue(key: string) {
@@ -1135,10 +1135,13 @@ export function createContextualUtils(
     };
   }
 
-  const getStartServerArgs = async () => {
+  const getStartServerArgs = async (options?: { testTags: string[] }) => {
     const testFileRegex = /.*\/(addons|enterprise)\/(.*)\/tests\/test_.*\.py/;
     const autoTest = vscode.workspace.getConfiguration("odooDev")["autoTest"] as boolean;
-    let commandArgs: string[] = [];
+
+    if (options?.testTags) {
+      return await getStartSelectedTestArgs(options.testTags.join(","));
+    }
 
     const editor = vscode.window.activeTextEditor;
     if (autoTest && editor) {
@@ -1154,31 +1157,32 @@ export function createContextualUtils(
         const { classSymbol, methodSymbol } = await getClassAndMethod(symbols, position);
 
         if (!classSymbol && !methodSymbol) {
-          commandArgs = await getStartCurrentTestFileArgs(editor.document.uri.path);
+          return await getStartCurrentTestFileArgs(editor.document.uri.path);
         } else {
           const testTag = `${addon}${classSymbol ? `:${classSymbol.name}` : ""}${
             methodSymbol ? `.${methodSymbol.name}` : ""
           }`;
-          commandArgs = await getstartSelectedTestArgs(testTag);
+          return await getStartSelectedTestArgs(testTag);
         }
       } else {
-        commandArgs = await getNormalStartServerArgs();
+        return await getNormalStartServerArgs();
       }
     } else {
-      commandArgs = await getNormalStartServerArgs();
+      return await getNormalStartServerArgs();
     }
-    const withDemoData = await getWithDemoData();
+  };
 
+  async function withDemoFlags(args: string[]) {
+    const withDemoData = await getWithDemoData();
     if (typeof withDemoData === "boolean") {
       if (withDemoData) {
-        commandArgs.push("--without-demo=");
+        args.push("--without-demo=");
       } else {
-        commandArgs.push("--without-demo=all");
+        args.push("--without-demo=all");
       }
     }
-
-    return commandArgs;
-  };
+    return args;
+  }
 
   const sendStartServerCommand = async (command: string, terminal: vscode.Terminal) => {
     terminal.show();

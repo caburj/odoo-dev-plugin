@@ -6,6 +6,12 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 ## [Unreleased]
 
+## [0.1.27] - 2024-01-29
+
+### Added
+
+- Introduce new command: Run Test Methods
+
 ## [0.1.26] - 2024-01-17
 
 ### Added
