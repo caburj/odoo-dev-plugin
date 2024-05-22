@@ -94,7 +94,7 @@ export function createContextualUtils(
     const reversedBranchHistory = [...branchHistory].reverse();
     const notInHistorySelections = selections.filter((s) => !branchHistory.includes(s.name));
     const inHistorySelections = [];
-    for (const branch of reversedBranchHistory) {
+    for (const branch of [...new Set(reversedBranchHistory)]) {
       const selection = selections.find((s) => s.name === branch);
       if (selection) {
         inHistorySelections.push(selection);

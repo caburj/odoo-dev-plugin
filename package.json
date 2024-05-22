@@ -2,7 +2,7 @@
   "name": "odoo-dev-plugin",
   "displayName": "Odoo Dev",
   "description": "Switch between projects, debug without configuration",
-  "version": "0.1.27",
+  "version": "0.1.29",
   "publisher": "JosephCaburnay",
   "repository": {
     "url": "https://github.com/caburj/odoo-dev-plugin.git"

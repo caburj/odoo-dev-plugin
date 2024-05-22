@@ -6,6 +6,12 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 ## [Unreleased]
 
+## [0.1.29] - 2024-05-22
+
+### Fixed
+
+- Fix duplicates when looking for branches.
+
 ## [0.1.27] - 2024-01-29
 
 ### Added
