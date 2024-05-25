@@ -36,6 +36,7 @@ import {
 import { OdooAddonsTree } from "./odoo_addons";
 import { getBaseBranches, getDebugSessions, getDevBranches } from "./state";
 import { withProgress } from "./decorators";
+import { init } from "./branch-history";
 
 export type ContextualUtils = ReturnType<typeof createContextualUtils>;
 
@@ -73,26 +74,19 @@ export function createContextualUtils(
   } = options;
 
   const odooDevTerminals = new Map<string, vscode.Terminal>();
-  const branchHistory = context.globalState.get<string[]>("odooDev.branchHistory") || [];
+  const branchHistory = init(context.globalState);
   const pushBranchHistory = async (branch: string) => {
-    const index = branchHistory.indexOf(branch);
-    if (index !== -1) {
-      branchHistory.splice(index, 1);
-    }
     branchHistory.push(branch);
-    await context.globalState.update("odooDev.branchHistory", branchHistory);
+    await branchHistory.flush();
   };
   const removeAndPushBranchHistory = async (toRemove: string, toPush: string) => {
-    const index = branchHistory.indexOf(toRemove);
-    if (index !== -1) {
-      branchHistory.splice(index, 1);
-    }
+    branchHistory.remove(toRemove);
     branchHistory.push(toPush);
-    await context.globalState.update("odooDev.branchHistory", branchHistory);
+    await branchHistory.flush();
   };
   const sortBranchSelections = (selections: { name: string; base: string }[]) => {
-    const reversedBranchHistory = [...branchHistory].reverse();
-    const notInHistorySelections = selections.filter((s) => !branchHistory.includes(s.name));
+    const reversedBranchHistory = [...branchHistory.items].reverse();
+    const notInHistorySelections = selections.filter((s) => !branchHistory.items.includes(s.name));
     const inHistorySelections = [];
     for (const branch of [...new Set(reversedBranchHistory)]) {
       const selection = selections.find((s) => s.name === branch);
@@ -839,7 +833,7 @@ export function createContextualUtils(
     }
   };
 
-  const deleteBranch = async (repo: Repository, base: string, branch: string) => {
+  const _deleteBranch = async (repo: Repository, base: string, branch: string) => {
     assert(base !== branch, "Value of the base can't be the same as branch.");
     const currentBranch = repo.state.HEAD?.name;
     if (currentBranch === branch) {
@@ -867,6 +861,13 @@ export function createContextualUtils(
       );
     }
     return Result.success();
+  };
+
+  const deleteBranch = async (repo: Repository, base: string, branch: string) => {
+    const result = await _deleteBranch(repo, base, branch);
+    branchHistory.remove(branch);
+    await branchHistory.flush();
+    return result;
   };
 
   const deleteBranches = async (base: string, branch: string, withSpinner: boolean = true) => {
