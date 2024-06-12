@@ -3,7 +3,7 @@ import { ExtensionContext } from "vscode";
 export const init = (globalState: ExtensionContext["globalState"]) => {
   const alreadyAdded: Set<string> = new Set();
   const items: string[] = [];
-  for (const item in globalState.get<string[]>("odooDev.branchHistory") || []) {
+  for (const item of globalState.get<string[]>("odooDev.branchHistory") || []) {
     if (!alreadyAdded.has(item)) {
       items.push(item);
       alreadyAdded.add(item);

@@ -6,6 +6,12 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 ## [Unreleased]
 
+## [0.1.31] - 2024-06-12
+
+### Fixed
+
+- Properly save the branch history.
+
 ## [0.1.30] - 2024-05-22
 
 ### Fixed
