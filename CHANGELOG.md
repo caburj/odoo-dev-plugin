@@ -6,6 +6,12 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 ## [Unreleased]
 
+## [0.1.33] - 2024-06-30
+
+### Fixed
+
+- Properly select the last command in the command history.
+
 ## [0.1.32] - 2024-06-30
 
 ### Added

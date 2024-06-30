@@ -26,7 +26,7 @@ export const init = (globalState: ExtensionContext["globalState"]) => {
   };
 
   const top = () => {
-    const topItem = items[0];
+    const topItem = items[items.length - 1];
     if (topItem) {
       return topItem.split(" :: ") as [terminalName: string, command: string];
     }
