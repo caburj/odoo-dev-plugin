@@ -6,6 +6,14 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 ## [Unreleased]
 
+## [0.1.32] - 2024-06-30
+
+### Added
+
+- Odoo Dev: Previous Commands
+- Odoo Dev: Run Last Command
+- Odoo Dev: Clear Command History
+
 ## [0.1.31] - 2024-06-12
 
 ### Fixed

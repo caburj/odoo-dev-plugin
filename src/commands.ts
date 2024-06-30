@@ -18,7 +18,14 @@ import {
 } from "./helpers";
 import { type ContextualUtils } from "./contextualUtils";
 import { OdooDevBranch } from "./odoo_dev_branch";
-import { DEBUG_JS_NAME, DEBUG_ODOO_SHELL, DEBUG_PYTHON_NAME, DEV_BRANCH_REGEX } from "./constants";
+import {
+  DEBUG_JS_NAME,
+  DEBUG_ODOO_SHELL,
+  DEBUG_PYTHON_NAME,
+  DEV_BRANCH_REGEX,
+  ODOO_SERVER_TERMINAL,
+  ODOO_SHELL_TERMINAL,
+} from "./constants";
 import { withProgress } from "./decorators";
 import {
   addBaseBranch,
@@ -517,7 +524,7 @@ export const startServer = createCommand("odooDev.startServer", async (utils) =>
   const odooBin = `${utils.getRepoPath(utils.odevRepos.odoo)}/odoo-bin`;
   utils.sendStartServerCommand(
     `${python} ${odooBin} ${commandArgs.join(" ")}`,
-    utils.getOdooServerTerminal()
+    ODOO_SERVER_TERMINAL
   );
 });
 
@@ -558,7 +565,7 @@ export const startOdooShell = createCommand("odooDev.startOdooShell", async (uti
   const odooBin = `${utils.getRepoPath(utils.odevRepos.odoo)}/odoo-bin`;
   utils.sendStartServerCommand(
     `${python} ${odooBin} ${commandArgs.join(" ")}`,
-    utils.getOdooShellTerminal()
+    ODOO_SHELL_TERMINAL
   );
 });
 
@@ -627,14 +634,12 @@ export const startServerWithUpdate = createCommand(
     }
 
     const startServerArgs = await utils.getStartServerArgs();
-    const args = [...startServerArgs, "-u", selectedAddons.join(",")];
+    const [d, dbname, ...otherArgs] = startServerArgs;
+    const args = [d, dbname, "-u", selectedAddons.join(","), ...otherArgs];
 
     const python = await utils.getPythonPath();
     const odooBin = `${utils.getRepoPath(utils.odevRepos.odoo)}/odoo-bin`;
-    utils.sendStartServerCommand(
-      `${python} ${odooBin} ${args.join(" ")}`,
-      utils.getOdooServerTerminal()
-    );
+    utils.sendStartServerCommand(`${python} ${odooBin} ${args.join(" ")}`, ODOO_SERVER_TERMINAL);
   }
 );
 
@@ -674,6 +679,39 @@ export const debugServerWithUpdate = createCommand(
     utils.odooServerStatus.text = "$(debug-stop) Stop Odoo Server";
   }
 );
+
+export const previousCommands = createCommand("odooDev.previousCommands", async (utils) => {
+  const items = utils.commandHistory.getItems().map(([terminalName, command]) => {
+    const [python, odooBin, ...args] = command.split(" ");
+    return { label: terminalName, detail: args.join(" "), python, odooBin };
+  });
+  items.reverse();
+  const selected = await vscode.window.showQuickPick(items, { canPickMany: false });
+  if (selected) {
+    const { python, odooBin, detail: args, label: terminalName } = selected;
+    if (!Result.check(await utils.ensureNoRunningServer({ waitForKill: true }))) {
+      return;
+    }
+    utils.sendStartServerCommand([python, odooBin, args].join(" "), terminalName);
+  }
+});
+
+export const runLastCommand = createCommand("odooDev.runLastCommand", async (utils) => {
+  const lastCommand = utils.commandHistory.top();
+  if (lastCommand) {
+    if (!Result.check(await utils.ensureNoRunningServer({ waitForKill: true }))) {
+      return;
+    }
+    const [terminalName, command] = lastCommand;
+    utils.sendStartServerCommand(command, terminalName);
+  } else {
+    vscode.window.showInformationMessage("No command to run.");
+  }
+});
+
+export const clearCommandHistory = createCommand("odooDev.clearCommandHistory", async (utils) => {
+  await utils.commandHistory.clear();
+});
 
 export const runTestMethods = createCommand("odooDev.runTestMethods", async (utils) => {
   const odooPath = `${utils.getRepoPath(utils.odevRepos.odoo)}/addons`;
@@ -755,7 +793,7 @@ export const runTestMethods = createCommand("odooDev.runTestMethods", async (uti
   const odooBin = `${utils.getRepoPath(utils.odevRepos.odoo)}/odoo-bin`;
   utils.sendStartServerCommand(
     `${python} ${odooBin} ${commandArgs.join(" ")}`,
-    utils.getOdooServerTerminal()
+    ODOO_SERVER_TERMINAL
   );
 });
 
@@ -799,8 +837,9 @@ export const dropActiveDB = createCommand("odooDev.dropActiveDB", async (utils) 
   }
   const dbName = await utils.getDBName();
   if (dbName) {
-    utils.getOdooServerTerminal().show();
-    utils.getOdooServerTerminal().sendText(`dropdb ${dbName}`);
+    const terminal = utils.getOdooDevTerminal(ODOO_SERVER_TERMINAL);
+    terminal.show();
+    terminal.sendText(`dropdb ${dbName}`);
   }
 });
 

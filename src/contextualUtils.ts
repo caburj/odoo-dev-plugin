@@ -31,12 +31,12 @@ import {
   DEV_BRANCH_REGEX,
   FETCH_URL_REGEX,
   ODOO_SERVER_TERMINAL,
-  ODOO_SHELL_TERMINAL,
 } from "./constants";
 import { OdooAddonsTree } from "./odoo_addons";
 import { getBaseBranches, getDebugSessions, getDevBranches } from "./state";
 import { withProgress } from "./decorators";
 import { init } from "./branch-history";
+import * as StartServerCommandHistory from "./start-server-command-history";
 
 export type ContextualUtils = ReturnType<typeof createContextualUtils>;
 
@@ -97,6 +97,8 @@ export function createContextualUtils(
     return [...inHistorySelections, ...notInHistorySelections];
   };
 
+  const commandHistory = StartServerCommandHistory.init(context.globalState);
+
   const getOdooDevTerminal = (name: string) => {
     let terminal = odooDevTerminals.get(name);
     if (!terminal) {
@@ -117,14 +119,6 @@ export function createContextualUtils(
       terminal.show();
     }
     return terminal;
-  };
-
-  const getOdooServerTerminal = () => {
-    return getOdooDevTerminal(ODOO_SERVER_TERMINAL);
-  };
-
-  const getOdooShellTerminal = () => {
-    return getOdooDevTerminal(ODOO_SHELL_TERMINAL);
   };
 
   const getConfigFilePath = async () => {
@@ -256,7 +250,7 @@ export function createContextualUtils(
 
   const getNormalStartServerArgs = async () => {
     const configFilePath = await getConfigFilePath();
-    const args = ["-c", configFilePath];
+    const args = [];
     const dbNameConfig = vscode.workspace.getConfiguration("odooDev").dbName as string;
     if (dbNameConfig !== "configBased") {
       const branch = await getActiveBranch();
@@ -270,7 +264,7 @@ export function createContextualUtils(
         args.push("-d", dbName.slice(0, 63));
       }
     }
-    return withDemoFlags(args);
+    return withDemoFlags([...args, "-c", configFilePath]);
   };
 
   const getOdooShellCommandArgs = async () => {
@@ -319,7 +313,8 @@ export function createContextualUtils(
   };
 
   async function ensureNoActiveServer({ shouldConfirm = true, waitForKill = false } = {}) {
-    const terminalPID = await getOdooServerTerminal().processId;
+    const terminal = getOdooDevTerminal(ODOO_SERVER_TERMINAL);
+    const terminalPID = await terminal.processId;
     if (!terminalPID) {
       return Result.success();
     }
@@ -1185,11 +1180,16 @@ export function createContextualUtils(
     return args;
   }
 
-  const sendStartServerCommand = async (command: string, terminal: vscode.Terminal) => {
+  const sendStartServerCommand = async (command: string, terminalName: string) => {
+    const terminal = getOdooDevTerminal(terminalName);
+
     terminal.show();
     // In some odoo config files, the addons_path is set using relative paths.
     // Important to cd to the odoo repo before running the command.
     terminal.sendText(`cd ${odevRepos.odoo.rootUri.fsPath} && ${command}`);
+
+    commandHistory.push(terminalName, command);
+    commandHistory.flush();
 
     // when the server stops, set the context to false
     let timeout = setTimeout(async function poll() {
@@ -1217,13 +1217,16 @@ export function createContextualUtils(
 
   const startServerWithInstall = async (selectedAddons: string[]) => {
     const startServerArgs = await getStartServerArgs();
+    const [d, dbname, ...otherArgs] = startServerArgs;
     const args = [
-      ...startServerArgs,
+      d,
+      dbname,
       ...(selectedAddons.length === 0 ? [] : ["-i", selectedAddons.join(",")]),
+      ...otherArgs,
     ];
     const python = await getPythonPath();
     const odooBin = `${getRepoPath(odevRepos.odoo)}/odoo-bin`;
-    sendStartServerCommand(`${python} ${odooBin} ${args.join(" ")}`, getOdooServerTerminal());
+    sendStartServerCommand(`${python} ${odooBin} ${args.join(" ")}`, ODOO_SERVER_TERMINAL);
   };
 
   const debugServerWithInstall = async (selectedAddons: string[], output: vscode.OutputChannel) => {
@@ -1413,8 +1416,7 @@ export function createContextualUtils(
     treeDataProvider,
     odooAddonsTreeProvider,
     getConfigFilePath,
-    getOdooServerTerminal,
-    getOdooShellTerminal,
+    getOdooDevTerminal,
     getOdooShellCommandArgs,
     getPythonPath,
     getStartServerArgs,
@@ -1453,5 +1455,6 @@ export function createContextualUtils(
     sortBranchSelections,
     pushBranchHistory,
     removeAndPushBranchHistory,
+    commandHistory,
   };
 }

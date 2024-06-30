@@ -2,7 +2,7 @@
   "name": "odoo-dev-plugin",
   "displayName": "Odoo Dev",
   "description": "Switch between projects, debug without configuration",
-  "version": "0.1.31",
+  "version": "0.1.32",
   "publisher": "JosephCaburnay",
   "repository": {
     "url": "https://github.com/caburj/odoo-dev-plugin.git"
@@ -13,7 +13,9 @@
   "categories": [
     "Other"
   ],
-  "activationEvents": ["onStartupFinished"],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
   "main": "./out/extension.js",
   "icon": "./resources/not-really-odoo-icon.png",
   "extensionDependencies": [
@@ -124,6 +126,18 @@
         "title": "Odoo Dev: Debug Server With Update..."
       },
       {
+        "command": "odooDev.previousCommands",
+        "title": "Odoo Dev: Previous Commands"
+      },
+      {
+        "command": "odooDev.runLastCommand",
+        "title": "Odoo Dev: Run Last Command"
+      },
+      {
+        "command": "odooDev.clearCommandHistory",
+        "title": "Odoo Dev: Clear Command History"
+      },
+      {
         "command": "odooDev.runTestMethods",
         "title": "Odoo Dev: Run Test Methods"
       },
@@ -207,7 +221,11 @@
           "title": "DB Name",
           "type": "string",
           "default": "devBranchName",
-          "enum": ["baseBranchName", "devBranchName", "configBased"],
+          "enum": [
+            "baseBranchName",
+            "devBranchName",
+            "configBased"
+          ],
           "enumDescriptions": [
             "Base branch name (e.g. 16.0)",
             "Branch name",
@@ -496,6 +514,16 @@
         "command": "odooDev.debugServerWithUpdate",
         "key": "ctrl+o ctrl+shift+u",
         "mac": "cmd+o cmd+shift+u"
+      },
+      {
+        "command": "odooDev.previousCommands",
+        "key": "ctrl+o ctrl+p",
+        "mac": "cmd+o cmd+p"
+      },
+      {
+        "command": "odooDev.runLastCommand",
+        "key": "ctrl+o ctrl+shilf+l",
+        "mac": "cmd+o cmd+shift+l"
       },
       {
         "command": "odooDev.openChromeLocalServer",
