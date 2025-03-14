@@ -6,6 +6,12 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 ## [Unreleased]
 
+## [0.1.35] - 2025-03-14
+
+### Fixed
+
+- Complement to 0.1.34. Should list the dev branches correctly.
+
 ## [0.1.34] - 2025-03-14
 
 ### Fixed

@@ -56,7 +56,7 @@ export async function initDevBranches(utils: ContextualUtils): Promise<void> {
   for (const branch of branchSet) {
     const check = branch.match(DEV_BRANCH_REGEX);
     if (check) {
-      const base = check[1].replace(/-$/, "");
+      const base = check[1].replace(/[-_]$/, "");
       if (!(base in devBranches)) {
         devBranches[base] = [];
       }

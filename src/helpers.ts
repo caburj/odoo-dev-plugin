@@ -211,7 +211,7 @@ export async function findRemote(
 export function getBase(branch: string) {
   const check = branch.match(DEV_BRANCH_REGEX);
   if (check) {
-    return check[1].replace(/-$/, "");
+    return check[1].replace(/[-_]$/, "");
   } else {
     const checkIfBase = branch.match(BASE_BRANCH_REGEX);
     if (checkIfBase) {

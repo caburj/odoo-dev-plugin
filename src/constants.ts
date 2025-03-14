@@ -5,6 +5,6 @@ export const REQUIREMENTS_REGEX = /['"]depends['"]\s*:\s*(\[[\s\S]*?\])/;
 export const ODOO_SERVER_TERMINAL = "Odoo Server";
 export const ODOO_SHELL_TERMINAL = "Odoo Shell";
 export const BASE_BRANCH_REGEX = /^(\d\d\.0|master|saas-\d\d\.\d)$/;
-export const DEV_BRANCH_REGEX = /^(\d\d\.0-|master-|saas-\d\d\.\d-)/;
+export const DEV_BRANCH_REGEX = /^(\d\d\.0[-_]|master[-_]|saas-\d\d\.\d[-_])/;
 export const LINE_BREAK_REGEX = /[\r\n]+/;
 export const FETCH_URL_REGEX = /git@github\.com:(.+)\/(.+)\.git/;
