@@ -6,6 +6,12 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 ## [Unreleased]
 
+## [0.1.34] - 2025-03-14
+
+### Fixed
+
+- Also infers the base branch of `master_test` to be `master`.
+
 ## [0.1.33] - 2024-06-30
 
 ### Fixed

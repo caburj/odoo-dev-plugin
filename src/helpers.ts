@@ -16,13 +16,10 @@ export function getFoldersInDirectory(directoryPath: string) {
   });
 }
 
-function splitWithDashFrom(str: string, start: number) {
-  return [str.substring(0, str.indexOf("-", start)), str.substring(str.indexOf("-", start) + 1)];
-}
-
 export function inferBaseBranch(devBranchName: string) {
-  const start = devBranchName.startsWith("saas") ? 5 : 0;
-  return splitWithDashFrom(devBranchName, start)[0];
+  const regex = /^(saas-\d{2}\.\d|\d{2}\.\d|master)/;
+  const match = devBranchName.match(regex);
+  return match ? match[0] : "";
 }
 
 export function isBaseBranch(branchName: string) {
