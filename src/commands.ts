@@ -1191,11 +1191,15 @@ export const pushForce = createCommand("odooDev.pushForce", async (utils) => {
 export const deleteMerged = createCommand("odooDev.deleteMerged", async (utils) => {
   const githubAccessToken = await utils.getGithubAccessToken();
 
+  // Get the current active branch and its base
+  const currentBranch = await utils.getActiveBranch();
+  const currentBase = getBase(currentBranch) || currentBranch; // If no base, assume it's a base branch itself
+
   // Limitation: For now, we only support the repositories in odoo.
   const repos = [
     ["odoo", utils.odevRepos.odoo],
     ...Object.entries(utils.odevRepos.custom).map(([name, repo]) => [name, repo]),
-    ["upgrade", utils.odevRepos.upgrade],
+    ...(utils.odevRepos.upgrade ? [["upgrade", utils.odevRepos.upgrade]] : []),
   ] as [string, Repository][];
 
   const getUrl = (repoName: string, branch: string) => {
@@ -1219,7 +1223,7 @@ export const deleteMerged = createCommand("odooDev.deleteMerged", async (utils) 
   };
 
   const findMerged = withProgress({
-    message: `Finding merged branches...`,
+    message: `Finding merged branches for base '${currentBase}'...`,
     cb: () =>
       Promise.all(
         repos
@@ -1237,6 +1241,11 @@ export const deleteMerged = createCommand("odooDev.deleteMerged", async (utils) 
               if (!branch || branch === activeBranch || !DEV_BRANCH_REGEX.test(branch)) {
                 continue;
               }
+              // Filter branches to only include those with the same base branch
+              const branchBase = getBase(branch);
+              if (branchBase !== currentBase) {
+                continue;
+              }
               const isClosed = await isBranchClosed(repoName, branch);
               if (isClosed) {
                 toDelete.push(branch);
@@ -1250,12 +1259,12 @@ export const deleteMerged = createCommand("odooDev.deleteMerged", async (utils) 
   const branchesToDelete = new Set((await findMerged()).flat());
 
   if (branchesToDelete.size === 0) {
-    vscode.window.showInformationMessage("No branches to delete.");
+    vscode.window.showInformationMessage(`No merged branches found for base '${currentBase}'.`);
     return;
   }
 
   const branchToDelete = await vscode.window.showQuickPick([...branchesToDelete], {
-    title: "Select branches to delete",
+    title: `Select branches to delete (base: ${currentBase})`,
     canPickMany: true,
   });
 

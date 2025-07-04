@@ -6,6 +6,12 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 ## [Unreleased]
 
+## [0.1.36] - 2025-07-04
+
+### Fixed
+
+- Fix "Cannot read properties of undefined (reading 'state')" error in Delete Merged command when upgrade repository is not present
+
 ## [0.1.35] - 2025-03-14
 
 ### Fixed
