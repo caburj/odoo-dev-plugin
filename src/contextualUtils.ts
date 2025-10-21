@@ -1300,13 +1300,8 @@ export function createContextualUtils(
   }
 
   const getServerUrl = async (queryParams?: Record<string, string>) => {
-    const ip = await runShellCommand(
-      `ifconfig en0 | grep "inet " | grep -v 127.0.0.1 | awk '{print $2}'`
-    );
-    const ipTrimmed = ip.trim();
-    const host = ipTrimmed === "" ? "localhost" : ipTrimmed;
     const port = (await getOdooConfigValue("http_port")) || "8069";
-    return `http://${host}:${port}` + `${queryParams ? toQueryString(queryParams) : ""}`;
+    return `http://localhost:${port}` + `${queryParams ? toQueryString(queryParams) : ""}`;
   };
 
   async function multiSelectAddons() {

@@ -6,6 +6,12 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 ## [Unreleased]
 
+## [0.1.37] - 2025-10-21
+
+### Changed
+
+- Use localhost when opening Chrome instance.
+
 ## [0.1.36] - 2025-07-04
 
 ### Fixed
